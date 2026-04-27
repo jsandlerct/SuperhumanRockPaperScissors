@@ -7,18 +7,18 @@
 
 ## Setup
 
-- [ ] Create file structure as defined in CLAUDE.md Section 3
-- [ ] Create `js/constants.js` with all constants from CLAUDE.md Section 5
-- [ ] Create `js/utils/rng.js` — single `roll()` function wrapping Math.random()
-- [ ] Create `js/storage.js` — migration function + all read/write helpers
-  - [ ] `migrateIfNeeded()` — runs on every app load, checks schemaVersion
-  - [ ] `saveSession()`, `loadSession()`, `clearSession()`
-  - [ ] `saveAccount()`, `loadAccount()`
-  - [ ] `saveIdentity()`, `loadIdentity()`
-  - [ ] `saveProgress()`, `loadProgress()`
-  - [ ] `saveStats()`, `loadStats()`
-  - [ ] `saveTournament()`, `loadTournament()`
-  - [ ] `saveWorld()`, `loadWorld()`
+- [x] Create file structure as defined in CLAUDE.md Section 3
+- [x] Create `js/constants.js` with all constants from CLAUDE.md Section 5
+- [x] Create `js/utils/rng.js` — single `roll()` function wrapping Math.random()
+- [x] Create `js/storage.js` — migration function + all read/write helpers
+  - [x] `migrateIfNeeded()` — runs on every app load, checks schemaVersion
+  - [x] `saveSession()`, `loadSession()`, `clearSession()`
+  - [x] `saveAccount()`, `loadAccount()`
+  - [x] `saveIdentity()`, `loadIdentity()`
+  - [x] `saveProgress()`, `loadProgress()`
+  - [x] `saveStats()`, `loadStats()`
+  - [x] `saveTournament()`, `loadTournament()`
+  - [x] `saveWorld()`, `loadWorld()`
 
 ---
 
