@@ -100,7 +100,7 @@
 - [ ] Pixel font — load from CDN (Press Start 2P or equivalent)
 - [ ] Chunky UI panels with SNES-style borders (think FF6 menu boxes)
 - [ ] Portrait boxes: 48×48 base, scaled 2–3x, SNES-style frame
-- [ ] SVG placeholder portraits for v0.1 (simple colored shapes with initial letter)
+- [x] Portrait assets — real PNGs in `assets/portraits/`, no SVG placeholders needed
 - [ ] Mobile portrait layout (vertical), touch input for all buttons
 
 ### NPC Data Loading

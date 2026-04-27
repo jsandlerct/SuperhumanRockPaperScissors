@@ -136,4 +136,7 @@ Full replacement pairs listed in design doc Section 16.9.
 
 **[v0.2 | 2026-04-23] Portrait size: 48×48 or 64×64 base, scaled up 2–3x. SVG/Canvas for v0.1, final pixel art for v1.0.**
 
+**[v0.1 | 2026-04-27] Real PNG portrait assets used from v0.1. No SVG placeholders needed.**
+All 50 portraits (male_1–25, female_1–25) are in `assets/portraits/`. Filename matches `portraitId` field in npc_roster exactly (e.g. `male_3.png` for `portraitId: "male_3"`). 8 Jessie expression PNGs are in `assets/portraits/jessie/` — not used until v1.0.
+
 **[v0.9 | 2026-04-26] Player can choose any of all 50 portraits at character creation regardless of gender. Scrollable gallery.**

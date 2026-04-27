@@ -68,6 +68,12 @@ Every Claude Code session begins with this sequence, no exceptions:
 │   └── utils/
 │       ├── rng.js                     ← all randomness through one function
 │       └── helpers.js
+├── assets/
+│   └── portraits/
+│       ├── male_1.png … male_25.png    ← player + NPC portraits (match portraitId in npc_roster)
+│       ├── female_1.png … female_25.png
+│       └── jessie/                    ← Coach Jessie expressions (v1.0 use only)
+│           └── Jessie_*.png
 ├── data/
 │   └── npc_roster_v0_9.json           ← static NPC data (read-only at runtime)
 └── docs/
@@ -90,7 +96,7 @@ Every Claude Code session begins with this sequence, no exceptions:
 | Styling | CSS3 | Tailwind CDN acceptable for layout utilities only |
 | Persistence | Browser localStorage | All access through `storage.js` only |
 | Hosting | Static files (GitHub Pages / Netlify) | No server required through v0.3 |
-| Portraits & sprites | SVG or Canvas pixel art | Programmatic for v0.1; final assets for v1.0 |
+| Portraits & sprites | PNG pixel art | Real assets in `assets/portraits/` from v0.1. No SVG placeholders needed. |
 | Audio | None | Deferred to v1.0 |
 
 **No npm. No build pipeline. No bundler.** The entire game runs from static files. A new session should be able to open `index.html` in a browser and run.
