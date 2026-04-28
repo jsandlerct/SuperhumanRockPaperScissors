@@ -140,3 +140,18 @@ Full replacement pairs listed in design doc Section 16.9.
 All 50 portraits (male_1–25, female_1–25) are in `assets/portraits/`. Filename matches `portraitId` field in npc_roster exactly (e.g. `male_3.png` for `portraitId: "male_3"`). 8 Jessie expression PNGs are in `assets/portraits/jessie/` — not used until v1.0.
 
 **[v0.9 | 2026-04-26] Player can choose any of all 50 portraits at character creation regardless of gender. Scrollable gallery.**
+
+---
+
+## Schema Version History
+
+**[v1.0 | 2026-04-27] localStorage schema bumped to v1.0. Reference file: `docs/SRPS_localStorage_schema_v1_0.md`.**
+Changes from v0.95: added `jessieOneShots` and `jessieSeasonCheckInHistory` arrays to `_trophies` bucket. Design doc bumped to v1.0 (`docs/SRPS_Design_Doc_v1_0.docx`). Starting loadout reference (`docs/SRPS_section_8_3_1_starting_loadout_v0_95.md`) removed — content folded into v1.0 design doc.
+
+**[v1.0 | 2026-04-27] `_trophies` bucket has an additional write trigger: immediately after any one-shot Jessie beat fires.**
+Push beat ID to `jessieOneShots` (or update `jessieSeasonCheckInHistory` for M-12) and call `saveTrophies()` immediately — do not wait for end of match or season.
+
+**[v1.0 | 2026-04-27] M-04 and M-06 Jessie beats are repeatable — never added to `jessieOneShots`.**
+All other Jessie one-shot beats: check `jessieOneShots.includes(beatId)` before firing; push after firing.
+
+**[v1.0 | 2026-04-27] `jessieSeasonCheckInHistory` tracks used M-12 line indices (0–7). Reset to [] after all 8 used.**

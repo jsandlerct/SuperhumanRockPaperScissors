@@ -49,7 +49,7 @@ export const POWERUP_SLOTS_BY_ROOT = { MIND: 5, MYSTIC: 3, FORTUNE: 3 };
 // When both trees have root nodes, use the higher value (MIND wins at 5).
 
 // ── Powerup Starting Loadout ──────────────────────────────────────────────────
-// See docs/SRPS_section_8_3_1_starting_loadout_v0_95.md for full table.
+// See docs/SRPS_Design_Doc_v1_0.docx Section 8.3.1 for full table.
 // These are the deterministic starting loads — no RNG at season start.
 export const STARTING_LOADOUT = {
   MIND_only:             { Basic: 4, Advanced: 1, Legendary: 0 },

@@ -1,1 +1,272 @@
-/* TODO v0.1: SNES palette, Press Start 2P font, base layout */
+/* SNES / 16-bit visual style — all palette values defined here as variables */
+
+:root {
+  --snes-black:        #0d0d1a;
+  --snes-panel:        #1c1c3c;
+  --snes-panel-dark:   #12122a;
+  --snes-border:       #5050b8;
+  --snes-border-light: #8888d8;
+  --snes-text:         #f8f8f8;
+  --snes-yellow:       #f8d020;
+  --snes-green:        #20d060;
+  --snes-red:          #e03030;
+  --snes-blue:         #3878f8;
+  --snes-purple:       #9030c8;
+  --snes-shadow:       #000000;
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--snes-black);
+  color: var(--snes-text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 2;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* Scanline overlay — pointer-events: none so it never blocks clicks */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.07) 3px,
+    rgba(0, 0, 0, 0.07) 4px
+  );
+  z-index: 9999;
+}
+
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Screen container ─────────────────────────────────────────────────────── */
+
+.screen {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── SNES panel (FF6-style menu box) ──────────────────────────────────────── */
+
+.snes-panel {
+  background: var(--snes-panel);
+  border: 3px solid var(--snes-border-light);
+  /* Double-border inset creates the classic SNES menu look */
+  box-shadow:
+    inset 0 0 0 2px var(--snes-panel-dark),
+    inset 0 0 0 4px var(--snes-border),
+    4px 4px 0 var(--snes-shadow);
+  padding: 16px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.snes-btn {
+  display: inline-block;
+  background: var(--snes-panel);
+  color: var(--snes-text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1;
+  border: 3px solid var(--snes-border-light);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    3px 3px 0 var(--snes-shadow);
+  padding: 12px 16px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  user-select: none;
+  transition: background 0s, color 0s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.snes-btn:hover {
+  background: var(--snes-border);
+  color: var(--snes-yellow);
+}
+
+.snes-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    1px 1px 0 var(--snes-shadow);
+}
+
+.snes-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.snes-btn-yellow {
+  color: var(--snes-yellow);
+  border-color: var(--snes-yellow);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    3px 3px 0 var(--snes-shadow);
+}
+
+.snes-btn-yellow:hover {
+  background: var(--snes-yellow);
+  color: var(--snes-black);
+}
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+
+.snes-input {
+  background: var(--snes-black);
+  color: var(--snes-text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 2;
+  border: 3px solid var(--snes-border-light);
+  box-shadow: inset 0 0 0 2px var(--snes-border);
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  caret-color: var(--snes-yellow);
+}
+
+.snes-input:focus {
+  border-color: var(--snes-yellow);
+  box-shadow: inset 0 0 0 2px var(--snes-yellow);
+}
+
+.snes-input::placeholder {
+  color: var(--snes-border);
+  opacity: 1;
+}
+
+/* ── Portrait frame ───────────────────────────────────────────────────────── */
+
+.portrait-frame {
+  border: 3px solid var(--snes-border-light);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    3px 3px 0 var(--snes-shadow);
+  background: var(--snes-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.portrait-frame img {
+  image-rendering: pixelated;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.portrait-frame--sm  { width: 64px;  height: 64px; }
+.portrait-frame--md  { width: 96px;  height: 96px; }
+.portrait-frame--lg  { width: 128px; height: 128px; }
+.portrait-frame--xl  { width: 160px; height: 160px; }
+
+/* Selected state for portrait gallery */
+.portrait-frame--selected {
+  border-color: var(--snes-yellow);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-yellow),
+    3px 3px 0 var(--snes-shadow);
+}
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+
+.snes-title {
+  font-size: 16px;
+  color: var(--snes-yellow);
+  text-shadow: 3px 3px 0 var(--snes-shadow);
+  letter-spacing: 2px;
+  line-height: 1.6;
+}
+
+.snes-subtitle {
+  font-size: 10px;
+  color: var(--snes-border-light);
+  text-shadow: 2px 2px 0 var(--snes-shadow);
+  line-height: 1.8;
+}
+
+.snes-label {
+  font-size: 8px;
+  color: var(--snes-text);
+  text-shadow: 1px 1px 0 var(--snes-shadow);
+  line-height: 2;
+}
+
+.snes-small {
+  font-size: 6px;
+  color: var(--snes-border-light);
+  line-height: 2;
+}
+
+.snes-highlight { color: var(--snes-yellow); }
+.snes-success   { color: var(--snes-green);  }
+.snes-error     { color: var(--snes-red);    }
+.snes-muted     { color: var(--snes-border); }
+
+/* ── Selection cursor ─────────────────────────────────────────────────────── */
+
+.snes-cursor::before {
+  content: '▶ ';
+  color: var(--snes-yellow);
+}
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+
+.snes-divider {
+  border: none;
+  border-top: 2px solid var(--snes-border);
+  margin: 4px 0;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.cursor-blink {
+  display: inline-block;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}

@@ -1,7 +1,7 @@
 # SRPS localStorage Schema
-**Version:** 0.95  
-**Game:** Superhuman Rock Paper Scissors  
-**Scope:** Covers all data persisted to browser localStorage for v0.1 through v1.0.  
+**Version:** 1.0
+**Game:** Superhuman Rock Paper Scissors
+**Scope:** Covers all data persisted to browser localStorage for v0.1 through v1.0.
 **Migration hook:** Every breaking schema change increments `schemaVersion` in `srps_meta`. A migration function runs on every app load and upgrades older saves before the app initialises.
 
 ---
@@ -29,7 +29,7 @@ All keys follow the pattern `srps_{scope}_{qualifier}`.
 | `srps_char_{id}_identity` | Character | Creation (name, portrait); Season 1 tree lock; Season 2 tree lock |
 | `srps_char_{id}_progress` | Character | After every match; after every skill point spend |
 | `srps_char_{id}_stats` | Character | After every round |
-| `srps_char_{id}_trophies` | Character | After each tournament result; after season end |
+| `srps_char_{id}_trophies` | Character | After each tournament result; after season end; after any one-shot Jessie beat fires |
 | `srps_char_{id}_tournament` | Character | After each match within a tournament |
 | `srps_char_{id}_world` | Character | Once per season end (after NPC simulation) |
 
@@ -99,7 +99,7 @@ Written at character creation, then only twice more in a playthrough (Season 1 t
   "charId": "char_abc123",
   "name": "Alex",
   "portraitId": "male_3",
-  // Format: male_N or female_N (N = 1–25). Matches npc_roster.json convention.
+  // Format: male_N or female_N (N = 1-25). Matches npc_roster.json convention.
 
   "primaryTree": null,
   // null until Season 1 pre-tournament selection. Then: "MIND" | "MYSTIC" | "FORTUNE".
@@ -257,7 +257,7 @@ Written after every round. Career scope never resets. Season scope resets to zer
     "tournamentsWon": 1,
     "runnerUpFinishes": 3,
     "deepestTournamentReached": 5
-    // deepestTournamentReached: highest tournamentLevel ever reached (1–5). High-water mark.
+    // deepestTournamentReached: highest tournamentLevel ever reached (1-5). High-water mark.
   },
 
   "season": {
@@ -283,7 +283,8 @@ Written after every round. Career scope never resets. Season scope resets to zer
 
 ### `srps_char_{id}_trophies`
 
-Written after each tournament result and at season end. Contains all data needed for HOF evaluation without re-reading world state.
+Written after each tournament result, at season end, and whenever any one-shot Jessie beat fires.
+Contains all data needed for HOF evaluation and Jessie beat tracking.
 
 ```json
 {
@@ -292,7 +293,7 @@ Written after each tournament result and at season end. Contains all data needed
   // Never decremented.
 
   "hofInductionSeason": null,
-  // Integer 1–10, or null. Set alongside hofStatus.
+  // Integer 1-10, or null. Set alongside hofStatus.
 
   "seasonEloHistory": [
     // One entry per completed season. Required for HOF cumulative ranking evaluation.
@@ -308,7 +309,7 @@ Written after each tournament result and at season end. Contains all data needed
     // (winner + runnerUp are both trophy-earning results).
     {
       "tournamentLevel": 1,
-      // 1–5 (Local through World Championship)
+      // 1-5 (Local through World Championship)
 
       "result": "winner",
       // Enum: "winner" | "runnerUp"
@@ -317,7 +318,20 @@ Written after each tournament result and at season end. Contains all data needed
       "season": 1
       // Season in which this trophy was earned. Display only.
     }
-  ]
+  ],
+
+  "jessieOneShots": [],
+  // Array of beat IDs that have already fired (e.g. ["T-01", "T-02", "M-01"]).
+  // Before firing any one-shot beat: check includes(beatId). If true, skip.
+  // After firing: push beatId and call saveTrophies() immediately.
+  // When Jessie toggle is OFF: do NOT push IDs. Beats will fire when re-enabled.
+  // M-04 and M-06 are repeatable — never add them to this array.
+
+  "jessieSeasonCheckInHistory": []
+  // Array of used M-12 line indices (integers 0-7).
+  // Before firing M-12: select random index NOT in this array.
+  // After firing: push the used index and call saveTrophies().
+  // If all 8 indices are in the array: reset to [] and start again.
 }
 ```
 
@@ -330,7 +344,7 @@ Written after every match within an active tournament. The bracket here is the p
 ```json
 {
   "currentTournamentLevel": 2,
-  // 1–5. Null if no tournament is in progress (between tournaments or off-season).
+  // 1-5. Null if no tournament is in progress (between tournaments or off-season).
 
   "tournamentStatus": "in_progress",
   // Enum: "not_started" | "in_progress" | "complete"
@@ -461,8 +475,6 @@ When a new character's first season begins (phase transitions from `pre_season` 
 ```
 NPC_STARTING_BUDGET_BY_TIER = { 1: 5, 2: 15, 3: 35, 4: 55, 5: 75 }
 // These are named constants. Define in one config file. Never inline.
-// Values chosen as lower bound of a per-tier range — tunable during playtesting.
-// Changing these values only affects new playthroughs (not saves in progress).
 
 For each NPC in npc_roster.json:
   budget = NPC_STARTING_BUDGET_BY_TIER[npc.tournamentLevel]
@@ -474,11 +486,9 @@ For each NPC in npc_roster.json:
       (a) not yet purchased
       (b) parent node is purchased (or node is L1 root, which has no parent)
       (c) node cost <= remaining budget
-    
+
     If legal is empty: break
-    // NPC may not be able to spend all points if remaining budget < cheapest legal node.
-    // This is intentional — partial spends are fine.
-    
+
     Pick one node at random from legal
     Mark it purchased in treeState
     Subtract node cost from budget
@@ -489,7 +499,7 @@ For each NPC in npc_roster.json:
 **Notes:**
 - NPCs with `secondaryTree: null` draw legal nodes only from their primary tree.
 - NPCs with both trees draw from the union of both trees' legal nodes.
-- Prerequisite rule: L2 requires L1, L3 requires its L2 parent, L4 requires its L3 parent. A node is never legal if its parent is unpurchased.
+- Prerequisite rule: L2 requires L1, L3 requires its L2 parent, L4 requires its L3 parent.
 - The root node (L1, cost 5 pts) is always the first legal node. All T1 NPCs (budget: 5 pts) will always and only purchase their root node. This is correct and intentional.
 
 ---
@@ -502,15 +512,15 @@ At the end of each season, before writing the world bucket:
 For each NPC:
   Determine tournament results from ELO-probability simulation
   Award skill points per the same winner/runner-up table as the player (Section 4.3)
-  
+
   While unspentPoints > 0:
     Run same random-from-legal-nodes algorithm as above
     (NPCs never respec — treeState is append-only)
-  
+
   Update currentElo based on simulated tournament results
 ```
 
-NPC vs NPC match outcomes are determined by ELO win probability only — no round-by-round simulation, no skill or powerup resolution. This keeps season simulation fast and synchronous.
+NPC vs NPC match outcomes are determined by ELO win probability only — no round-by-round simulation, no skill or powerup resolution.
 
 ---
 
@@ -531,6 +541,18 @@ This order is mandatory. Writing in the wrong order can corrupt rank or HOF data
 
 ---
 
+## Jessie Beat Write Trigger
+
+`_trophies` is written in one additional context beyond the season-end sequence above:
+
+**Whenever any one-shot Jessie beat fires:**
+1. Push the beat ID to `jessieOneShots` (or update `jessieSeasonCheckInHistory` for M-12)
+2. Call `saveTrophies()` immediately — do not wait for end of match or season
+
+This ensures Jessie beat state survives page reloads during an active session.
+
+---
+
 ## Schema Migration Pattern
 
 Every app load must run this before any other localStorage access:
@@ -540,16 +562,20 @@ function migrateIfNeeded() {
   const meta = JSON.parse(localStorage.getItem('srps_meta') || '{}');
   const currentVersion = meta.schemaVersion || 0;
 
-  // Each migration step is idempotent and version-gated.
   if (currentVersion < 1) {
-    // v0 → v1: initial schema. Nothing to migrate — fresh install.
+    // v0 to v1: initial schema. Nothing to migrate — fresh install.
     meta.schemaVersion = 1;
     meta.accountUsernames = meta.accountUsernames || [];
     localStorage.setItem('srps_meta', JSON.stringify(meta));
   }
 
-  // Future migrations follow same pattern:
-  // if (currentVersion < 2) { ...transform keys... meta.schemaVersion = 2; }
+  // When adding Jessie fields to existing saves (schema v1 to v2):
+  // if (currentVersion < 2) {
+  //   // For each existing character, load _trophies and add missing Jessie fields
+  //   // jessieOneShots: [], jessieSeasonCheckInHistory: []
+  //   meta.schemaVersion = 2;
+  //   localStorage.setItem('srps_meta', JSON.stringify(meta));
+  // }
 }
 ```
 
@@ -559,7 +585,7 @@ Add a new numbered block for every breaking change. Never modify an existing blo
 
 ## In-Memory-Only State (Never Persisted)
 
-The following are reset on every match start and must never appear in localStorage. If you find yourself reaching for localStorage for any of these, stop.
+The following are reset on every match start and must never appear in localStorage.
 
 | State | Reset When | Used By |
 |---|---|---|
