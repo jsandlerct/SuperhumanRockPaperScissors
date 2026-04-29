@@ -65,12 +65,73 @@ body::after {
 
 .screen {
   width: 100%;
-  max-width: 480px;
   min-height: 100dvh;
-  padding: 16px;
+  padding: 16px clamp(16px, 4vw, 64px);
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Centered narrow card — for login, summary, intro */
+.content-card {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Wider centered card — for character select */
+.content-card--lg {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 2-column slot grid for character select on desktop */
+.char-slots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .char-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Match screen 2-column layout on desktop */
+.match-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.match-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .match-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .match-panel {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 /* ── SNES panel (FF6-style menu box) ──────────────────────────────────────── */
@@ -100,11 +161,13 @@ body::after {
     inset 0 0 0 2px var(--snes-border),
     3px 3px 0 var(--snes-shadow);
   padding: 12px 16px;
+  min-height: 44px;
   cursor: pointer;
   letter-spacing: 1px;
   user-select: none;
   transition: background 0s, color 0s;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .snes-btn:hover {
@@ -149,9 +212,11 @@ body::after {
   border: 3px solid var(--snes-border-light);
   box-shadow: inset 0 0 0 2px var(--snes-border);
   padding: 10px 12px;
+  min-height: 44px;
   outline: none;
   width: 100%;
   caret-color: var(--snes-yellow);
+  touch-action: manipulation;
 }
 
 .snes-input:focus {
@@ -269,4 +334,308 @@ body::after {
 
 .fade-in {
   animation: fadeIn 0.3s ease-in;
+}
+
+/* ── Bracket visualization ────────────────────────────────────────────────── */
+
+.bracket-round-headers {
+  display: flex;
+  margin-bottom: 6px;
+}
+
+.bracket-round-header {
+  flex: 1;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-yellow);
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.bracket-conn-gap {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.bracket-body {
+  display: flex;
+  align-items: stretch;
+  min-height: 180px;
+}
+
+.bracket-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bracket-col--final {
+  justify-content: center;
+}
+
+.bracket-match {
+  background: var(--snes-panel-dark);
+  border: 2px solid var(--snes-border);
+  box-shadow: 3px 3px 0 var(--snes-shadow);
+}
+
+.bracket-match--active {
+  border-color: var(--snes-yellow);
+  box-shadow: 0 0 0 1px var(--snes-yellow), 3px 3px 0 var(--snes-shadow);
+}
+
+.bracket-match--complete {
+  opacity: 0.75;
+}
+
+.bracket-slot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  min-height: 38px;
+  overflow: hidden;
+}
+
+.bracket-slot + .bracket-slot {
+  border-top: 1px solid var(--snes-border);
+}
+
+.bracket-slot--winner {
+  background: rgba(32, 208, 96, 0.1);
+}
+
+.bracket-slot--loser {
+  opacity: 0.35;
+}
+
+.bracket-portrait {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--snes-border);
+  background: var(--snes-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.bracket-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.bracket-name {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: var(--snes-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.6;
+}
+
+.bracket-name--player {
+  color: var(--snes-yellow);
+}
+
+.bracket-score {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  flex-shrink: 0;
+  min-width: 12px;
+  text-align: right;
+  color: var(--snes-border);
+}
+
+.bracket-score--win  { color: var(--snes-green); }
+.bracket-score--loss { color: var(--snes-red);   }
+
+/* Fork connector between rounds */
+.bracket-conn {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bracket-conn-top {
+  flex: 1;
+  border-right: 2px solid var(--snes-border-light);
+  border-bottom: 2px solid var(--snes-border-light);
+}
+
+.bracket-conn-bot {
+  flex: 1;
+  border-right: 2px solid var(--snes-border-light);
+  border-top: 2px solid var(--snes-border-light);
+}
+
+/* ── Throw choice buttons ─────────────────────────────────────────────────── */
+
+.throw-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--snes-panel);
+  border: 3px solid var(--snes-border-light);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    3px 3px 0 var(--snes-shadow);
+  padding: 10px 4px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-text);
+  min-height: 44px;
+  width: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.throw-btn:hover {
+  background: var(--snes-border);
+  color: var(--snes-yellow);
+}
+
+.throw-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-border),
+    1px 1px 0 var(--snes-shadow);
+}
+
+.throw-btn img {
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+  display: block;
+  pointer-events: none;
+}
+
+/* ── Throw reveal (both hands facing each other) ──────────────────────────── */
+
+.throw-reveal {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.throw-reveal-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+
+.throw-reveal-side img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.throw-reveal-side--flip img {
+  transform: scaleX(-1);
+}
+
+/* Portrait grid for character creation */
+.portrait-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.portrait-grid-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* Responsive portrait frame for match screen */
+.portrait-frame--match {
+  width: 96px;
+  height: 96px;
+}
+
+/* ── Responsive breakpoints ───────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+  .portrait-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  .portrait-grid-scroll {
+    max-height: 360px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .portrait-grid {
+    grid-template-columns: repeat(10, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  /* Bracket scales up on desktop */
+  .bracket-body {
+    min-height: 280px;
+  }
+
+  .bracket-slot {
+    min-height: 56px;
+    padding: 8px 12px;
+  }
+
+  .bracket-portrait {
+    width: 44px;
+    height: 44px;
+  }
+
+  .bracket-name {
+    font-size: 7px;
+  }
+
+  .bracket-score {
+    font-size: 8px;
+    min-width: 16px;
+  }
+
+  .bracket-conn {
+    width: 48px;
+  }
+
+  .bracket-conn-gap {
+    width: 48px;
+  }
+
+  /* Match portraits scale up on desktop */
+  .portrait-frame--match {
+    width: 128px;
+    height: 128px;
+  }
+
+  /* Hand images scale up on desktop */
+  .throw-btn img {
+    width: 110px;
+    height: 110px;
+  }
+
+  .throw-reveal-side img {
+    width: 140px;
+    height: 140px;
+  }
 }

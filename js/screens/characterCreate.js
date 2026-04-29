@@ -98,20 +98,8 @@ export function mount(container, options = {}) {
           </div>
 
           <!-- Scrollable portrait grid -->
-          <div style="
-            max-height:220px;
-            overflow-y:auto;
-            overflow-x:hidden;
-            padding-right:4px;
-          ">
-            <div
-              id="portrait-grid"
-              style="
-                display:grid;
-                grid-template-columns:repeat(5,1fr);
-                gap:6px;
-              "
-            >
+          <div class="portrait-grid-scroll">
+            <div id="portrait-grid" class="portrait-grid">
               ${gridItems}
             </div>
           </div>

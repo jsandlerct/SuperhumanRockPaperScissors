@@ -98,25 +98,29 @@ export function mount(container, options = {}) {
   }
 
   container.innerHTML = `
-    <div class="screen fade-in" style="gap:16px">
-      <div style="text-align:center">
-        <p class="snes-title">SRPS</p>
-        <p class="snes-small snes-highlight" style="margin-top:6px">
-          ${username.toUpperCase()}
-        </p>
+    <div class="screen fade-in" style="justify-content:center">
+      <div class="content-card--lg">
+        <div style="text-align:center">
+          <p class="snes-title">SRPS</p>
+          <p class="snes-small snes-highlight" style="margin-top:6px">
+            ${username.toUpperCase()}
+          </p>
+        </div>
+
+        <hr class="snes-divider">
+
+        <p class="snes-small snes-muted">SELECT CHARACTER</p>
+
+        <div class="char-slots-grid">
+          ${slots.map(renderSlot).join('')}
+        </div>
+
+        <hr class="snes-divider">
+
+        <button class="snes-btn" id="btn-logout" style="width:100%;opacity:0.6">
+          ← LOG OUT
+        </button>
       </div>
-
-      <hr class="snes-divider">
-
-      <p class="snes-small snes-muted">SELECT CHARACTER</p>
-
-      ${slots.map(renderSlot).join('')}
-
-      <hr class="snes-divider">
-
-      <button class="snes-btn" id="btn-logout" style="width:100%;opacity:0.6">
-        ← LOG OUT
-      </button>
     </div>
   `;
 

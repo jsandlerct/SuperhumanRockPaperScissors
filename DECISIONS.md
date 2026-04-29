@@ -141,12 +141,24 @@ All 50 portraits (male_1–25, female_1–25) are in `assets/portraits/`. Filena
 
 **[v0.9 | 2026-04-26] Player can choose any of all 50 portraits at character creation regardless of gender. Scrollable gallery.**
 
+**[v0.1.1 | 2026-04-29] Responsive layout: game uses full viewport width on all screen sizes — no fixed 480px cap.**
+`.screen` has no max-width; horizontal padding is `clamp(16px, 4vw, 64px)`. Narrow-content screens (login, summary, intro) center content in `.content-card` (max-width 560px). Character select uses `.content-card--lg` (800px) with a 2-column slot grid at ≥640px. Match screen uses a 2-column CSS grid at ≥768px (scoreboard left, action right). Tournament bracket scales up at ≥768px (larger slots, bigger portraits, wider connector). Portrait gallery in character create uses `repeat(5→8→10, 1fr)` auto-fill at breakpoints.
+
+**[v0.1.1 | 2026-04-29] Bracket visualization redesigned as a horizontal bracket with fork connector lines.**
+Replaces stacked match cards. Two columns (SEMIFINAL / FINAL) connected by a CSS fork (`.bracket-conn-top` / `.bracket-conn-bot` with interlocking border-right + border-bottom/top). Each match slot shows: portrait (28px→44px on desktop), name, score. Winner slot gets green highlight; loser fades. Active next-match gets yellow border glow.
+
 ---
 
 ## App Flow & Session
 
-**[v0.1 | 2026-04-27] Intro plays on every page load — no session auto-resume.**
-Every app load goes: intro → login → character select → game. The session is never used to skip the login screen. Session is written only when the player picks a character slot.
+**[v0.1 | 2026-04-29] Intro plays on every page load — no session auto-resume.**
+Every app load goes: intro → title → login → character select → game. The session is never used to skip the login screen. Session is written only when the player picks a character slot.
+
+**[v0.1 | 2026-04-29] Title screen added as a dedicated screen between intro and login (`js/screens/title.js`).**
+Displays `assets/SRPS Title screen.png` full-screen on a black background. Any click, tap, or keypress advances to login. Image is centered with `max-width: min(100%, 560px)`.
+
+**[v0.1 | 2026-04-29] Pixel-art hand images used for throw selection and reveal in the match screen.**
+Assets: `assets/hands/rock.png`, `assets/hands/paper.png`, `assets/hands/scissors.png`. Throw selection: 3-column button grid with hand image above label. Reveal: player hand on left (normal orientation), NPC hand on right (mirrored with `scaleX(-1)`) so both hands face each other.
 
 **[v0.1 | 2026-04-27] Character select screen added between login and game (`js/screens/characterSelect.js`).**
 Shows exactly 3 slots (MAX_CHARACTERS_PER_ACCOUNT). Filled slots show portrait, name, season, phase, ELO with a PLAY button. Empty slots show a NEW button. Log Out button returns to login and clears session.

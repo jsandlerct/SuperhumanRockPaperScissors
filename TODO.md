@@ -101,11 +101,11 @@
 - [x] Chunky UI panels with SNES-style borders (think FF6 menu boxes)
 - [x] Portrait boxes: 48×48 base, scaled 2–3x, SNES-style frame
 - [x] Portrait assets — real PNGs in `assets/portraits/`, no SVG placeholders needed
-- [ ] Mobile portrait layout (vertical), touch input for all buttons
+- [x] Mobile portrait layout (vertical), touch input for all buttons
 
 ### v0.1 Remaining
-- [ ] Powerup activation phase placeholder (disabled UI stub in match screen)
-- [ ] Skill information phase placeholder (disabled UI stub in match screen)
+- [x] Powerup activation phase placeholder (disabled UI stub in match screen)
+- [x] Skill information phase placeholder (disabled UI stub in match screen)
 
 ### NPC Data Loading
 - [x] Load `data/npc_roster_v0_9.json` at app init

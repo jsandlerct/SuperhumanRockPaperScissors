@@ -88,52 +88,84 @@ function participantPortrait(id, playerPortraitId) {
   return getNpcById(id)?.portraitId ?? null;
 }
 
-function portraitImg(portraitId, size = 'sm') {
-  if (!portraitId) {
-    return `<div class="portrait-frame portrait-frame--${size}" style="background:var(--snes-panel)">
-      <span class="snes-label" style="font-size:16px;text-align:center">?</span>
-    </div>`;
+function renderSlot(id, slotKey, match, playerName, playerPortraitId) {
+  const isPlayer = id === 'player';
+  const isPending = id === null;
+  const portrait = participantPortrait(id, playerPortraitId);
+  const name = participantName(id, playerName);
+
+  let slotClass = '';
+  let scoreVal = '';
+  let scoreClass = '';
+
+  if (match.result) {
+    const won = (slotKey === 'p1' && match.result === 'p1_won') ||
+                (slotKey === 'p2' && match.result === 'p2_won');
+    slotClass = won ? 'bracket-slot--winner' : 'bracket-slot--loser';
+    if (match.score) {
+      scoreVal = String(slotKey === 'p1' ? match.score[0] : match.score[1]);
+      scoreClass = won ? 'bracket-score--win' : 'bracket-score--loss';
+    } else {
+      scoreVal = won ? '✓' : '';
+    }
   }
-  return `<div class="portrait-frame portrait-frame--${size}">
-    <img src="assets/portraits/${portraitId}.png" alt="">
-  </div>`;
-}
 
-function matchResultLabel(match, playerName) {
-  if (!match.result) return `<span class="snes-small snes-muted">PENDING</span>`;
-  const winnerName = participantName(
-    match.result === 'p1_won' ? match.p1 : match.p2,
-    playerName
-  );
-  const isPlayer = (match.result === 'p1_won' && match.p1 === 'player') ||
-                   (match.result === 'p2_won' && match.p2 === 'player');
-  return `<span class="snes-small ${isPlayer ? 'snes-success' : 'snes-error'}">${winnerName} WINS</span>`;
-}
+  const portraitHTML = isPending
+    ? `<div class="bracket-portrait"><span style="font-size:10px;color:var(--snes-border)">?</span></div>`
+    : `<div class="bracket-portrait"><img src="assets/portraits/${portrait}.png" alt=""></div>`;
 
-function renderMatchCard(match, playerName, playerPortraitId, label, highlight) {
-  const p1Name    = participantName(match.p1, playerName);
-  const p2Name    = participantName(match.p2, playerName);
-  const p1Portait = participantPortrait(match.p1, playerPortraitId);
-  const p2Portait = participantPortrait(match.p2, playerPortraitId);
-  const p1IsPlayer = match.p1 === 'player';
-  const p2IsPlayer = match.p2 === 'player';
-  const borderStyle = highlight ? 'border-color:var(--snes-yellow)' : '';
+  const scoreHTML = scoreVal !== ''
+    ? `<span class="bracket-score ${scoreClass}">${scoreVal}</span>`
+    : '';
 
   return `
-    <div class="snes-panel" style="${borderStyle}">
-      <p class="snes-small snes-highlight" style="margin-bottom:10px">${label}</p>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
-          ${portraitImg(p1Portait, 'sm')}
-          <p class="snes-small ${p1IsPlayer ? 'snes-highlight' : ''}" style="text-align:center;word-break:break-all">${p1Name}</p>
+    <div class="bracket-slot ${slotClass}">
+      ${portraitHTML}
+      <span class="bracket-name ${isPlayer ? 'bracket-name--player' : ''}">${name}</span>
+      ${scoreHTML}
+    </div>
+  `;
+}
+
+function renderBracket(data, playerName, playerPortraitId, stateInfo) {
+  const r1 = data.bracket.rounds[0].matches;
+  const r2 = data.bracket.rounds[1].matches[0];
+  const playerR1 = r1.find(m => m.p1 === 'player' || m.p2 === 'player');
+  const npcR1    = r1.find(m => m.p1 !== 'player' && m.p2 !== 'player');
+
+  const r1Active = stateInfo.state === 'r1_pending';
+  const r2Active = stateInfo.state === 'final_pending';
+  const r1Done   = !!playerR1.result;
+
+  return `
+    <div>
+      <div class="bracket-round-headers">
+        <div class="bracket-round-header">SEMIFINAL</div>
+        <div class="bracket-conn-gap"></div>
+        <div class="bracket-round-header">FINAL</div>
+      </div>
+      <div class="bracket-body">
+        <div class="bracket-col">
+          <div class="bracket-match ${r1Active ? 'bracket-match--active' : ''} ${r1Done ? 'bracket-match--complete' : ''}">
+            ${renderSlot(playerR1.p1, 'p1', playerR1, playerName, playerPortraitId)}
+            ${renderSlot(playerR1.p2, 'p2', playerR1, playerName, playerPortraitId)}
+          </div>
+          <div class="bracket-match ${npcR1.result ? 'bracket-match--complete' : ''}">
+            ${renderSlot(npcR1.p1, 'p1', npcR1, playerName, playerPortraitId)}
+            ${renderSlot(npcR1.p2, 'p2', npcR1, playerName, playerPortraitId)}
+          </div>
         </div>
-        <p class="snes-label" style="flex-shrink:0">VS</p>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
-          ${portraitImg(p2Portait, 'sm')}
-          <p class="snes-small ${p2IsPlayer ? 'snes-highlight' : ''}" style="text-align:center;word-break:break-all">${p2Name}</p>
+        <div class="bracket-conn">
+          <div class="bracket-conn-top"></div>
+          <div class="bracket-conn-bot"></div>
+        </div>
+        <div class="bracket-col bracket-col--final">
+          <div class="bracket-match ${r2Active ? 'bracket-match--active' : ''} ${r2.result ? 'bracket-match--complete' : ''}">
+            ${renderSlot(r2.p1, 'p1', r2, playerName, playerPortraitId)}
+            ${renderSlot(r2.p2, 'p2', r2, playerName, playerPortraitId)}
+          </div>
         </div>
       </div>
-      <div style="margin-top:8px;text-align:center">${matchResultLabel(match, playerName)}</div>
     </div>
   `;
 }
@@ -171,11 +203,6 @@ export function mount(container, options = {}) {
   }
 
   function renderScreen(stateInfo) {
-    const r1 = data.bracket.rounds[0].matches;
-    const r2 = data.bracket.rounds[1].matches[0];
-    const playerR1Match = r1.find(m => m.p1 === 'player' || m.p2 === 'player');
-    const npcR1Match    = r1.find(m => m.p1 !== 'player' && m.p2 !== 'player');
-
     let statusHTML = '';
     let actionHTML = '';
 
@@ -201,14 +228,9 @@ export function mount(container, options = {}) {
 
         <hr class="snes-divider">
 
-        <p class="snes-small snes-highlight">SEMIFINAL</p>
-        ${renderMatchCard(playerR1Match, playerName, playerPortraitId, 'MATCH 1', stateInfo.state === 'r1_pending')}
-        ${renderMatchCard(npcR1Match,    playerName, playerPortraitId, 'MATCH 2', false)}
+        ${renderBracket(data, playerName, playerPortraitId, stateInfo)}
 
         <hr class="snes-divider">
-
-        <p class="snes-small snes-highlight">FINAL</p>
-        ${renderMatchCard(r2, playerName, playerPortraitId, 'CHAMPIONSHIP', stateInfo.state === 'final_pending')}
 
         ${statusHTML}
         ${actionHTML}

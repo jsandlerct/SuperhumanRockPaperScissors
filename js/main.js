@@ -1,5 +1,6 @@
 import { migrateIfNeeded, loadSession, loadProgress, loadTournament } from './storage.js';
 import { mount as mountIntro }           from './screens/intro.js';
+import { mount as mountTitle }           from './screens/title.js';
 import { mount as mountLogin }           from './screens/login.js';
 import { mount as mountCharacterSelect } from './screens/characterSelect.js';
 import { mount as mountCharacterCreate } from './screens/characterCreate.js';
@@ -34,6 +35,7 @@ export function navigate(screen, options = {}) {
   app.innerHTML = '';
   switch (screen) {
     case 'intro':           mountIntro(app, options);           break;
+    case 'title':           mountTitle(app, options);           break;
     case 'login':           mountLogin(app, options);           break;
     case 'characterSelect': mountCharacterSelect(app, options); break;
     case 'create':          mountCharacterCreate(app, options); break;

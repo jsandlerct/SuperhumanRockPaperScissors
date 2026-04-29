@@ -69,17 +69,18 @@ export function mount(container, options = {}) {
       position: relative;
       padding-bottom: 64px;
     ">
-      <div id="intro-text" style="width:100%"></div>
-
-      <div id="intro-prompt" style="display:none; width:100%; text-align:center; margin-top:32px">
-        <span class="snes-highlight" style="font-size:10px">▶ PRESS ANY KEY</span>
-        <span class="cursor-blink snes-highlight"> ▌</span>
+      <div class="content-card">
+        <div id="intro-text"></div>
+        <div id="intro-prompt" style="display:none; text-align:center; margin-top:32px">
+          <span class="snes-highlight" style="font-size:10px">▶ PRESS ANY KEY</span>
+          <span class="cursor-blink snes-highlight"> ▌</span>
+        </div>
       </div>
 
       <button
         id="btn-skip"
         class="snes-btn snes-small"
-        style="position:absolute; bottom:24px; right:0; opacity:0.5; font-size:6px; padding:8px 10px"
+        style="position:absolute; bottom:24px; right:clamp(16px,4vw,64px); opacity:0.5; font-size:6px; padding:8px 10px"
       >SKIP</button>
     </div>
   `;
@@ -90,7 +91,7 @@ export function mount(container, options = {}) {
 
   function goToLogin() {
     if (timerId) clearTimeout(timerId);
-    navigate('login');
+    navigate('title');
   }
 
   function onRevealComplete() {

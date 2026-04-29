@@ -9,7 +9,7 @@ import {
   loadStats, saveStats, loadTournament, saveTournament,
 } from '../storage.js';
 
-const THROW_LABEL = { rock: '✊ ROCK', paper: '✋ PAPER', scissors: '✌ SCISSORS' };
+const THROW_NAME = { rock: 'ROCK', paper: 'PAPER', scissors: 'SCISSORS' };
 const ROUND_WIN   = '■';
 const ROUND_EMPTY = '□';
 
@@ -33,7 +33,8 @@ export function mount(container, options = {}) {
   let playerRoundsWon   = 0;
   let opponentRoundsWon = 0;
   let roundNumber       = 1;
-  let screenState       = 'picking'; // 'picking' | 'revealing' | 'match_over'
+  // Round phase flow: powerup_stub → skill_stub → picking → revealing → match_over
+  let screenState       = 'powerup_stub';
   let lastPlayerThrow   = null;
   let lastOpponentThrow = null;
   let lastRoundResult   = null;
@@ -50,7 +51,27 @@ export function mount(container, options = {}) {
 
     let bodyHTML = '';
 
-    if (screenState === 'picking') {
+    if (screenState === 'powerup_stub') {
+      bodyHTML = `
+        <p class="snes-small snes-highlight" style="text-align:center">── ROUND ${roundNumber} ──</p>
+        <div class="snes-panel" style="opacity:0.5;text-align:center;display:flex;flex-direction:column;gap:10px">
+          <p class="snes-small snes-muted">POWERUP PHASE</p>
+          <p class="snes-small">NO POWERUPS IN INVENTORY</p>
+          <p class="snes-small snes-muted">[UNLOCKS V0.2]</p>
+        </div>
+        <button class="snes-btn snes-btn-yellow" id="btn-powerup-done" style="width:100%">▶ CONTINUE</button>
+      `;
+    } else if (screenState === 'skill_stub') {
+      bodyHTML = `
+        <p class="snes-small snes-highlight" style="text-align:center">── ROUND ${roundNumber} ──</p>
+        <div class="snes-panel" style="opacity:0.5;text-align:center;display:flex;flex-direction:column;gap:10px">
+          <p class="snes-small snes-muted">SKILL PHASE</p>
+          <p class="snes-small">NO ACTIVE SKILLS EQUIPPED</p>
+          <p class="snes-small snes-muted">[UNLOCKS V0.3]</p>
+        </div>
+        <button class="snes-btn snes-btn-yellow" id="btn-skill-done" style="width:100%">▶ CONTINUE</button>
+      `;
+    } else if (screenState === 'picking') {
       bodyHTML = `
         <p class="snes-small snes-highlight" style="text-align:center">
           ── ROUND ${roundNumber} ──
@@ -58,10 +79,19 @@ export function mount(container, options = {}) {
         <p class="snes-small snes-muted" style="text-align:center;margin-bottom:4px">
           CHOOSE YOUR THROW
         </p>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button class="snes-btn" data-throw="rock"     style="width:100%">${THROW_LABEL.rock}</button>
-          <button class="snes-btn" data-throw="paper"    style="width:100%">${THROW_LABEL.paper}</button>
-          <button class="snes-btn" data-throw="scissors" style="width:100%">${THROW_LABEL.scissors}</button>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <button class="throw-btn" data-throw="rock">
+            <img src="assets/hands/rock.png" alt="Rock" draggable="false">
+            <span>ROCK</span>
+          </button>
+          <button class="throw-btn" data-throw="paper">
+            <img src="assets/hands/paper.png" alt="Paper" draggable="false">
+            <span>PAPER</span>
+          </button>
+          <button class="throw-btn" data-throw="scissors">
+            <img src="assets/hands/scissors.png" alt="Scissors" draggable="false">
+            <span>SCISSORS</span>
+          </button>
         </div>
       `;
     } else if (screenState === 'revealing') {
@@ -73,15 +103,19 @@ export function mount(container, options = {}) {
                         : 'snes-highlight';
       bodyHTML = `
         <p class="snes-small snes-highlight" style="text-align:center">── ROUND ${roundNumber} ──</p>
-        <div class="snes-panel" style="display:flex;justify-content:space-around;align-items:center;gap:8px">
-          <div style="text-align:center">
-            <p class="snes-small snes-muted">YOU</p>
-            <p class="snes-label" style="margin-top:4px">${THROW_LABEL[lastPlayerThrow]}</p>
-          </div>
-          <p class="snes-label">VS</p>
-          <div style="text-align:center">
-            <p class="snes-small snes-muted">THEM</p>
-            <p class="snes-label" style="margin-top:4px">${THROW_LABEL[lastOpponentThrow]}</p>
+        <div class="snes-panel">
+          <div class="throw-reveal">
+            <div class="throw-reveal-side">
+              <img src="assets/hands/${lastPlayerThrow}.png" alt="${lastPlayerThrow}" draggable="false">
+              <p class="snes-small snes-highlight">YOU</p>
+              <p class="snes-small">${THROW_NAME[lastPlayerThrow]}</p>
+            </div>
+            <p class="snes-label" style="flex-shrink:0">VS</p>
+            <div class="throw-reveal-side throw-reveal-side--flip">
+              <img src="assets/hands/${lastOpponentThrow}.png" alt="${lastOpponentThrow}" draggable="false">
+              <p class="snes-small snes-muted">THEM</p>
+              <p class="snes-small">${THROW_NAME[lastOpponentThrow]}</p>
+            </div>
           </div>
         </div>
         <p class="snes-label ${resultColor}" style="text-align:center">${resultMsg}</p>
@@ -117,48 +151,54 @@ export function mount(container, options = {}) {
         }).join('  ')
       : '';
 
+    const greetingHTML = screenState === 'picking' && roundNumber === 1
+      ? `<div class="snes-panel">
+           <p class="snes-small snes-muted" style="line-height:2">"${npc.greeting}"</p>
+         </div>`
+      : '';
+
     container.innerHTML = `
-      <div class="screen fade-in" style="gap:14px">
+      <div class="screen fade-in" style="gap:0">
+        <div class="match-layout">
 
-        <!-- Scoreboard -->
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
-            <div class="portrait-frame portrait-frame--md">
-              <img src="assets/portraits/${playerPortrait}.png" alt="">
+          <!-- Left panel: scoreboard + greeting + round history -->
+          <div class="match-panel">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
+                <div class="portrait-frame portrait-frame--match">
+                  <img src="assets/portraits/${playerPortrait}.png" alt="">
+                </div>
+                <p class="snes-small snes-highlight" style="text-align:center;word-break:break-all">${playerName}</p>
+                <p style="font-size:10px;text-align:center">${scoreBar(playerRoundsWon)}</p>
+              </div>
+
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+                <p class="snes-small snes-muted">${cm.matchType === 'final' ? 'FINAL' : 'SEMI'}</p>
+                <p class="snes-label">VS</p>
+              </div>
+
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
+                <div class="portrait-frame portrait-frame--match">
+                  <img src="assets/portraits/${npcPortrait}.png" alt="">
+                </div>
+                <p class="snes-small" style="text-align:center;word-break:break-all">${npcName}</p>
+                <p style="font-size:10px;text-align:center">${scoreBar(opponentRoundsWon)}</p>
+              </div>
             </div>
-            <p class="snes-small snes-highlight" style="text-align:center;word-break:break-all">${playerName}</p>
-            <p style="font-size:10px;text-align:center">${scoreBar(playerRoundsWon)}</p>
+
+            ${greetingHTML}
+
+            ${historyHTML
+              ? `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0">${historyHTML}</div>`
+              : ''}
           </div>
 
-          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-            <p class="snes-small snes-muted">${cm.matchType === 'final' ? 'FINAL' : 'SEMI'}</p>
-            <p class="snes-label">VS</p>
+          <!-- Right panel: action area -->
+          <div class="match-panel">
+            ${bodyHTML}
           </div>
 
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
-            <div class="portrait-frame portrait-frame--md">
-              <img src="assets/portraits/${npcPortrait}.png" alt="">
-            </div>
-            <p class="snes-small" style="text-align:center;word-break:break-all">${npcName}</p>
-            <p style="font-size:10px;text-align:center">${scoreBar(opponentRoundsWon)}</p>
-          </div>
         </div>
-
-        <!-- Greeting (first screen only) -->
-        ${screenState === 'picking' && roundNumber === 1
-          ? `<div class="snes-panel">
-               <p class="snes-small snes-muted" style="line-height:2">"${npc.greeting}"</p>
-             </div>`
-          : ''}
-
-        <!-- Main action area -->
-        ${bodyHTML}
-
-        <!-- Round history -->
-        ${historyHTML
-          ? `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0">${historyHTML}</div>`
-          : ''}
-
       </div>
     `;
 
@@ -168,7 +208,17 @@ export function mount(container, options = {}) {
   // ── Listeners ───────────────────────────────────────────────────────────────
 
   function attachListeners() {
-    if (screenState === 'picking') {
+    if (screenState === 'powerup_stub') {
+      document.getElementById('btn-powerup-done')?.addEventListener('click', () => {
+        screenState = 'skill_stub';
+        render();
+      });
+    } else if (screenState === 'skill_stub') {
+      document.getElementById('btn-skill-done')?.addEventListener('click', () => {
+        screenState = 'picking';
+        render();
+      });
+    } else if (screenState === 'picking') {
       container.querySelectorAll('[data-throw]').forEach(btn => {
         btn.addEventListener('click', () => handleThrow(btn.dataset.throw));
       });
@@ -216,7 +266,7 @@ export function mount(container, options = {}) {
       screenState = 'match_over';
     } else {
       roundNumber++;
-      screenState = 'picking';
+      screenState = 'powerup_stub';
     }
     render();
   }

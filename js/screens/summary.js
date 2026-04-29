@@ -50,34 +50,36 @@ export function mount(container, options = {}) {
   const cfg = outcomeConfig[outcome];
 
   container.innerHTML = `
-    <div class="screen fade-in" style="justify-content:center;gap:20px">
+    <div class="screen fade-in" style="justify-content:center">
+      <div class="content-card" style="gap:20px">
 
-      <p class="snes-title" style="text-align:center">RESULTS</p>
+        <p class="snes-title" style="text-align:center">RESULTS</p>
 
-      <!-- Player card -->
-      <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
-        <div class="portrait-frame portrait-frame--lg">
-          <img src="assets/portraits/${playerPortrait}.png" alt="">
+        <!-- Player card -->
+        <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
+          <div class="portrait-frame portrait-frame--lg">
+            <img src="assets/portraits/${playerPortrait}.png" alt="">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <p class="snes-label snes-highlight">${playerName}</p>
+            <p class="snes-label ${cfg.color}" style="font-size:10px">${cfg.emoji} ${cfg.title}</p>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <p class="snes-label snes-highlight">${playerName}</p>
-          <p class="snes-label ${cfg.color}" style="font-size:10px">${cfg.emoji} ${cfg.title}</p>
+
+        <!-- ELO display -->
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
+          <p class="snes-small snes-muted">RATING</p>
+          <p class="snes-label" style="font-size:14px">
+            <span class="snes-highlight">${currentElo}</span>
+            <span class="snes-small snes-muted"> ELO</span>
+          </p>
         </div>
+
+        <button class="snes-btn snes-btn-yellow" id="btn-play-again" style="width:100%">
+          ▶ PLAY AGAIN
+        </button>
+
       </div>
-
-      <!-- ELO display -->
-      <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
-        <p class="snes-small snes-muted">RATING</p>
-        <p class="snes-label" style="font-size:14px">
-          <span class="snes-highlight">${currentElo}</span>
-          <span class="snes-small snes-muted"> ELO</span>
-        </p>
-      </div>
-
-      <button class="snes-btn snes-btn-yellow" id="btn-play-again" style="width:100%">
-        ▶ PLAY AGAIN
-      </button>
-
     </div>
   `;
 
