@@ -103,6 +103,10 @@
 - [x] Portrait assets — real PNGs in `assets/portraits/`, no SVG placeholders needed
 - [ ] Mobile portrait layout (vertical), touch input for all buttons
 
+### v0.1 Remaining
+- [ ] Powerup activation phase placeholder (disabled UI stub in match screen)
+- [ ] Skill information phase placeholder (disabled UI stub in match screen)
+
 ### NPC Data Loading
 - [x] Load `data/npc_roster_v0_9.json` at app init
 - [x] Cache in memory — it's read-only, never written at runtime

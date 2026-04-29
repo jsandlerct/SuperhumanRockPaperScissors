@@ -143,6 +143,30 @@ All 50 portraits (male_1–25, female_1–25) are in `assets/portraits/`. Filena
 
 ---
 
+## App Flow & Session
+
+**[v0.1 | 2026-04-27] Intro plays on every page load — no session auto-resume.**
+Every app load goes: intro → login → character select → game. The session is never used to skip the login screen. Session is written only when the player picks a character slot.
+
+**[v0.1 | 2026-04-27] Character select screen added between login and game (`js/screens/characterSelect.js`).**
+Shows exactly 3 slots (MAX_CHARACTERS_PER_ACCOUNT). Filled slots show portrait, name, season, phase, ELO with a PLAY button. Empty slots show a NEW button. Log Out button returns to login and clears session.
+
+**[v0.1 | 2026-04-27] NPC roster JSON is accessed as `.npcs` array (the JSON root has `meta` and `npcs` keys).**
+`main.js` caches `roster.npcs`, not the full root object. All `getNpcById` / `getNpcsByTier` calls operate on this array.
+
+**[v0.1 | 2026-04-27] Intro text crawl speed: 60ms per character (~200 WPM).**
+
+---
+
+## Hosting
+
+**[v0.1 | 2026-04-27] Project hosted on GitHub Pages.**
+Repo: `https://github.com/jsandlerct/SuperhumanRockPaperScissors`
+Live URL: `https://jsandlerct.github.io/SuperhumanRockPaperScissors`
+Deploy: push to `master` branch — Pages auto-deploys from root.
+
+---
+
 ## Schema Version History
 
 **[v1.0 | 2026-04-27] localStorage schema bumped to v1.0. Reference file: `docs/SRPS_localStorage_schema_v1_0.md`.**
