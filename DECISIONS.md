@@ -5,6 +5,13 @@
 
 ---
 
+## Testing
+
+**[v0.2 | 2026-04-30] Every game system addition or change must be accompanied by added or updated tests in `js/tests/`.**
+Rationale: NPC strategy bugs caught in testing (momentum off-by-one, maskedThrows order) confirmed the value of the test harness. Test coverage is not optional for game systems — it is part of the definition of done. Test files follow the `<system>.test.js` naming convention and are run via `tests.html`.
+
+---
+
 ## Architecture
 
 **[v0.95 | 2026-04-26] Tech stack: Vanilla HTML5 + Canvas + JavaScript, no framework, no build step.**
@@ -109,6 +116,24 @@ Full replacement pairs listed in design doc Section 16.9.
 ---
 
 ## Season & Tournament Structure
+
+**[v0.2 | 2026-04-30] Bracket display redesigned as a player-path layout (one column per round, linear sequence with ▶ arrows).**
+Replaces the T1 fork-connector layout. Scales cleanly to T5 (6 rounds) with horizontal scroll. NPC vs NPC results appear in a "Meanwhile…" panel after each player match, before bracket advances.
+
+**[v0.2 | 2026-04-30] NPC bracket composition rules for T2–T5: previous finalist NPC (guaranteed) + top 5 ELO from eligible pool (guaranteed) + random fill. All seeded by ELO descending.**
+T1 remains 3 random T1 NPCs + player. Eligible pool for tier N = all NPCs with tournamentLevel ≤ N.
+
+**[v0.2 | 2026-04-30] NPC concurrent matches are simulated (ELO-probability) after the player's match completes, then revealed before the bracket advances.**
+Results simulate that all matches happen simultaneously. Player clicks "Continue to [Next Round]" to advance.
+
+**[v0.2 | 2026-04-30] Finals match is Best of 7 (first to 4 rounds). All non-final matches remain Best of 5 (first to 3).**
+`matchType: 'finals'` triggers `ROUNDS_TO_WIN_MATCH_FINALS = 4` in match.js. Score bar scales to match.
+
+**[v0.2 | 2026-04-30] Round name badges display in the match screen header (`cm.roundName`) and bracket column headers.**
+Values from `TOURNAMENT_CONFIG[tier].roundNames` array, stored on `currentMatch.roundName` at match start.
+
+**[v0.2 | 2026-04-30] `currentTournamentTier` and `previousFinalists` stored in `_progress`.**
+`currentTournamentTier` (1–5) drives which bracket is generated. `previousFinalists` is set after any tournament where the player reaches the final; reset to null on season end or early elimination.
 
 **[v0.95 | 2026-04-26] Season-end write order is mandatory: NPC simulation → NPC ELO update → player worldRank recompute → write _world → write _progress → write _trophies → write _stats (zero season after career update).**
 

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SRPS Tests</title>
+  <style>
+    body {
+      background: #1a1a2e;
+      color: #f8f8f2;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 24px;
+      margin: 0;
+    }
+    h1 { color: #bd93f9; margin: 0 0 4px; font-size: 16px; }
+    p  { color: #6272a4; margin: 0 0 20px; font-size: 12px; }
+    #output {
+      white-space: pre;
+      line-height: 1.7;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #6272a4;
+    }
+  </style>
+</head>
+<body>
+  <h1>SRPS Test Suite</h1>
+  <p>NPC strategy tests — open browser console for additional detail</p>
+  <div id="output">Running…</div>
+  <div id="status"></div>
+
+  <script type="module">
+    import { runAll } from './js/tests/testRunner.js';
+    import './js/tests/npc.test.js';
+
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+
+    const { totalPass, totalFail } = await runAll(output);
+
+    status.textContent = `Finished — ${totalPass + totalFail} tests total`;
+    document.title = `${totalFail === 0 ? '✓' : '✗'} SRPS Tests`;
+  </script>
+</body>
+</html>

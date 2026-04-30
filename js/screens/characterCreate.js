@@ -182,6 +182,8 @@ export function mount(container, options = {}) {
       charId,
       currentSeason:          1,
       phase:                  'active_season',
+      currentTournamentTier:  1,
+      previousFinalists:      null,
       currentElo:             ELO_BASELINE,
       peakElo:                ELO_BASELINE,
       worldRank:              null,

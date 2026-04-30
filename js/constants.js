@@ -63,6 +63,69 @@ export const STARTING_LOADOUT = {
   MYSTIC_FORTUNE_synergy:{ Basic: 1, Advanced: 0, Legendary: 1 }, // MYSTIC.1.1.2 purchased
 };
 
+// ── Tournament Configuration ──────────────────────────────────────────────────
+export const TOURNAMENT_CONFIG = [
+  { tier: 1, name: 'Local Championship',       players: 4,  roundNames: ['Semifinal', 'Final'] },
+  { tier: 2, name: 'Regional Championship',    players: 8,  roundNames: ['Quarterfinal', 'Semifinal', 'Final'] },
+  { tier: 3, name: 'National Championship',    players: 16, roundNames: ['Round of 16', 'Quarterfinal', 'Semifinal', 'Final'] },
+  { tier: 4, name: 'Continental Championship', players: 32, roundNames: ['Round of 32', 'Round of 16', 'Quarterfinal', 'Semifinal', 'Final'] },
+  { tier: 5, name: 'World Championship',       players: 64, roundNames: ['Round of 64', 'Round of 32', 'Round of 16', 'Quarterfinal', 'Semifinal', 'Final'] },
+];
+
+// ── Match Structure (extended) ────────────────────────────────────────────────
+export const ROUNDS_TO_WIN_MATCH_FINALS = 4; // Finals are Best of 7 (first to 4)
+
+// ── Skill Point Awards ────────────────────────────────────────────────────────
+export const SKILL_POINTS_AWARD = {
+  1: { winner: 10, runnerUp:  5 },
+  2: { winner: 15, runnerUp:  7 },
+  3: { winner: 20, runnerUp: 10 },
+  4: { winner: 25, runnerUp: 12 },
+  5: { winner: 30, runnerUp: 15 },
+};
+
+// ── Powerup Icons ─────────────────────────────────────────────────────────────
+// Maps canonical powerup name (as stored in inventory entries) → icon asset path.
+export const POWERUP_ICONS = {
+  'A Word From Your Coach':        'assets/powerups/a_word_from_your_coach.png',
+  'Carolina Reaper':               'assets/powerups/carolina_reaper.png',
+  'Changed My Mind':               'assets/powerups/Changed_my_mind.png',
+  'Clockwork Orange':              'assets/powerups/clockwork_orange.png',
+  'Comically Large Fortune Cookie':'assets/powerups/comically_large_fortune_cookie.png',
+  'Cosmic Insurance Policy':       'assets/powerups/cosmic_insurance_policy.png',
+  'Courtside with Jessie':         'assets/powerups/courtside_with_jessie.png',
+  'Cuckoo Clock':                  'assets/powerups/cuckoo_clock.png',
+  'Dead Giveaway':                 'assets/powerups/dead_giveaway.png',
+  'Dizzy Spell':                   'assets/powerups/dizzy_spell.png',
+  'Espresso Shot':                 'assets/powerups/espresso_shot.png',
+  'Fait Accompli':                 'assets/powerups/fait_accompli.png',
+  'Focus Group':                   'assets/powerups/focus_group.png',
+  'Focused Focus Group':           'assets/powerups/focused_focus_group.png',
+  'Fortune Cookie':                'assets/powerups/fortune_cookie.png',
+  'Giant Fortune Cookie':          'assets/powerups/giant_fortune_cookie.png',
+  'Ghost Pepper':                  'assets/powerups/ghost_pepper.png',
+  'Hiccup Potion':                 'assets/powerups/hiccup_potion.png',
+  'Hot Sauce':                     'assets/powerups/hot_sauce.png',
+  'Jessie Did Her Homework':       'assets/powerups/jessie_did_her_homework.png',
+  'Jonesing to Help':              'assets/powerups/jonesing_to_help.png',
+  'Lucky Penny':                   'assets/powerups/lucky_penny.png',
+  'Molasses':                      'assets/powerups/molasses.png',
+  'Mystic Pizza':                  'assets/powerups/mystic_pizza.png',
+  "Pandora's Box":                 'assets/powerups/pandora\'s_box.png',
+  'Padlock':                       'assets/powerups/padlock.png',
+  'Project Hail Mary':             'assets/powerups/Project_hail_mary.png',
+  'Protein Shake':                 'assets/powerups/protein_shake.png',
+  'Reading Glasses':               'assets/powerups/reading_glasses.png',
+  'Research Notes':                'assets/powerups/research_notes.png',
+  "Schrödinger's Amulet":          "assets/powerups/schrodinger's_amulet.png",
+  'Smart Glasses':                 'assets/powerups/smart_glasses.png',
+  'Tabula Rasa':                   'assets/powerups/tabula_rasa.png',
+  'The Ballad of Jessie Jones':    'assets/powerups/the_ballad_of_jessie_jones.png',
+  'The Jessie Special':            'assets/powerups/the_jessie_special.png',
+  "Three's Company":               "assets/powerups/three's_company.png",
+  'Wish Upon a Star':              'assets/powerups/wish_upon_a_star.png',
+};
+
 // ── localStorage Schema Version ───────────────────────────────────────────────
 export const SCHEMA_VERSION = 1;
 // Increment this when making any breaking localStorage schema change.

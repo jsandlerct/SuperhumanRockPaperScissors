@@ -1,9 +1,9 @@
 import { navigate } from '../main.js';
 import { getNpcById } from '../main.js';
 import { resolveRound } from '../systems/round.js';
-import { initNpcMatchState, getNpcThrow } from '../systems/npc.js';
+import { initNpcMatchState, getNpcThrow, recordPlayerThrow } from '../systems/npc.js';
 import { calcNewElo } from '../systems/elo.js';
-import { ROUNDS_TO_WIN_MATCH } from '../constants.js';
+import { ROUNDS_TO_WIN_MATCH, ROUNDS_TO_WIN_MATCH_FINALS } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
   loadStats, saveStats, loadTournament, saveTournament,
@@ -13,8 +13,8 @@ const THROW_NAME = { rock: 'ROCK', paper: 'PAPER', scissors: 'SCISSORS' };
 const ROUND_WIN   = '■';
 const ROUND_EMPTY = '□';
 
-function scoreBar(won) {
-  return Array.from({ length: ROUNDS_TO_WIN_MATCH }, (_, i) =>
+function scoreBar(won, target) {
+  return Array.from({ length: target }, (_, i) =>
     `<span style="color:${i < won ? 'var(--snes-yellow)' : 'var(--snes-border)'}">${i < won ? ROUND_WIN : ROUND_EMPTY}</span>`
   ).join(' ');
 }
@@ -25,9 +25,10 @@ export function mount(container, options = {}) {
   const identity = loadIdentity(charId);
   const progress = loadProgress(charId);
 
-  const tournamentData = loadTournament(charId);
-  const cm = tournamentData.currentMatch;
-  const npc = getNpcById(cm.opponentId);
+  const tournamentData  = loadTournament(charId);
+  const cm              = tournamentData.currentMatch;
+  const npc             = getNpcById(cm.opponentId);
+  const roundsToWin     = cm.matchType === 'finals' ? ROUNDS_TO_WIN_MATCH_FINALS : ROUNDS_TO_WIN_MATCH;
 
   // In-memory match state — never persisted mid-round
   let playerRoundsWon   = 0;
@@ -122,7 +123,7 @@ export function mount(container, options = {}) {
         <button class="snes-btn snes-btn-yellow" id="btn-next" style="width:100%">▶ NEXT</button>
       `;
     } else if (screenState === 'match_over') {
-      const won = playerRoundsWon >= ROUNDS_TO_WIN_MATCH;
+      const won = playerRoundsWon >= roundsToWin;
       bodyHTML = `
         <div class="snes-panel" style="text-align:center;display:flex;flex-direction:column;gap:12px">
           <p class="snes-label ${won ? 'snes-success' : 'snes-error'}" style="font-size:12px">
@@ -169,11 +170,11 @@ export function mount(container, options = {}) {
                   <img src="assets/portraits/${playerPortrait}.png" alt="">
                 </div>
                 <p class="snes-small snes-highlight" style="text-align:center;word-break:break-all">${playerName}</p>
-                <p style="font-size:10px;text-align:center">${scoreBar(playerRoundsWon)}</p>
+                <p style="font-size:10px;text-align:center">${scoreBar(playerRoundsWon, roundsToWin)}</p>
               </div>
 
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-                <p class="snes-small snes-muted">${cm.matchType === 'final' ? 'FINAL' : 'SEMI'}</p>
+                <p class="snes-small snes-muted">${(cm.roundName ?? '').toUpperCase()}</p>
                 <p class="snes-label">VS</p>
               </div>
 
@@ -182,7 +183,7 @@ export function mount(container, options = {}) {
                   <img src="assets/portraits/${npcPortrait}.png" alt="">
                 </div>
                 <p class="snes-small" style="text-align:center;word-break:break-all">${npcName}</p>
-                <p style="font-size:10px;text-align:center">${scoreBar(opponentRoundsWon)}</p>
+                <p style="font-size:10px;text-align:center">${scoreBar(opponentRoundsWon, roundsToWin)}</p>
               </div>
             </div>
 
@@ -232,7 +233,7 @@ export function mount(container, options = {}) {
   // ── Round logic ──────────────────────────────────────────────────────────────
 
   function handleThrow(playerThrow) {
-    const opponentThrow = getNpcThrow(npcMatchState);
+    const opponentThrow = getNpcThrow(npcMatchState, lastRoundResult);
     const result        = resolveRound(playerThrow, opponentThrow);
 
     lastPlayerThrow   = playerThrow;
@@ -253,16 +254,15 @@ export function mount(container, options = {}) {
     tournamentData.currentMatch.opponentRoundsWon = opponentRoundsWon;
     saveTournament(charId, tournamentData);
 
-    // Update npc strategy state for mirror
-    npcMatchState.lastPlayerThrow = playerThrow;
+    // Record player throw for history-reading strategies (streaker, mimic, historian)
+    recordPlayerThrow(npcMatchState, playerThrow);
 
     screenState = 'revealing';
     render();
   }
 
   function advanceRound() {
-    if (playerRoundsWon >= ROUNDS_TO_WIN_MATCH ||
-        opponentRoundsWon >= ROUNDS_TO_WIN_MATCH) {
+    if (playerRoundsWon >= roundsToWin || opponentRoundsWon >= roundsToWin) {
       screenState = 'match_over';
     } else {
       roundNumber++;
@@ -274,7 +274,7 @@ export function mount(container, options = {}) {
   // ── Match completion ─────────────────────────────────────────────────────────
 
   function finishMatch() {
-    const playerWon = playerRoundsWon >= ROUNDS_TO_WIN_MATCH;
+    const playerWon = playerRoundsWon >= roundsToWin;
     const matchResult = playerWon ? 'p1_won' : 'p2_won';
     const score       = [playerRoundsWon, opponentRoundsWon];
 

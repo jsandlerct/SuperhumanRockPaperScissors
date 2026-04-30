@@ -22,6 +22,10 @@ export function getNpcsByTier(level) {
   return npcRoster?.filter(n => n.tournamentLevel === level) ?? [];
 }
 
+export function getAllNpcs() {
+  return npcRoster ?? [];
+}
+
 async function loadNpcRoster() {
   const res = await fetch('data/npc_roster_v0_9.json');
   npcRoster = (await res.json()).npcs;

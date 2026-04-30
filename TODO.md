@@ -60,8 +60,8 @@
   - [x] Round outcome resolution (win/lose/tie)
   - [x] Match win condition: first to `ROUNDS_TO_WIN_MATCH` (3) rounds
   - [x] Round history panel: running tally of rounds won per player
-- [ ] Placeholder: powerup activation phase (disabled, UI stub only)
-- [ ] Placeholder: skill information phase (disabled, UI stub only)
+- [x] Placeholder: powerup activation phase (disabled, UI stub only)
+- [x] Placeholder: skill information phase (disabled, UI stub only)
 
 ### NPC Strategy Engine (v0.1 strategies only)
 - [x] `js/systems/npc.js`
@@ -116,17 +116,18 @@
 
 ## v0.2 Tasks (do not start until v0.1 ships)
 
-- [ ] All 5 tournaments with correct bracket sizes
-- [ ] Full season structure: advancement rules, season end conditions
+- [x] Full NPC roster: all 99 NPCs, all 13 strategies
+- [x] All 5 tournaments with correct bracket sizes
+- [x] Full season structure: advancement rules, season end conditions
+- [x] Add button toggle during tournaments to switch between view of player's bracket and full tournament view
 - [ ] Off-season screen (placeholder respec — no trees)
-- [ ] Full NPC roster: all 99 NPCs, all 13 strategies
 - [ ] Full ELO simulation: all NPC vs NPC matches per season (ELO-probability only)
 - [ ] Global ranking display with milestone celebrations (Section 11.3)
 - [ ] Career summary screen: stats, throw distribution
 - [ ] Post-season summary: consolation bonus + Jessie dialogue stubs
 - [ ] Trophy system: 5 trophy types, trophy case
 - [ ] Basic powerup drops (Basic tier only, no tree-specific powerups)
-- [ ] 3 characters per account
+- [ ] 3 characters per account and ability to delete characters (with double "Are you sure?" prompts)
 
 ---
 
