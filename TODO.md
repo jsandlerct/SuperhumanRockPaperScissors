@@ -120,7 +120,6 @@
 - [x] All 5 tournaments with correct bracket sizes
 - [x] Full season structure: advancement rules, season end conditions
 - [x] Add button toggle during tournaments to switch between view of player's bracket and full tournament view
-- [ ] Off-season screen (placeholder respec — no trees)
 - [ ] Full ELO simulation: all NPC vs NPC matches per season (ELO-probability only)
 - [ ] Global ranking display with milestone celebrations (Section 11.3)
 - [ ] Career summary screen: stats, throw distribution
@@ -128,6 +127,7 @@
 - [ ] Trophy system: 5 trophy types, trophy case
 - [ ] Basic powerup drops (Basic tier only, no tree-specific powerups)
 - [ ] 3 characters per account and ability to delete characters (with double "Are you sure?" prompts)
+- [ ] Off-season screen (placeholder respec — no trees)
 
 ---
 
