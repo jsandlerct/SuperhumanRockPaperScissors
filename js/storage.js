@@ -108,3 +108,13 @@ export function saveWorld(charId, world) {
 export function loadWorld(charId) {
   return JSON.parse(localStorage.getItem(`srps_char_${charId}_world`) || 'null');
 }
+
+// ── Character deletion ────────────────────────────────────────────────────────
+
+// Removes all localStorage keys for a character. Caller must also update the account.
+export function deleteCharacterData(charId) {
+  const suffixes = ['identity', 'progress', 'stats', 'trophies', 'tournament', 'world'];
+  for (const suffix of suffixes) {
+    localStorage.removeItem(`srps_char_${charId}_${suffix}`);
+  }
+}

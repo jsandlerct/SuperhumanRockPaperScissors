@@ -120,20 +120,21 @@
 - [x] All 5 tournaments with correct bracket sizes
 - [x] Full season structure: advancement rules, season end conditions
 - [x] Add button toggle during tournaments to switch between view of player's bracket and full tournament view
-- [ ] Full ELO simulation: all NPC vs NPC matches per season (ELO-probability only)
-- [ ] Global ranking display with milestone celebrations (Section 11.3)
-- [ ] Career summary screen: stats, throw distribution
-- [ ] Post-season summary: consolation bonus + Jessie dialogue stubs
-- [ ] Trophy system: 5 trophy types, trophy case
-- [ ] Basic powerup drops (Basic tier only, no tree-specific powerups)
-- [ ] 3 characters per account and ability to delete characters (with double "Are you sure?" prompts)
-- [ ] Off-season screen (placeholder respec — no trees)
+- [x] Full ELO simulation: all NPC vs NPC matches per season (ELO-probability only)
+- [x] Global ranking display with milestone celebrations (Section 11.3)
+- [x] Career summary screen: stats, throw distribution
+- [x] Post-season summary: consolation bonus + Jessie dialogue stubs
+- [x] Trophy system: 5 trophy types, trophy case
+- [x] Basic powerup drops (Basic tier only, no tree-specific powerups)
+- [x] 3 characters per account and ability to delete characters (with double "Are you sure?" prompts)
+- [x] Off-season screen (placeholder respec — no trees)
 
 ---
 
 ## v0.3 Tasks (do not start until v0.2 ships)
 
 - [ ] All 3 skill trees, levels 1–2 only
+- [ ] UI element in between tournaments where you can view the whole global ranking
 - [ ] Active skill system: one active skill per round, cooldowns, UI buttons
 - [ ] Skill point allocation UI: node graph, tap to inspect, Add/Remove/Lock In
 - [ ] Lock In gate: disabled until ≥1 node purchased (Section 6.10 of CLAUDE.md)
@@ -157,8 +158,7 @@
 - [ ] Trust My Luck full implementation (75% / 85% / 95%)
 - [ ] Skill information phase fully implemented
 - [ ] Coach Jessie: complete tutorial + all milestone dialogues
-- [ ] Final portrait assets replacing SVG placeholders
-- [ ] All 13 NPC strategies fully implemented
+
 
 ---
 

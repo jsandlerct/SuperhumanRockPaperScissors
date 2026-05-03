@@ -84,6 +84,22 @@ export const SKILL_POINTS_AWARD = {
   5: { winner: 30, runnerUp: 15 },
 };
 
+// ── Trophy Configuration (Section 13) ────────────────────────────────────────
+// One entry per earnable trophy. id = `t{tier}_{place}`.
+// Unearned trophies are shown as silhouettes in the trophy case.
+export const TROPHY_CONFIG = [
+  { id: 't1_1st', tier: 1, place: '1st', label: 'LOCAL CHAMPION',        asset: 'assets/trophies/trophy_local_1st_place.png' },
+  { id: 't1_2nd', tier: 1, place: '2nd', label: 'LOCAL RUNNER-UP',       asset: 'assets/trophies/trophy_local_2nd_medal.png' },
+  { id: 't2_1st', tier: 2, place: '1st', label: 'REGIONAL CHAMPION',     asset: 'assets/trophies/trophy_regional_1st_place.png' },
+  { id: 't2_2nd', tier: 2, place: '2nd', label: 'REGIONAL RUNNER-UP',    asset: 'assets/trophies/trophy_regional_2nd_place.png' },
+  { id: 't3_1st', tier: 3, place: '1st', label: 'NATIONAL CHAMPION',     asset: 'assets/trophies/trophy_national_1st_place.png' },
+  { id: 't3_2nd', tier: 3, place: '2nd', label: 'NATIONAL RUNNER-UP',    asset: 'assets/trophies/trophy_national_2nd_place.png' },
+  { id: 't4_1st', tier: 4, place: '1st', label: 'CONTINENTAL CHAMPION',  asset: 'assets/trophies/trophy_continental_1st_place.png' },
+  { id: 't4_2nd', tier: 4, place: '2nd', label: 'CONTINENTAL RUNNER-UP', asset: 'assets/trophies/trophy_continental_2nd_place.png' },
+  { id: 't5_1st', tier: 5, place: '1st', label: 'WORLD CHAMPION',        asset: 'assets/trophies/trophy_world_1st_place.png' },
+  { id: 't5_2nd', tier: 5, place: '2nd', label: 'WORLD RUNNER-UP',       asset: 'assets/trophies/trophy_world_2nd_place.png' },
+];
+
 // ── Powerup Icons ─────────────────────────────────────────────────────────────
 // Maps canonical powerup name (as stored in inventory entries) → icon asset path.
 export const POWERUP_ICONS = {
@@ -125,6 +141,64 @@ export const POWERUP_ICONS = {
   "Three's Company":               "assets/powerups/three's_company.png",
   'Wish Upon a Star':              'assets/powerups/wish_upon_a_star.png',
 };
+
+// ── Powerup Descriptions ──────────────────────────────────────────────────────
+// Maps canonical powerup name → short description shown in the detail popup.
+export const POWERUP_DESCRIPTIONS = {
+  'Changed My Mind': 'During the Gut Check phase, change your throw selection before the round is revealed. One-time use per round.',
+};
+
+// ── Jessie Consolation Dialogue (Section 4.6) ────────────────────────────────
+// Locked text — do not change without designer approval.
+// Shown to eliminated players (not runner-up, not champion) at season end.
+// Each tier is [pepTalk, awardSentence] — displayed as two tap-to-advance boxes.
+export const JESSIE_CONSOLATION_DIALOGUE = {
+  1: [
+    "Hey. That one stings, I know. But you know what? We've got the whole off-season. I'm talking early mornings, late nights, the works. By the time we're done, you're going to be a completely different competitor. Take these points — you earned every one of them.",
+    "Your intensive off-season training yielded 25 new skill points to spend before next season!",
+  ],
+  2: [
+    "Regional's a tough draw. But honestly? This is exactly the kind of loss that makes champions. We've got time to fix what went wrong. I've already got a training plan in my head. These points are from us putting in the work together.",
+    "Your dedicated off-season work earned you 20 new skill points to spend before next season!",
+  ],
+  3: [
+    "You made it to Nationals. That's real. And now we know exactly what we need to sharpen. We'll use this off-season well — I promise you that. Here's what our sessions together earned you.",
+    "Your focused off-season sessions earned you 15 new skill points to spend before next season!",
+  ],
+  4: [
+    "Continental. You were right there. The gap between you and the top is smaller than you think — I've seen it up close. We don't have a lot of off-season left, but we're going to make every session count. These points are from the work we squeezed in.",
+    "Your off-season work together earned you 10 new skill points to spend before next season!",
+  ],
+  5: [
+    "You made the World Championship. Let that land for a second. The off-season is short — almost no time at all before it starts again — but we found a few sessions together, and I want you to have what we worked on. You're ready.",
+    "Those sessions together earned you 5 new skill points to spend before next season!",
+  ],
+};
+
+// ── Ranking Milestones (Section 11.3) ─────────────────────────────────────────
+// One-shot thresholds — fire the first time player's worldRank reaches each level.
+export const RANKING_MILESTONES = [
+  { id: 'ranked', threshold: 100, message: "You've entered the world rankings!" },
+  { id: 'top50',  threshold: 50,  message: "You've broken into the top 50!" },
+  { id: 'top20',  threshold: 20,  message: "You broke into the top 20!" },
+  { id: 'top10',  threshold: 10,  message: "You're in the top 10 in the world!" },
+  { id: 'top3',   threshold: 3,   message: "You're one of the top 3 players on the planet!" },
+  { id: 'rank1',  threshold: 1,   message: "You are the #1 ranked RPS player in the world!" },
+];
+// Personal best fires any season the player improves their best rank (not one-shot).
+export const MILESTONE_PERSONAL_BEST_MSG    = "You hit a new personal best ranking!";
+// Championship milestones fire on T5 wins.
+export const MILESTONE_FIRST_CHAMP_MSG      = "First Championship! You've reached the pinnacle!";
+export const MILESTONE_THREE_TIME_CHAMP_MSG = "Three-Time World Champion!";
+
+// ── Powerup Drop System (Section 8.4) ────────────────────────────────────────
+// Base drop chance by the player's Nth win within a match (escalating schedule).
+// Values > 1.0 mean guaranteed drops + fractional chance for one more.
+export const POWERUP_DROP_CHANCE_BY_ROUND_WON = {
+  1: 0.10, 2: 0.20, 3: 0.40, 4: 0.80, 5: 1.60, 6: 3.20,
+};
+export const POWERUP_UPGRADE_CHANCE_BASE  = 0.10; // Flat +10% to upgrade one tier on any drop
+export const POWERUP_MAX_SLOTS_BASELINE   = 3;    // Default slots before MIND.1 / FORTUNE.1.1.2
 
 // ── localStorage Schema Version ───────────────────────────────────────────────
 export const SCHEMA_VERSION = 1;

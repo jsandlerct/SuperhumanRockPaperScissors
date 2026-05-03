@@ -1,8 +1,8 @@
 import { navigate, routeByPhase } from '../main.js';
 import { MAX_CHARACTERS_PER_ACCOUNT } from '../constants.js';
 import {
-  loadAccount, saveSession, clearSession,
-  loadIdentity, loadProgress,
+  loadAccount, saveAccount, saveSession, clearSession,
+  loadIdentity, loadProgress, deleteCharacterData,
 } from '../storage.js';
 
 const PHASE_LABEL = {
@@ -14,37 +14,70 @@ const PHASE_LABEL = {
 
 export function mount(container, options = {}) {
   const username = options.username;
-  const account  = loadAccount(username);
 
-  // Build slot data: always exactly MAX_CHARACTERS_PER_ACCOUNT slots
-  const slots = Array.from({ length: MAX_CHARACTERS_PER_ACCOUNT }, (_, i) => {
-    const charId = account.characterIds[i] ?? null;
-    if (!charId) return { empty: true, index: i };
+  // Two-stage delete confirmation: { charId, stage: 1|2 } or null
+  let deleteConfirm = null;
 
-    const identity = loadIdentity(charId);
-    const progress = loadProgress(charId);
-    return {
-      empty:     false,
-      index:     i,
-      charId,
-      name:      identity?.name ?? '???',
-      portraitId: identity?.portraitId ?? 'male_1',
-      elo:       progress?.currentElo ?? 0,
-      season:    progress?.currentSeason ?? 1,
-      phase:     progress?.phase ?? 'active_season',
-    };
-  });
+  function getSlots() {
+    const account = loadAccount(username);
+    return Array.from({ length: MAX_CHARACTERS_PER_ACCOUNT }, (_, i) => {
+      const charId = account.characterIds[i] ?? null;
+      if (!charId) return { empty: true, index: i };
+      const identity = loadIdentity(charId);
+      const progress = loadProgress(charId);
+      return {
+        empty:      false,
+        index:      i,
+        charId,
+        name:       identity?.name ?? '???',
+        portraitId: identity?.portraitId ?? 'male_1',
+        elo:        progress?.currentElo ?? 0,
+        season:     progress?.currentSeason ?? 1,
+        phase:      progress?.phase ?? 'active_season',
+      };
+    });
+  }
 
-  const canCreateNew = account.characterIds.length < MAX_CHARACTERS_PER_ACCOUNT;
+  // ── Render ───────────────────────────────────────────────────────────────────
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  function render() {
+    const account    = loadAccount(username);
+    const slots      = getSlots();
+    const canCreate  = account.characterIds.length < MAX_CHARACTERS_PER_ACCOUNT;
 
-  function renderSlot(slot) {
+    container.innerHTML = `
+      <div class="screen fade-in" style="justify-content:center">
+        <div class="content-card--lg">
+          <div style="text-align:center">
+            <p class="snes-title">SRPS</p>
+            <p class="snes-small snes-highlight" style="margin-top:6px">
+              ${username.toUpperCase()}
+            </p>
+          </div>
+
+          <hr class="snes-divider">
+
+          <p class="snes-small snes-muted">SELECT CHARACTER</p>
+
+          <div class="char-slots-grid">
+            ${slots.map(s => renderSlot(s, canCreate)).join('')}
+          </div>
+
+          <hr class="snes-divider">
+
+          <button class="snes-btn" id="btn-logout" style="width:100%;opacity:0.6">
+            ← LOG OUT
+          </button>
+        </div>
+      </div>
+    `;
+
+    attachListeners(slots);
+  }
+
+  function renderSlot(slot, canCreate) {
     if (slot.empty) {
-      if (!canCreateNew) {
-        // All slots filled — this shouldn't render but guard anyway
-        return '';
-      }
+      if (!canCreate) return '';
       return `
         <div class="snes-panel" style="
           display:flex;align-items:center;gap:14px;
@@ -63,9 +96,53 @@ export function mount(container, options = {}) {
           <button
             class="snes-btn"
             data-action="create"
-            data-index="${slot.index}"
             style="flex-shrink:0;font-size:6px;padding:8px 10px"
           >+ NEW</button>
+        </div>
+      `;
+    }
+
+    const isConfirming = deleteConfirm?.charId === slot.charId;
+
+    if (isConfirming && deleteConfirm.stage === 1) {
+      return `
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px;
+             border-color:var(--snes-error)">
+          <p class="snes-small snes-error">DELETE ${slot.name.toUpperCase()}?</p>
+          <p class="snes-small snes-muted">This character and all their data will be removed.</p>
+          <div style="display:flex;gap:8px">
+            <button class="snes-btn snes-btn-yellow" data-action="delete-stage2"
+                    data-charid="${slot.charId}" style="flex:1;font-size:6px;padding:8px">
+              YES, DELETE
+            </button>
+            <button class="snes-btn" data-action="delete-cancel"
+                    style="flex:1;font-size:6px;padding:8px">
+              CANCEL
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (isConfirming && deleteConfirm.stage === 2) {
+      return `
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px;
+             border-color:var(--snes-error)">
+          <p class="snes-small snes-error">⚠ PERMANENT DELETION</p>
+          <p class="snes-small snes-muted">
+            Are you absolutely sure? This cannot be undone.
+            ${slot.name.toUpperCase()} will be gone forever.
+          </p>
+          <div style="display:flex;gap:8px">
+            <button class="snes-btn" style="flex:1;font-size:5px;padding:8px;color:var(--snes-error)"
+                    data-action="delete-confirm" data-charid="${slot.charId}">
+              YES, DELETE PERMANENTLY
+            </button>
+            <button class="snes-btn" data-action="delete-cancel"
+                    style="flex:1;font-size:6px;padding:8px">
+              CANCEL
+            </button>
+          </div>
         </div>
       `;
     }
@@ -87,62 +164,86 @@ export function mount(container, options = {}) {
             ELO <span class="snes-highlight">${slot.elo}</span>
           </p>
         </div>
-        <button
-          class="snes-btn snes-btn-yellow"
-          data-action="continue"
-          data-charid="${slot.charId}"
-          style="flex-shrink:0;font-size:6px;padding:8px 10px"
-        >▶ PLAY</button>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="snes-btn snes-btn-yellow" data-action="continue"
+                  data-charid="${slot.charId}" style="font-size:6px;padding:8px 10px">
+            ▶ PLAY
+          </button>
+          <button class="snes-btn" data-action="stats"
+                  data-charid="${slot.charId}" style="font-size:6px;padding:8px 10px;opacity:0.8">
+            📊 STATS
+          </button>
+          <button class="snes-btn" data-action="delete-stage1"
+                  data-charid="${slot.charId}" style="font-size:6px;padding:8px 10px;opacity:0.7;color:var(--snes-error)">
+            ✗ DELETE
+          </button>
+        </div>
       </div>
     `;
   }
 
-  container.innerHTML = `
-    <div class="screen fade-in" style="justify-content:center">
-      <div class="content-card--lg">
-        <div style="text-align:center">
-          <p class="snes-title">SRPS</p>
-          <p class="snes-small snes-highlight" style="margin-top:6px">
-            ${username.toUpperCase()}
-          </p>
-        </div>
+  // ── Listeners ────────────────────────────────────────────────────────────────
 
-        <hr class="snes-divider">
-
-        <p class="snes-small snes-muted">SELECT CHARACTER</p>
-
-        <div class="char-slots-grid">
-          ${slots.map(renderSlot).join('')}
-        </div>
-
-        <hr class="snes-divider">
-
-        <button class="snes-btn" id="btn-logout" style="width:100%;opacity:0.6">
-          ← LOG OUT
-        </button>
-      </div>
-    </div>
-  `;
-
-  // ── Listeners ───────────────────────────────────────────────────────────────
-
-  container.querySelectorAll('[data-action="continue"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const charId = btn.dataset.charid;
-      saveSession({ loggedInUsername: username, activeCharId: charId });
-      routeByPhase(charId);
+  function attachListeners(slots) {
+    container.querySelectorAll('[data-action="continue"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const charId = btn.dataset.charid;
+        saveSession({ loggedInUsername: username, activeCharId: charId });
+        routeByPhase(charId);
+      });
     });
-  });
 
-  container.querySelectorAll('[data-action="create"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      saveSession({ loggedInUsername: username, activeCharId: null });
-      navigate('create');
+    container.querySelectorAll('[data-action="stats"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigate('careerSummary', { charId: btn.dataset.charid, username });
+      });
     });
-  });
 
-  document.getElementById('btn-logout').addEventListener('click', () => {
-    clearSession();
-    navigate('login');
-  });
+    container.querySelectorAll('[data-action="create"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        saveSession({ loggedInUsername: username, activeCharId: null });
+        navigate('create');
+      });
+    });
+
+    container.querySelectorAll('[data-action="delete-stage1"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        deleteConfirm = { charId: btn.dataset.charid, stage: 1 };
+        render();
+      });
+    });
+
+    container.querySelectorAll('[data-action="delete-stage2"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        deleteConfirm = { charId: btn.dataset.charid, stage: 2 };
+        render();
+      });
+    });
+
+    container.querySelectorAll('[data-action="delete-cancel"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        deleteConfirm = null;
+        render();
+      });
+    });
+
+    container.querySelectorAll('[data-action="delete-confirm"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const charId = btn.dataset.charid;
+        const account = loadAccount(username);
+        account.characterIds = account.characterIds.filter(id => id !== charId);
+        saveAccount(username, account);
+        deleteCharacterData(charId);
+        deleteConfirm = null;
+        render();
+      });
+    });
+
+    document.getElementById('btn-logout')?.addEventListener('click', () => {
+      clearSession();
+      navigate('login');
+    });
+  }
+
+  render();
 }

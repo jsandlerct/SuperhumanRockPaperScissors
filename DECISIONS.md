@@ -5,6 +5,16 @@
 
 ---
 
+## Trophy Case Display
+
+**[v0.2 | 2026-05-02] Trophy case displays earned trophies grouped by season — no unearned/shadow entries.**
+Each season that produced a trophy shows a row of full-color trophy images with labels. The same trophy can appear in multiple seasons (e.g., Local Champion in Season 1 and Season 2 are two separate entries). Replaces the old 2-column all-trophies-with-silhouettes layout.
+
+**[v0.2 | 2026-05-02] `_trophies.trophies` changed from `string[]` to `{id: string, season: number}[]`.**
+Legacy string entries (from before this change) are read as `{ id: entry, season: 1 }` for backwards compatibility. Deduplication guard removed — same trophy ID can appear multiple times across different seasons. `newTrophy` banner (Season Complete panel) still fires only on the first earn of each trophy type.
+
+---
+
 ## Testing
 
 **[v0.2 | 2026-04-30] Every game system addition or change must be accompanied by added or updated tests in `js/tests/`.**
@@ -115,6 +125,42 @@ Full replacement pairs listed in design doc Section 16.9.
 
 ---
 
+## Ranking & Milestones
+
+**[v0.2 | 2026-05-02] Ranking milestone messages (Section 11.3) are detected in summary.js after season simulation and displayed on a "Season Complete" results panel before navigating away.**
+One-shot threshold milestones (ranked, top50, top20, top10, top3, rank1) are stored in `_trophies.achievedMilestones` (array of IDs). Personal best fires any season the player improves their peak rank (repeatable, not stored). Championship milestones (first T5 win, third T5 win) are detected from `stats.career.t5Wins` before incrementing.
+
+**[v0.2 | 2026-05-02] `peakWorldRank` stored in `_progress` (lowest rank number ever achieved). Updated by `runSeasonSimulation` via `Math.min`.**
+Required for personal best detection: summary.js captures it before calling the simulation, then compares against the new rank.
+
+**[v0.2 | 2026-05-02] `stats.career.t5Wins` tracks World Championship wins separately from `tournamentsWon`.**
+Needed to detect "First Championship" (t5Wins === 0 before win) and "Three-Time World Champion" (t5Wins + 1 === 3).
+
+**[v0.2 | 2026-05-02] Season-end summary uses a two-phase UI: initial results view → "END OF SEASON" triggers simulation → "Season Complete" panel with rank + milestones → "CONTINUE" navigates.**
+The initial view shows last season's rank (from `progress.worldRank`). The season complete panel shows the newly computed rank and any triggered milestones.
+
+---
+
+## Career Summary
+
+**[v0.2 | 2026-05-02] Career summary screen (`js/screens/careerSummary.js`) is accessible via a STATS button on each filled character slot in the character select screen.**
+Shows: portrait, current ELO + world rank, career record (seasons, tournaments, wins, runner-up, best finish, best rank, peak ELO), and throw distribution table (R/P/S play% and win% from career stats). Trophy case and HOF plaque are deferred to the trophy system task. No game logic — pure presentation, no tests required.
+
+---
+
+## Season Simulation
+
+**[v0.2 | 2026-05-02] NPC season simulation runs 5 separate brackets (one per tier), NPC-only, each using the standard TOURNAMENT_CONFIG bracket size.**
+Eligible pool for tier N = all NPCs with tournamentLevel ≤ N. Random selection fills each bracket; selected NPCs are seeded by ELO descending. All bracket sizes are powers of 2 (4, 8, 16, 32, 64) and eligible pool is always ≥ bracket size, so no bye handling needed.
+
+**[v0.2 | 2026-05-02] NPC unspentSkillPoints stored in _world bucket on each NPC entry.**
+Carry-over from seasons where the budget cannot be fully spent (no legal affordable nodes remain). Field initialised to remaining pts after starting budget spend; added to each season's earnings before spending.
+
+**[v0.2 | 2026-05-02] worldRank computed as: count of NPC ELOs strictly greater than player ELO, plus 1.**
+Ties resolve in the player's favour (player gets the higher rank). Computed from the post-simulation eloMap, not from stale world bucket values.
+
+---
+
 ## Season & Tournament Structure
 
 **[v0.2 | 2026-04-30] Bracket display redesigned as a player-path layout (one column per round, linear sequence with ▶ arrows).**
@@ -191,7 +237,64 @@ Shows exactly 3 slots (MAX_CHARACTERS_PER_ACCOUNT). Filled slots show portrait, 
 **[v0.1 | 2026-04-27] NPC roster JSON is accessed as `.npcs` array (the JSON root has `meta` and `npcs` keys).**
 `main.js` caches `roster.npcs`, not the full root object. All `getNpcById` / `getNpcsByTier` calls operate on this array.
 
-**[v0.1 | 2026-04-27] Intro text crawl speed: 60ms per character (~200 WPM).**
+**[v0.2 | 2026-05-02] Intro text crawl speed: 40ms per character (~300 WPM).**
+
+**[v0.2 | 2026-05-02] Intro text updated by designer to reflect the three skill trees more explicitly.**
+New lines: "BIOTECH IMPLANTS UTILIZING QUANTUM MECHANICS COULD UNLOCK SUPERHUMAN ABILITIES", "MICROSCOPIC PERCEPTION AND REACTION TIMES." (MIND), "THE ABILITY TO INFLUENCE THOUGHTS AND ACTIONS." (MYSTIC), "EVEN THE ABILITY TO CREATE ORDER FROM WHAT WAS SEEMINGLY RANDOM CHAOS." (FORTUNE). Source of truth is `js/screens/intro.js` — do not revert to older wording.
+
+**[v0.2 | 2026-05-02] Trophy PNG assets added to `assets/trophies/` — one 1st-place and one 2nd-place image per tournament tier.**
+Naming convention: `trophy_{tier}_1st_place.png` and `trophy_{tier}_2nd_place.png`, where `{tier}` is `local`, `regional`, `national`, `continental`, or `world`. Exception: the local runner-up is named `trophy_local_2nd_medal.png` (not `2nd_place`). Use these exact filenames when displaying trophies in the trophy system (v0.2).
+
+**[v0.2 | 2026-05-02] Jessie consolation dialogue shown at season-end for eliminated players (not runner-up, not champion) as a tap-to-advance SNES dialog box stub.**
+Locked dialogue text lives in `JESSIE_CONSOLATION_DIALOGUE` in `constants.js` — 5 tiers × 2 messages (pep talk + award sentence). Portrait area shows a placeholder; actual Jessie expression sprites (`assets/portraits/jessie/`) are deferred to v1.0. Dialogue fires in `summary.js` between "END OF SEASON" click and the season-results panel.
+
+---
+
+## Powerup Drop System
+
+**[v0.2 | 2026-05-02] Drop pool for v0.2: "Changed My Mind" only (universal, Basic, round scope).**
+All players are eligible regardless of tree. Tree-specific powerups activate in v0.3 alongside the skill tree system. "Changed My Mind" grants the ability to change your throw selection during the Gut Check phase.
+
+**[v0.2 | 2026-05-02] Drop rates follow the escalating schedule from Section 8.4: 10% / 20% / 40% / 80% / 160% / 320% by player's Nth win in the match.**
+Values >100% encode guaranteed drops + fractional chance for one more (e.g. 160% = 1 guaranteed + 60% chance of a second). Constants in `POWERUP_DROP_CHANCE_BY_ROUND_WON`.
+
+**[v0.2 | 2026-05-02] Baseline powerup slots = 3 (Section 8.3). MIND.1 raises to 5; FORTUNE.1.1.2 synergy adds a 6th.**
+Constant `POWERUP_MAX_SLOTS_BASELINE = 3`. `getMaxSlots(treeState)` in `powerupEngine.js` is the single source of truth.
+
+**[v0.2 | 2026-05-02] Overflow prompt is mandatory and blocking (Section 6.8). Player must choose replace or discard before the round can advance.**
+Each overflow drop is handled individually. On replace: chosen slot is spliced out, new drop pushed to end (FIFO preserved). On discard: drop is discarded silently.
+
+**[v0.2 | 2026-05-02] Match screen flow restructured: picking → gut_check → revealing → (drop_result / overflow_prompt) → next round.**
+Removed `powerup_stub` and `skill_stub` states. Phase 2 (Gut Check) is the combined powerup + skill info phase. "Changed My Mind" is activated in Gut Check; consuming it reveals throw-change buttons. Skill phase stub note remains visible in Gut Check (`[SKILL PHASE V0.3]`).
+
+---
+
+## Trophy System
+
+**[v0.2 | 2026-05-02] Trophy case displayed in `careerSummary.js` using all 10 `TROPHY_CONFIG` entries in a 2-column grid (1st place / 2nd place per tier).**
+Earned trophies show full-color PNG at 64×64 (`image-rendering: pixelated`). Unearned trophies show the same asset with `filter: grayscale(1) brightness(0.25)` — silhouette effect, no separate asset needed. The earned set is `_trophies.trophies` (array of ID strings like `t1_1st`). No tests required — pure presentation, no game logic.
+
+**[v0.2 | 2026-05-02] Trophies awarded in two paths: advance path (T1–T4 champion, written immediately) and season-end path (any tier champion or runner-up, written as part of season-end simulation flow).**
+Both paths guard against duplicates with `Array.includes` before pushing. `newTrophy` flag (set only on first earn) drives the "NEW TROPHY" display in the Season Complete panel so re-earning the same trophy does not re-trigger the callout.
+
+---
+
+## Off-Season Screen
+
+**[v0.2 | 2026-05-02] Off-season screen (`js/screens/offSeason.js`) is a placeholder — skill tree respec and starting loadout both show `[UNLOCKS V0.3]` stubs.**
+The screen shows: player identity panel (portrait, ELO, rank), skill points available (accumulated, no respec yet), powerup inventory cleared notice. "BEGIN SEASON N" locks in the transition: clears `powerupInventory`, increments `currentSeason`, resets `currentTournamentTier = 1` and `previousFinalists = null`, sets `phase = 'active_season'`, then navigates to tournament.
+
+**[v0.2 | 2026-05-02] `routeByPhase` updated: `off_season` now routes to `offSeason` screen (was incorrectly pointing to `skillTree`).**
+
+---
+
+## Character Management
+
+**[v0.2 | 2026-05-02] Character deletion uses a two-stage confirmation before any data is removed.**
+Stage 1: "DELETE CHARACTER?" with YES/CANCEL. Stage 2: "ARE YOU SURE? PERMANENT DELETION" with YES DELETE PERMANENTLY/CANCEL. No data is touched until both confirmations pass. Deletion removes all 6 character localStorage keys (`identity`, `progress`, `stats`, `trophies`, `tournament`, `world`) via `deleteCharacterData(charId)` in `storage.js`, then removes the charId from `account.characterIds` and saves the account.
+
+**[v0.2 | 2026-05-02] Character select screen re-renders in place after each confirmation step and after deletion — no navigation required.**
+`deleteConfirm = { charId, stage }` is module-scoped state inside the mount function; resetting it to null and calling `render()` restores the normal slot view.
 
 ---
 
