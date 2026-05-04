@@ -646,6 +646,187 @@ body::after {
   padding-right: 4px;
 }
 
+/* ── Skill tree screen ─────────────────────────────────────────────────────── */
+
+.tree-card-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .tree-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+.tree-card {
+  background: var(--snes-panel);
+  border: 3px solid var(--snes-border-light);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-panel-dark),
+    inset 0 0 0 4px var(--snes-border),
+    4px 4px 0 var(--snes-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-card--purchased {
+  border-color: var(--snes-yellow);
+  box-shadow:
+    inset 0 0 0 2px var(--snes-panel-dark),
+    inset 0 0 0 4px var(--snes-yellow),
+    4px 4px 0 var(--snes-shadow);
+}
+
+.tree-card--locked {
+  opacity: 0.45;
+}
+
+.tree-card-header {
+  padding: 10px 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ── Skill tree panel ────────────────────────────────────────────────────── */
+
+.st-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--snes-panel-dark);
+}
+
+/* Navigator bar */
+.st-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--snes-panel);
+  border-bottom: 2px solid var(--snes-border);
+}
+
+.st-nav-btn {
+  font-size: 7px !important;
+  padding: 8px 12px !important;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Scrollable canvas wrapper */
+.st-canvas-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0;
+  background: var(--snes-black);
+  scrollbar-width: thin;
+  scrollbar-color: var(--snes-border) var(--snes-panel-dark);
+}
+
+/* Node boxes */
+.st-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 2px solid var(--snes-border);
+  background: var(--snes-panel-dark);
+  box-sizing: border-box;
+  padding: 6px 6px;
+  cursor: default;
+  text-align: center;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+
+.st-node--available {
+  cursor: pointer;
+  border-color: var(--snes-border-light);
+}
+
+.st-node--available:hover {
+  border-color: var(--snes-yellow);
+  box-shadow: 0 0 6px var(--snes-yellow)66;
+}
+
+/* "available" pulse — draws eye to purchasable nodes */
+@keyframes st-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--snes-yellow)00; }
+  50%       { box-shadow: 0 0 0 3px var(--snes-yellow)44; }
+}
+.st-node--available {
+  animation: st-pulse 2s ease-in-out infinite;
+}
+.st-node--available:hover {
+  animation: none;
+}
+
+.st-node--purchased {
+  cursor: pointer;
+  /* border-color and glow set inline per tree color */
+}
+
+.st-node--locked {
+  opacity: 0.35;
+  cursor: pointer;
+}
+
+.st-node--future {
+  opacity: 0.18;
+  border-style: dashed;
+  cursor: default;
+}
+
+.st-node--selected {
+  animation: none !important;
+}
+
+.st-node-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--snes-text);
+  line-height: 1.5;
+  word-break: break-word;
+  hyphens: auto;
+  text-align: center;
+}
+
+.st-node-cost {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-border-light);
+  text-align: center;
+}
+
+.st-cost--owned  { color: var(--snes-green); }
+.st-cost--broke  { color: var(--snes-red); }
+
+/* Detail panel */
+.st-detail {
+  padding: 12px;
+  background: var(--snes-panel);
+}
+
+/* Full-screen overlay (from HUD "VIEW SKILL TREES" button) */
+.st-fs-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--snes-black);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* ── Powerup tray ────────────────────────────────────────────────────────── */
 
 .pu-tray {
@@ -689,7 +870,19 @@ body::after {
 }
 
 .pu-slot--empty .pu-slot-icon {
-  opacity: 0.25;
+  border-color: var(--snes-border);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--snes-border), 2px 2px 0 var(--snes-shadow);
+}
+
+.pu-slot--active-now .pu-slot-icon {
+  border-color: var(--snes-green);
+  box-shadow: inset 0 0 0 1px var(--snes-border), 2px 2px 0 var(--snes-shadow), 0 0 4px var(--snes-green);
+}
+
+.pu-slot--gutcheck-only .pu-slot-icon {
+  border-color: var(--snes-yellow);
+  box-shadow: inset 0 0 0 1px var(--snes-border), 2px 2px 0 var(--snes-shadow);
 }
 
 .pu-slot-icon img {

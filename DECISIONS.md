@@ -5,6 +5,111 @@
 
 ---
 
+## L2 Skill Tree Nodes (v0.3-pre)
+
+**[v0.3 | 2026-05-03] All 6 L2 nodes implemented across MIND / MYSTIC / FORTUNE.**
+MIND.1.1 (NPR): passive accumulation of 10%/round, fires at 90% accuracy with 10% false-read chance, resets on fire/match start, sets `hasNPRFiredThisMatch` for future Mental Mysticism (v1.0). MIND.1.2 (Blank Slate): passes `maskedThrows: 2` to `getNpcThrow`, hiding the player's last 2 throws from history-reading strategies. MYSTIC.1.1 (Tweak Reality): natural ties get a 30% conversion roll to player win in `handleReady`. MYSTIC.1.2 (Reverse Card): catalogued and stored in `treeState` but no observable effect — depends on NPC active-skill activation, which doesn't exist yet. FORTUNE.1.1 (TML): active skill, 75% auto-win / 25% auto-loss with a 5-round cooldown, takes the round's single active-skill slot. FORTUNE.1.2 (Consolation Prize): 30% chance Basic drop awarded on a player loss.
+
+**[v0.3 | 2026-05-03] `SKILL_TREE_L2` and `SKILL_NODE_INFO` exported from `constants.js`.**
+`SKILL_TREE_L2` is the per-tree array of L2 node metadata (id, name, branch, kind, effect, optional cooldownRounds). `SKILL_NODE_INFO` is the unified L1+L2 lookup keyed by node id. Constants `TWEAK_REALITY_CHANCE` (0.30), `CONSOLATION_PRIZE_CHANCE` (0.30), `REVERSE_CARD_CHANCE` (0.25), `TML_SUCCESS_CHANCE` (0.75), `TML_COOLDOWN_ROUNDS` (5), `NPR_FIRE_BASE_ACCURACY` (0.90) capture the design doc tunables.
+
+**[v0.3 | 2026-05-03] Skill tree screen now shows L1 root + 2 L2 children per tree column.**
+L2 nodes are gated on the L1 root being purchased ("REQUIRES ROOT" label otherwise). Cost 10 pts each. Refund button only renders during Season 1 pre-Lock-In (Season 2+ purchases stick). Refunding an L1 root cascades a refund of all purchased L2 children of that tree.
+
+**[v0.3 | 2026-05-03] Off-season now routes to `pre_season` for all subsequent seasons (was `active_season`).**
+This lets players spend accumulated skill points on L2 nodes between seasons. Inventory is cleared in `offSeason.js` and the deterministic starting loadout is regenerated in `skillTree.js` Lock In handler — that way any tree-state changes made during pre-season actually affect what gets seeded.
+
+**[v0.3 | 2026-05-03] Identity tracks `secondaryTree` for Season 2+ tree picks.**
+Season 1 enforces "single tree only" (other roots locked once primary is purchased). Season 2+ allows the player to pick a second tree by purchasing its L1 root — that tree is then committed as `identity.secondaryTree`. Once both are picked, the third remains permanently locked.
+
+**[v0.3 | 2026-05-03] One active skill per round enforced via `roundActiveSkillUsed` flag.**
+Set on TML use; reset in `resetRoundScopeState`. Future L3+ active skills will share this flag.
+
+**[v0.3 | 2026-05-03] TML cooldown decrements only on `advanceRound` (round transitions).**
+Mystic Pizza replays do not decrement cooldown (the round didn't truly end). Cosmic Insurance Policy resets the entire match including TML cooldown — handled implicitly because `tmlCooldownRemaining` is in-memory and `resetRoundScopeState` is called from `resetMatch`.
+
+**[v0.3 | 2026-05-03] NPR is a separate read channel from throw-reveals.**
+Throw reveals (Focus Group, Dead Giveaway, etc.) populate `roundRead`. NPR populates `roundStrategyRead`. Both render side-by-side in the gut_check body when active.
+
+---
+
+## MIND & MYSTIC Powerup Effects + Activation Phase (v0.3-pre)
+
+**[v0.3 | 2026-05-03] `activationPhase: 'either' | 'gut_check'` field added per powerup in `POWERUP_CATALOG`.**
+Default is `'either'` — most powerups can be USEd during Throw Selection or Gut Check. Only `Changed My Mind` is `'gut_check'`-only because it changes a throw the player has already made. The match screen renders the powerup tray + popup in both phases and `isUsableNow` enforces the per-powerup phase rule.
+
+**[v0.3 | 2026-05-03] Lock-throw powerups auto-advance from picking to gut_check.**
+When Fortune Cookie / Pandora's Box / Project Hail Mary are activated during Throw Selection, the powerup sets the player's throw (and NPC's where applicable) and the screen automatically transitions to Gut Check. Player has nothing left to choose.
+
+**[v0.3 | 2026-05-03] MIND effects implemented (6 of 12).**
+- The Jessie Special: forced player win this round (mirror of Wish Upon a Star).
+- Dead Giveaway: 100% accurate one-shot reveal of NPC throw + grants throw change.
+- Focus Group / Focused Focus Group: match-scope per-round read at 65% / 80% accuracy + grants throw change. Highest-confidence active read wins.
+- Jessie Did Her Homework: shows NPC's primary strategy (99% accurate) as a one-time activated indicator.
+- Research Notes: catalog stub — full season throw-distribution display deferred (NPC throw history isn't tracked across matches yet).
+
+**[v0.3 | 2026-05-03] MIND deferred (6 of 12): Espresso Shot, A Word From Your Coach, Reading Glasses, Courtside with Jessie, Smart Glasses, and full Research Notes display.**
+The four passive % reveals (Reading Glasses 15% per round, Courtside 40%, Smart Glasses 20%) need a per-round-roll system that piggybacks on the same read mechanism — straightforward follow-up. A Word From Your Coach uses a Monty Hall variant (eliminate one wrong throw) — distinct UI affordance. Espresso Shot needs a "two-throws-best-outcome" subsystem.
+
+**[v0.3 | 2026-05-03] MYSTIC effects implemented (10 of 12) — 6 functional + 4 no-op-marked.**
+Functional: Fait Accompli (forced win), Dizzy Spell (NPC random this round), Hiccup Potion (NPC random every 3rd round), Tabula Rasa (NPC random all match), Mystic Pizza (replay round on loss — streak preserved), Cosmic Insurance Policy (full match reset including NPC strategy state).
+No-op marked-implemented (consume on USE, no observable effect until later systems land): Clockwork Orange and Molasses (need v0.3 active skills), Padlock (needs NPC powerup activation), Cuckoo Clock (auto-fires Clockwork Orange).
+`POWERUP_NO_OP` set distinguishes these from genuinely-effective implementations.
+
+**[v0.3 | 2026-05-03] MYSTIC deferred (2 of 12): Schrödinger's Amulet (complex throw-change interaction) and Jonesing to Help (requires cross-match start-of-match drop hook).**
+
+**[v0.3 | 2026-05-03] NPC throw computed via `computeNpcThrow()` to honour Tabula Rasa / Hiccup Potion / Dizzy Spell.**
+The function checks effects in priority order (round-scope first, then match-scope) and falls back to the standard strategy engine. Activation mid-round (after the throw was already chosen) overrides `pendingOpponentThrow` and re-runs the read generator if applicable.
+
+**[v0.3 | 2026-05-03] `npcMatchState` is `let`-bound to allow Cosmic Insurance Policy reset.**
+The "Opponent remembers nothing" semantic requires re-initialising NPC strategy state mid-match.
+
+---
+
+## FORTUNE Powerup Effects (v0.3-pre)
+
+**[v0.3 | 2026-05-03] All 12 FORTUNE powerups have working gameplay effects, added to `POWERUP_IMPLEMENTED`.**
+Round-scope: Fortune Cookie / Giant FC / Comically Large FC (random throw + 2 tier-matched bonus drops on win), Pandora's Box (random both, cooldown reset on win — no-op until v0.3 active skills), Project Hail Mary (random both, instant match win on round win, disables other USEs this round), Wish Upon a Star (forced player win). Match-scope: Hot Sauce (every 2-streak → +1 Basic), Three's Company (3-streak → +3 Advanced, once per match), Lucky Penny (per-round H/T call, correct → +1 Basic). Tournament-scope: Ghost Pepper (2-streak → +1 Basic, 3-streak → +1 Advanced, once per streak run), Carolina Reaper (2-streak → +1 Advanced, 3-streak → +1 Legendary). Season-scope: The Ballad of Jessie Jones (same as Carolina Reaper, season-long).
+
+**[v0.3 | 2026-05-03] `_progress.activePowerupEffects = { tournament: [], season: [] }` field added.**
+Stores names of currently-active tournament-scope and season-scope powerup effects. Tournament list cleared on tier advance and season end. Season list cleared at off-season Begin Season. Match-scope effects are kept in-memory in `match.js` (not persisted — known limitation: mid-match crash loses match-scope effect activation).
+
+**[v0.3 | 2026-05-03] `generateBonusDrops(specs, treeState)` in `powerupEngine.js` produces fixed-tier drops without upgrade rolls.**
+Used by Fortune Cookies and streak spawners. Falls back to lower tiers (Legendary → Advanced → Basic) when the requested tier has no candidates in the player's pool — protects against scenarios like a MIND-only player triggering Carolina Reaper without any FORTUNE Legendaries available. Each bonus draws from the player's standard tree-affinity pool.
+
+**[v0.3 | 2026-05-03] `randomThrow()` and `randomCoinFlip()` exported from `powerupEngine.js`.**
+Used by Fortune Cookie family, Pandora's Box, Project Hail Mary (random throws), and Lucky Penny (coin flip resolution). Both go through the central `roll()` RNG abstraction so they remain mockable in tests.
+
+**[v0.3 | 2026-05-03] Match streak counter rebuilt on match start from `roundHistory`.**
+`computeStreak()` walks the persisted history backwards. Per-effect "already-awarded-at-2 / awarded-at-3" flags reset on streak break (any non-win round). Hot Sauce uses `streak % 2 === 0` for recurring 2-streak awards; Three's Company uses one-time `streak === 3`.
+
+---
+
+## Powerup Catalog & Skill Trees (v0.3-pre)
+
+**[v0.3 | 2026-05-03] All 37 powerups defined in `POWERUP_CATALOG` (1 universal + 12 MIND + 12 MYSTIC + 12 FORTUNE).**
+Each entry has `{name, tier, scope, tree, jessieOnly, effect}`. Locked-name list — do not rename without designer approval. Source: design doc Section 8.9–8.12. The `POWERUP_BY_NAME` and `POWERUP_DESCRIPTIONS` lookup maps are derived from the catalog at module load.
+
+**[v0.3 | 2026-05-03] `POWERUP_IMPLEMENTED` Set lists powerups with actual gameplay effects wired up. v0.3-pre: just `'Changed My Mind'`.**
+Other powerups drop into inventory and show full descriptions in the popup, but the USE button is disabled with "Effect coming in a future update". Effects will be added incrementally as v0.3 progresses.
+
+**[v0.3 | 2026-05-03] L1 root nodes for all 3 skill trees implemented end-to-end.**
+- MIND.1 (Mind Power): 5 powerup slots, starting loadout 4 Basic + 1 Advanced
+- MYSTIC.1 (Mystical Power): +15% one-tier-higher / +5% Legendary on round-win drops
+- FORTUNE.1 (Fortunate Power): 2× drop rate per round
+Constants `MYSTIC_UPGRADE_BONUS_TO_ADVANCED` (0.15), `MYSTIC_UPGRADE_BONUS_TO_LEGENDARY` (0.05), `FORTUNE_DROP_MULTIPLIER` (2). L2+ nodes deferred to follow-up v0.3 work.
+
+**[v0.3 | 2026-05-03] Drop pool is tree-affinity-restricted.**
+`getDropPool(treeState)` returns universal powerups + the catalog of any tree the player has at least one node in. Cross-tree players draw from the union. `getDropMultiplier(treeState)` and `getUpgradeBonus(treeState)` are derived from the same tree state and applied per drop.
+
+**[v0.3 | 2026-05-03] Starting loadout is fully deterministic via curated `STARTER_PICKS` per tree.**
+`generateStartingLoadout(treeState)` uses the tree's L1 effect (e.g. MIND_only → 4 Basic + 1 Advanced from the curated MIND starter list) with no RNG-driven content selection. Higher-tier preferences are picked first. Loadout regenerates each season at off-season Lock In (or pre-season Lock In for Season 1).
+
+**[v0.3 | 2026-05-03] `phase = pre_season` after character creation; routes to `skillTree.js` for Season 1 tree selection.**
+Player picks one tree, buys its L1 root (5 pts) — Season 1 rule enforces single tree. Refund button available before Lock In. Lock In gate disabled until ≥1 node purchased. On Lock In, deterministic starting loadout is generated and phase advances to `active_season`. Off-season for Season 2+ skips the skill tree screen and routes directly to `active_season` — Season 2 second-tree selection deferred.
+
+---
+
 ## Trophy Case Display
 
 **[v0.2 | 2026-05-02] Trophy case displays earned trophies grouped by season — no unearned/shadow entries.**

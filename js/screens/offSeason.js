@@ -26,6 +26,18 @@ export function mount(container, options = {}) {
         <p class="snes-title" style="text-align:center">OFF-SEASON</p>
         <p class="snes-small snes-muted" style="text-align:center">SEASON ${season} COMPLETE</p>
 
+        <!-- Jessie check-in -->
+        <div class="snes-panel" style="display:flex;align-items:flex-start;gap:14px">
+          <div class="portrait-frame portrait-frame--lg" style="flex-shrink:0">
+            <img src="assets/portraits/jessie/Jessie_default.png" alt="Jessie"
+              style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <p class="snes-small snes-highlight">JESSIE</p>
+            <p class="snes-small" style="line-height:1.8">Off-season. Time to get to work.</p>
+          </div>
+        </div>
+
         <!-- Player identity -->
         <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
           <div class="portrait-frame portrait-frame--lg">
@@ -63,7 +75,7 @@ export function mount(container, options = {}) {
             : `<p class="snes-small snes-muted">No powerups to clear.</p>`
           }
           <p class="snes-small snes-muted" style="font-size:5px">
-            STARTING LOADOUT BASED ON SKILL TREE [UNLOCKS V0.3]
+            A fresh starting loadout will be drawn from your skill trees.
           </p>
         </div>
 
@@ -77,12 +89,19 @@ export function mount(container, options = {}) {
 
   document.getElementById('btn-begin').addEventListener('click', () => {
     const p = loadProgress(charId);
-    p.powerupInventory       = [];
     p.currentSeason          = nextSeason;
     p.currentTournamentTier  = 1;
     p.previousFinalists      = null;
-    p.phase                  = 'active_season';
+
+    // Reset all carry-over powerup effects — new season, fresh slate.
+    p.activePowerupEffects   = { tournament: [], season: [] };
+
+    // Inventory is cleared here. The starting loadout is regenerated at the
+    // end of the pre-season skill tree screen (after any new purchases) so
+    // that L2 buys made this off-season can affect what gets seeded.
+    p.powerupInventory       = [];
+    p.phase                  = 'pre_season';
     saveProgress(charId, p);
-    navigate('tournament', { charId });
+    navigate('skillTree', { charId });
   });
 }

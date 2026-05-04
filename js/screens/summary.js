@@ -1,5 +1,6 @@
 import { navigate, getAllNpcs }         from '../main.js';
 import { getNpcById }                  from '../main.js';
+import { openRankingsOverlay }         from '../ui/rankingsOverlay.js';
 import {
   TOURNAMENT_CONFIG, SKILL_POINTS_AWARD, CONSOLATION_BONUS_BY_LEVEL,
   RANKING_MILESTONES, MILESTONE_FIRST_CHAMP_MSG, MILESTONE_THREE_TIME_CHAMP_MSG,
@@ -147,6 +148,10 @@ export function mount(container, options = {}) {
         </div>
         ` : ''}
 
+        <button class="snes-btn" id="btn-view-rankings" style="width:100%;font-size:8px">
+          ★ VIEW GLOBAL RANKINGS
+        </button>
+
         <button class="snes-btn snes-btn-yellow" id="btn-continue" style="width:100%">
           ${actionLabel}
         </button>
@@ -156,6 +161,9 @@ export function mount(container, options = {}) {
   `;
 
   document.getElementById('btn-continue').addEventListener('click', handleContinue);
+  document.getElementById('btn-view-rankings')?.addEventListener('click', () => {
+    openRankingsOverlay(charId, getAllNpcs);
+  });
 
   // ── Handle continue ──────────────────────────────────────────────────────────
 
@@ -187,9 +195,13 @@ export function mount(container, options = {}) {
       const otherFinalistId = getOtherFinalistId(data);
       updatedProgress.previousFinalists    = ['player', otherFinalistId].filter(Boolean);
       updatedProgress.currentTournamentTier = tier + 1;
+      // Tournament-scope powerup effects expire when advancing to the next tier.
+      if (updatedProgress.activePowerupEffects) {
+        updatedProgress.activePowerupEffects.tournament = [];
+      }
       saveProgress(charId, updatedProgress);
       saveTournament(charId, null);
-      navigate('tournament', { charId });
+      navigate('skillTree', { charId, midSeason: true, nextTier: tier + 1 });
     } else {
       runSeasonEnd(updatedProgress);
     }
@@ -229,6 +241,10 @@ export function mount(container, options = {}) {
     updatedProgress.previousFinalists     = null;
     updatedProgress.currentTournamentTier = 1;
     updatedProgress.phase                 = 'off_season';
+    // Tournament-scope powerup effects expire at season end (no active tournament).
+    if (updatedProgress.activePowerupEffects) {
+      updatedProgress.activePowerupEffects.tournament = [];
+    }
 
     const worldData = loadWorld(charId);
     const trophies  = loadTrophies(charId) ?? {
@@ -293,17 +309,13 @@ export function mount(container, options = {}) {
           <div class="content-card" style="gap:20px">
 
             <div class="snes-panel" style="display:flex;align-items:flex-start;gap:16px">
-              <div class="portrait-frame portrait-frame--lg" style="
-                display:flex;flex-direction:column;align-items:center;
-                justify-content:center;flex-shrink:0;
-                background:var(--snes-dark);gap:4px
-              ">
-                <p class="snes-small snes-highlight" style="font-size:5px">JESSIE</p>
-                <p class="snes-small snes-muted" style="font-size:5px;text-align:center">[v1.0]</p>
+              <div class="portrait-frame portrait-frame--lg" style="flex-shrink:0">
+                <img src="assets/portraits/jessie/Jessie_sad.png" alt="Jessie"
+                  style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
               </div>
               <div style="flex:1;display:flex;flex-direction:column;gap:10px">
                 <p class="snes-small snes-highlight">JESSIE</p>
-                <p class="snes-small" style="line-height:1.8">"${messages[idx]}"</p>
+                <p class="snes-small" style="line-height:1.8">${messages[idx]}</p>
               </div>
             </div>
 
@@ -342,10 +354,11 @@ export function mount(container, options = {}) {
       rankDelta < 0      ? `<p class="snes-small snes-error"   style="margin-top:4px">▼ Down from #${prevRank}</p>` :
                            `<p class="snes-small snes-muted"   style="margin-top:4px">— Same as last season (#${prevRank})</p>`;
 
+    const trophyPx = newTrophy ? ([40,48,56,64,80][(newTrophy.tier ?? 1) - 1] ?? 48) : 48;
     const trophyHtml = newTrophy ? `
       <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
         <img src="${newTrophy.asset}" alt="${newTrophy.label}"
-             style="width:64px;height:64px;image-rendering:pixelated;flex-shrink:0">
+             style="width:${trophyPx}px;height:${trophyPx}px;image-rendering:pixelated;flex-shrink:0">
         <div style="display:flex;flex-direction:column;gap:6px">
           <p class="snes-small snes-muted">NEW TROPHY</p>
           <p class="snes-small snes-highlight">★ ${newTrophy.label}</p>
@@ -380,6 +393,10 @@ export function mount(container, options = {}) {
           ${trophyHtml}
           ${milestonesHtml}
 
+          <button class="snes-btn" id="btn-season-view-rankings" style="width:100%;font-size:8px">
+            ★ VIEW GLOBAL RANKINGS
+          </button>
+
           <button class="snes-btn snes-btn-yellow" id="btn-season-continue" style="width:100%">
             ▶ CONTINUE
           </button>
@@ -388,6 +405,9 @@ export function mount(container, options = {}) {
       </div>
     `;
 
+    document.getElementById('btn-season-view-rankings')?.addEventListener('click', () => {
+      openRankingsOverlay(charId, getAllNpcs);
+    });
     document.getElementById('btn-season-continue').addEventListener('click', () => {
       navigate('offSeason', { charId });
     });

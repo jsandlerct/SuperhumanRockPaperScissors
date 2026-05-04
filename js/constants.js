@@ -142,11 +142,224 @@ export const POWERUP_ICONS = {
   'Wish Upon a Star':              'assets/powerups/wish_upon_a_star.png',
 };
 
-// ── Powerup Descriptions ──────────────────────────────────────────────────────
-// Maps canonical powerup name → short description shown in the detail popup.
-export const POWERUP_DESCRIPTIONS = {
-  'Changed My Mind': 'During the Gut Check phase, change your throw selection before the round is revealed. One-time use per round.',
+// ── Powerup Catalog (Section 8.9 / 8.10 / 8.11 / 8.12) ────────────────────────
+// All 37 powerups (1 Universal + 12 MIND + 12 MYSTIC + 12 FORTUNE).
+// tree: 'UNIVERSAL' | 'MIND' | 'MYSTIC' | 'FORTUNE'
+// tier: 'Basic' | 'Advanced' | 'Legendary'
+// scope: 'round' | 'match' | 'tournament' | 'season'
+// jessieOnly: powerup is player-only (NPCs cannot receive it).
+export const POWERUP_CATALOG = [
+  // ── Universal ──────────────────────────────────────────────────────────────
+  { name: 'Changed My Mind', tier: 'Basic', scope: 'round', tree: 'UNIVERSAL', jessieOnly: false, activationPhase: 'gut_check',
+    effect: 'Grants the ability to change your throw during the Gut Check phase. One-time use per round.' },
+
+  // ── MIND — Basic (4) ───────────────────────────────────────────────────────
+  { name: 'Espresso Shot',   tier: 'Basic', scope: 'round', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Play two throws this round — the better outcome counts.' },
+  { name: 'Focus Group',     tier: 'Basic', scope: 'match', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Each round during Gut Check the crowd hints at the NPC\'s initial throw with 65% accuracy. If the NPC changes throw, tough luck.' },
+  { name: 'Research Notes',  tier: 'Basic', scope: 'round', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Reveals the NPC\'s cumulative throw distribution across all matches this season. Historical only.' },
+  { name: 'Protein Shake',   tier: 'Basic', scope: 'round', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Grants ability to change throw during Gut Check. If you change and win, earn 1 bonus Basic powerup drop.' },
+
+  // ── MIND — Advanced (4) ────────────────────────────────────────────────────
+  { name: 'Focused Focus Group',  tier: 'Advanced', scope: 'match', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Upgraded Focus Group — 80% accurate. Same mechanic.' },
+  { name: 'A Word From Your Coach', tier: 'Advanced', scope: 'match', tree: 'MIND', jessieOnly: true,  activationPhase: 'either',
+    effect: 'Each round one throw the NPC is definitely NOT throwing is eliminated. Player may always change throw. Jessie powerup — player only.' },
+  { name: 'Dead Giveaway',        tier: 'Advanced', scope: 'round', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: 'Reveals NPC\'s initial throw with 100% accuracy. Player may change throw. NPC is aware and may attempt to change.' },
+  { name: 'Reading Glasses',      tier: 'Advanced', scope: 'tournament', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: '15% chance per round of catching a tell. NPC unaware. Initial throw only.' },
+
+  // ── MIND — Legendary (4) ───────────────────────────────────────────────────
+  { name: 'The Jessie Special',   tier: 'Legendary', scope: 'round', tree: 'MIND', jessieOnly: true,  activationPhase: 'either',
+    effect: 'You win this round. Jessie saw something nobody else could see. Jessie powerup — player only.' },
+  { name: 'Jessie Did Her Homework', tier: 'Legendary', scope: 'match', tree: 'MIND', jessieOnly: true,  activationPhase: 'either',
+    effect: 'Pre-match: Jessie reveals NPC\'s current behavioral strategy with 99% accuracy. Jessie powerup — player only.' },
+  { name: 'Courtside with Jessie',tier: 'Legendary', scope: 'tournament', tree: 'MIND', jessieOnly: true,  activationPhase: 'either',
+    effect: '40% chance per round Jessie spots a tell. Jessie powerup — player only.' },
+  { name: 'Smart Glasses',        tier: 'Legendary', scope: 'season', tree: 'MIND', jessieOnly: false, activationPhase: 'either',
+    effect: '20% chance per round of catching a tell, all season. Always active.' },
+
+  // ── MYSTIC — Basic (4) ─────────────────────────────────────────────────────
+  { name: 'Mystic Pizza',         tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'If you lose: round replays from Throw Selection. If you win or tie: fizzles.' },
+  { name: 'Dizzy Spell',          tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'NPC throws randomly this round and cannot change their throw during Gut Check.' },
+  { name: "Schrödinger's Amulet", tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'If you change throw, both your original and new throw exist — if either beats the NPC, you win.' },
+  { name: 'Hiccup Potion',        tier: 'Basic', scope: 'match', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'Every third round this match, the NPC throws randomly regardless of strategy.' },
+
+  // ── MYSTIC — Advanced (4) ──────────────────────────────────────────────────
+  { name: 'Clockwork Orange',     tier: 'Advanced', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'Reset all your active skill cooldowns to ready and add 1 round to all opponent active skill cooldowns.' },
+  { name: 'Tabula Rasa',          tier: 'Advanced', scope: 'match', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'NPC plays completely randomly for the entire match — no adaptation, no active skills, no powerups.' },
+  { name: 'Molasses',             tier: 'Advanced', scope: 'match', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'All opponent active skill cooldowns increased by 1 round, including any already cooling.' },
+  { name: 'Padlock',              tier: 'Advanced', scope: 'tournament', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'Opponents cannot activate any powerups during the first 3 rounds of every match.' },
+
+  // ── MYSTIC — Legendary (4) ─────────────────────────────────────────────────
+  { name: 'Fait Accompli',        tier: 'Legendary', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'Activate before throw reveal. You win this round. Reality had no choice.' },
+  { name: 'Cosmic Insurance Policy', tier: 'Legendary', scope: 'match', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'Reset match to round 1. You remember everything. Opponent remembers nothing.' },
+  { name: 'Cuckoo Clock',         tier: 'Legendary', scope: 'tournament', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+    effect: 'At the start of round 3 of every match this tournament, Clockwork Orange fires automatically.' },
+  { name: 'Jonesing to Help',     tier: 'Legendary', scope: 'season', tree: 'MYSTIC', jessieOnly: true,  activationPhase: 'either',
+    effect: 'At the start of every match this season, Jessie delivers 1 random Advanced powerup. Jessie powerup — player only.' },
+
+  // ── FORTUNE — Basic (4) ────────────────────────────────────────────────────
+  { name: 'Fortune Cookie',       tier: 'Basic', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Change throw to a random selection. If you win, earn 2 Basic powerups.' },
+  { name: "Pandora's Box",        tier: 'Basic', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Both players throw randomly. If you win, all your active skill cooldowns reset to ready.' },
+  { name: 'Project Hail Mary',    tier: 'Basic', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Disables all your other powerups and active skills this round. Both players throw randomly. If you win, you win the match instantly.' },
+  { name: 'Hot Sauce',            tier: 'Basic', scope: 'match', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Every time you win 2 consecutive rounds this match, earn 1 Basic powerup.' },
+
+  // ── FORTUNE — Advanced (4) ─────────────────────────────────────────────────
+  { name: 'Giant Fortune Cookie', tier: 'Advanced', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Change throw to a random selection. If you win, earn 2 Advanced powerups.' },
+  { name: 'Ghost Pepper',         tier: 'Advanced', scope: 'tournament', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Win 2 consecutive rounds = 1 Basic powerup. Win 3 consecutive = 1 Advanced powerup.' },
+  { name: "Three's Company",      tier: 'Advanced', scope: 'match', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'If you win 3 consecutive rounds at any point this match, earn 3 Advanced powerups.' },
+  { name: 'Lucky Penny',          tier: 'Advanced', scope: 'match', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Each round during Gut Check, call heads or tails. Correct call earns 1 Basic powerup. Independent of round outcome.' },
+
+  // ── FORTUNE — Legendary (4) ────────────────────────────────────────────────
+  { name: 'Wish Upon a Star',     tier: 'Legendary', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'You win this round. You wished for it. The universe complied.' },
+  { name: 'Comically Large Fortune Cookie', tier: 'Legendary', scope: 'round', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Change throw to a random selection. If you win, earn 2 Legendary powerups.' },
+  { name: 'Carolina Reaper',      tier: 'Legendary', scope: 'tournament', tree: 'FORTUNE', jessieOnly: false, activationPhase: 'either',
+    effect: 'Win 2 consecutive rounds = 1 Advanced powerup. Win 3 consecutive = 1 Legendary powerup.' },
+  { name: 'The Ballad of Jessie Jones', tier: 'Legendary', scope: 'season', tree: 'FORTUNE', jessieOnly: true,  activationPhase: 'either',
+    effect: 'All season: win 2 consecutive = 1 Advanced. Win 3 consecutive = 1 Legendary. Jessie powerup — player only.' },
+];
+
+// Lookup map — powerup name → catalog entry.
+export const POWERUP_BY_NAME = Object.fromEntries(POWERUP_CATALOG.map(p => [p.name, p]));
+
+// Lookup map — powerup name → effect description (used by match-screen popup).
+export const POWERUP_DESCRIPTIONS = Object.fromEntries(
+  POWERUP_CATALOG.map(p => [p.name, p.effect])
+);
+
+// Powerups that have actual gameplay effects implemented (rest are catalog-only for now).
+export const POWERUP_IMPLEMENTED = new Set([
+  'Changed My Mind',
+  // FORTUNE
+  'Fortune Cookie', 'Giant Fortune Cookie', 'Comically Large Fortune Cookie',
+  "Pandora's Box", 'Project Hail Mary', 'Wish Upon a Star',
+  'Hot Sauce', "Three's Company", 'Lucky Penny',
+  'Ghost Pepper', 'Carolina Reaper', 'The Ballad of Jessie Jones',
+  // MIND
+  'The Jessie Special', 'Research Notes', 'Jessie Did Her Homework',
+  'Dead Giveaway', 'Focus Group', 'Focused Focus Group',
+  // MYSTIC
+  'Fait Accompli', 'Dizzy Spell', 'Hiccup Potion', 'Tabula Rasa',
+  'Mystic Pizza', 'Cosmic Insurance Policy',
+  // MYSTIC — no-op until later systems land (skill cooldowns / NPC powerup use)
+  'Clockwork Orange', 'Molasses', 'Padlock', 'Cuckoo Clock',
+]);
+
+// Powerups marked implemented but currently no-op (waiting on dependent systems).
+// Useful for the popup to show "Effect activated, but waits on …" rather than a blanket lock.
+export const POWERUP_NO_OP = new Set([
+  'Clockwork Orange',  // resets your active-skill cooldowns — needs v0.3 active skills
+  'Molasses',          // bumps opponent active-skill cooldowns — needs v0.3 active skills
+  'Padlock',           // blocks NPC powerup activation — NPCs don't yet activate powerups
+  'Cuckoo Clock',      // auto-fires Clockwork Orange — needs v0.3 active skills
+]);
+
+// ── Skill Trees — L1 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
+// Display info for the L1 root nodes. Higher levels deferred to a future v0.3 task.
+export const SKILL_TREE_INFO = {
+  MIND: {
+    name:       'MIND',
+    theme:      'Deduce it',
+    color:      'var(--snes-blue)',
+    rootId:     'MIND.1',
+    rootName:   'Mind Power',
+    rootEffect: '5 powerup slots. Start season with 4 Basic + 1 Advanced powerups.',
+  },
+  MYSTIC: {
+    name:       'MYSTIC',
+    theme:      'Bend it',
+    color:      'var(--snes-purple)',
+    rootId:     'MYSTIC.1',
+    rootName:   'Mystical Power',
+    rootEffect: '+15% chance of one tier higher on random drops, plus +5% Legendary chance.',
+  },
+  FORTUNE: {
+    name:       'FORTUNE',
+    theme:      'Trust it',
+    color:      'var(--snes-green)',
+    rootId:     'FORTUNE.1',
+    rootName:   'Fortunate Power',
+    rootEffect: '2× powerup drop rate per round.',
+  },
 };
+
+// Drop modifiers from MYSTIC.1 (Mystical Power) — applied to in-season drops only.
+export const MYSTIC_UPGRADE_BONUS_TO_ADVANCED  = 0.15; // +15%
+export const MYSTIC_UPGRADE_BONUS_TO_LEGENDARY = 0.05; // +5%
+
+// Drop multiplier from FORTUNE.1 (Fortunate Power).
+export const FORTUNE_DROP_MULTIPLIER = 2;
+
+// ── Skill Trees — L2 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
+// L2 nodes per tree. Each costs NODE_COST.L2 (10 pts). Requires L1 root.
+// kind: 'passive' (always-on) or 'active' (player-triggered, with cooldown).
+export const SKILL_TREE_L2 = {
+  MIND: [
+    { id: 'MIND.1.1', name: 'Neural Pattern Recognition', branch: 'Offense', kind: 'passive',
+      effect: 'Accumulates 10% per round to identify NPC strategy at 90% accuracy. Resets at match start and after firing. Always 10% chance of false read.' },
+    { id: 'MIND.1.2', name: 'Blank Slate', branch: 'Defense', kind: 'passive',
+      effect: 'NPC pattern-reading strategies (Historian, Streaker, Mimic) treat your last 2 throws as unknown. Always active.' },
+  ],
+  MYSTIC: [
+    { id: 'MYSTIC.1.1', name: 'Tweak Reality', branch: 'Offense', kind: 'passive',
+      effect: '30% chance a natural tie converts to a win.' },
+    { id: 'MYSTIC.1.2', name: 'Reverse Card', branch: 'Defense', kind: 'passive',
+      effect: '25% chance any opponent active skill fires for you instead. Always active.' },
+  ],
+  FORTUNE: [
+    { id: 'FORTUNE.1.1', name: 'Trust My Luck', branch: 'Offense', kind: 'active', cooldownRounds: 5,
+      effect: 'Supersedes RPS choice. 75% auto-win / 25% auto-loss. Usable every 5 rounds.' },
+    { id: 'FORTUNE.1.2', name: 'Consolation Prize', branch: 'Defense', kind: 'passive',
+      effect: '30% chance to earn a Basic powerup when you lose a round. Always active.' },
+  ],
+};
+
+// Lookup: node id → metadata across L1 + L2.
+export const SKILL_NODE_INFO = (() => {
+  const map = {};
+  for (const [tree, info] of Object.entries(SKILL_TREE_INFO)) {
+    map[info.rootId] = { ...info, level: 1, tree };
+  }
+  for (const [tree, nodes] of Object.entries(SKILL_TREE_L2)) {
+    for (const node of nodes) {
+      map[node.id] = { ...node, level: 2, tree };
+    }
+  }
+  return map;
+})();
+
+// L2 skill effect chances.
+export const TWEAK_REALITY_CHANCE     = 0.30;
+export const CONSOLATION_PRIZE_CHANCE = 0.30;
+export const REVERSE_CARD_CHANCE      = 0.25; // no-op until NPC active skills exist
+export const TML_SUCCESS_CHANCE       = 0.75;
+export const TML_COOLDOWN_ROUNDS      = 5;
+export const NPR_FIRE_BASE_ACCURACY   = 0.90;
 
 // ── Jessie Consolation Dialogue (Section 4.6) ────────────────────────────────
 // Locked text — do not change without designer approval.

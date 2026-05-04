@@ -7,6 +7,10 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function trophySize(tier) {
+  return [40, 48, 56, 64, 80][tier - 1] ?? 48;
+}
+
 function pct(count, total) {
   if (!total) return '—';
   return (count / total * 100).toFixed(1) + '%';
@@ -157,9 +161,9 @@ export function mount(container, options = {}) {
                 <p class="snes-small snes-muted" style="font-size:6px;border-bottom:1px solid var(--snes-border);padding-bottom:4px">SEASON ${season}</p>
                 <div style="display:flex;flex-wrap:wrap;gap:12px">
                   ${trophyBySeason[season].filter(Boolean).map(t => `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:${trophySize(t.tier)}px">
                       <img src="${t.asset}" alt="${t.label}"
-                        style="width:64px;height:64px;image-rendering:pixelated;object-fit:contain">
+                        style="width:${trophySize(t.tier)}px;height:${trophySize(t.tier)}px;image-rendering:pixelated;object-fit:contain">
                       <p class="snes-small snes-highlight" style="text-align:center;font-size:5px;line-height:1.4">${t.label}</p>
                     </div>
                   `).join('')}

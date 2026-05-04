@@ -3,6 +3,7 @@ import {
   loadSession, loadIdentity, loadProgress,
   loadStats, loadTrophies,
 } from '../storage.js';
+import { openFullScreenTree } from './skillTreePanel.js';
 
 // ── Screens where the HUD should never appear ─────────────────────────────────
 const HIDDEN_ON = new Set(['intro', 'title', 'login', 'characterSelect', 'create']);
@@ -10,6 +11,10 @@ const HIDDEN_ON = new Set(['intro', 'title', 'login', 'characterSelect', 'create
 const hudEl = document.getElementById('hud');
 
 // ── Stats overlay helpers (mirrors careerSummary.js layout) ──────────────────
+
+function trophySize(tier) {
+  return [40, 48, 56, 64, 80][tier - 1] ?? 48;
+}
 
 function pct(count, total) {
   if (!total) return '—';
@@ -27,6 +32,7 @@ function statRow(label, value) {
     <div><p class="snes-small snes-highlight">${value}</p></div>
   `;
 }
+
 
 function buildOverlayHTML(charId) {
   const identity = loadIdentity(charId);
@@ -109,6 +115,14 @@ function buildOverlayHTML(charId) {
           </div>
         </div>
 
+        <!-- Skill trees -->
+        <div style="margin-bottom:12px">
+          <button class="snes-btn snes-btn-yellow" id="hud-view-trees-btn"
+                  style="width:100%;font-size:7px;padding:10px 16px">
+            ▶ VIEW SKILL TREES
+          </button>
+        </div>
+
         <!-- Throw distribution -->
         <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
           <p class="snes-small snes-muted">THROW DISTRIBUTION</p>
@@ -149,9 +163,9 @@ function buildOverlayHTML(charId) {
                 <p class="snes-small snes-muted" style="font-size:5px;border-bottom:1px solid var(--snes-border);padding-bottom:3px">SEASON ${season}</p>
                 <div style="display:flex;flex-wrap:wrap;gap:8px">
                   ${trophyBySeason[season].filter(Boolean).map(t => `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:52px">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:${trophySize(t.tier)}px">
                       <img src="${t.asset}" alt="${t.label}"
-                        style="width:48px;height:48px;image-rendering:pixelated;object-fit:contain">
+                        style="width:${trophySize(t.tier)}px;height:${trophySize(t.tier)}px;image-rendering:pixelated;object-fit:contain">
                       <p class="snes-small snes-highlight" style="text-align:center;font-size:4px;line-height:1.4">${t.label}</p>
                     </div>
                   `).join('')}
@@ -173,6 +187,9 @@ function openOverlay(charId) {
 
   hudEl.insertAdjacentHTML('beforeend', buildOverlayHTML(charId));
 
+  document.getElementById('hud-view-trees-btn').addEventListener('click', () => {
+    openFullScreenTree(charId, loadProgress, loadIdentity);
+  });
   document.getElementById('hud-close-btn').addEventListener('click', closeOverlay);
   document.getElementById('hud-overlay-backdrop').addEventListener('click', closeOverlay);
 }

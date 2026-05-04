@@ -177,11 +177,11 @@ export function mount(container, options = {}) {
       createdAt:     Date.now(),
     });
 
-    // Write _progress — phase=active_season (v0.1: skip skill tree selection)
+    // Write _progress — phase=pre_season so player goes through skill tree selection
     saveProgress(charId, {
       charId,
       currentSeason:          1,
-      phase:                  'active_season',
+      phase:                  'pre_season',
       currentTournamentTier:  1,
       previousFinalists:      null,
       currentElo:             ELO_BASELINE,
@@ -192,6 +192,7 @@ export function mount(container, options = {}) {
       treeState:              {},
       crossMatchState:        { neuralScanMatchesSinceLastUse: 0 },
       powerupInventory:       [],
+      activePowerupEffects:   { tournament: [], season: [] },
     });
 
     // Write _stats (all zeros)
@@ -227,7 +228,7 @@ export function mount(container, options = {}) {
     // Update session
     saveSession({ loggedInUsername: username, activeCharId: charId });
 
-    navigate('tournament', { charId });
+    navigate('skillTree', { charId });
   }
 
   // ── Go ───────────────────────────────────────────────────────────────────────
