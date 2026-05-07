@@ -59,8 +59,13 @@ export function mount(container, options = {}) {
     );
   }
 
-  // Refunds only allowed pre-season during Season 1
-  const canRefund = isSeason1 && !midSeason;
+  // Refunds allowed during any pre-season phase (Season 2+ starts with all nodes cleared
+  // from the off-season respec, so the allocation window before Lock In should be flexible).
+  const canRefund = !midSeason;
+
+  // Season 2+ pre-season requires picking a second tree before Lock In is allowed.
+  // Must be a function (not a const) so render() sees the updated secondaryTree after each buy.
+  function needsSecondaryPick() { return !isSeason1 && !midSeason && secondaryTree === null; }
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -68,26 +73,38 @@ export function mount(container, options = {}) {
     const unspent   = progress.unspentSkillPoints ?? 0;
     const hasPoints = unspent > 0;
 
-    // Mid-season: button always enabled (player can proceed without spending)
-    // Pre-season: button disabled until at least one node purchased
     const locked     = anyNodePurchased();
-    const btnEnabled = midSeason ? true : locked;
+    // Lock In requires: mid-season (always ok) OR (≥1 node AND second tree already chosen)
+    const btnEnabled = midSeason ? true : (locked && !needsSecondaryPick());
 
     let headerSub = '';
     if (midSeason) {
       const nextName = TOURNAMENT_CONFIG[nextTier - 1]?.name ?? `Tier ${nextTier}`;
       headerSub = `MID-SEASON · HEADING INTO ${nextName.toUpperCase()}`;
+    } else if (isSeason1) {
+      headerSub = 'SEASON 1 — CHOOSE ONE TREE';
+    } else if (needsSecondaryPick()) {
+      headerSub = `SEASON ${progress.currentSeason} — CHOOSE YOUR SECOND TREE`;
     } else {
-      headerSub = isSeason1 ? 'SEASON 1 — CHOOSE ONE TREE' : `SEASON ${progress.currentSeason} · PRE-SEASON`;
+      headerSub = `SEASON ${progress.currentSeason} · PRE-SEASON`;
     }
 
     const continueBtnLabel = midSeason
       ? '▶ CONTINUE TO NEXT TOURNAMENT'
       : '▶ LOCK IN &amp; BEGIN SEASON';
 
-    const footerNote = midSeason
-      ? (hasPoints ? `${unspent} UNSPENT POINT${unspent !== 1 ? 'S' : ''} — SPEND NOW OR CARRY FORWARD.` : 'NO UNSPENT POINTS — NOTHING TO SPEND.')
-      : (locked ? 'READY — YOUR CHOICES WILL LOCK IN FOR THE SEASON.' : 'PURCHASE AT LEAST ONE NODE TO LOCK IN.');
+    let footerNote = '';
+    if (midSeason) {
+      footerNote = hasPoints
+        ? `${unspent} UNSPENT POINT${unspent !== 1 ? 'S' : ''} — SPEND NOW OR CARRY FORWARD.`
+        : 'NO UNSPENT POINTS — NOTHING TO SPEND.';
+    } else if (needsSecondaryPick()) {
+      footerNote = 'BUY A ROOT NODE IN A SECOND TREE TO UNLOCK LOCK IN.';
+    } else {
+      footerNote = locked
+        ? 'READY — YOUR CHOICES WILL LOCK IN FOR THE SEASON.'
+        : 'PURCHASE AT LEAST ONE NODE TO LOCK IN.';
+    }
 
     container.innerHTML = `
       <div class="screen fade-in" style="justify-content:flex-start;padding:0">
@@ -153,8 +170,17 @@ export function mount(container, options = {}) {
 
     // L2 requires L1 root
     if (level === 2 && !isPurchased(`${tree}.1`)) return;
+    // L3 requires parent L2
+    if (level === 3) {
+      const parentId = nodeId.split('.').slice(0, -1).join('.');
+      if (!isPurchased(parentId)) return;
+    }
 
     progress.unspentSkillPoints -= cost;
+    // Initialise tree entry if the player is buying into a new tree for the first time.
+    if (!progress.treeState[tree]) {
+      progress.treeState[tree] = getInitialTreeState(tree);
+    }
     progress.treeState[tree][nodeId] = true;
 
     // Commit tree selection
@@ -181,14 +207,12 @@ export function mount(container, options = {}) {
     const level = nodeId.split('.').length - 1;
     const cost  = NODE_COST[`L${level}`];
 
-    // Refunding L1 cascades to all purchased L2 children
-    if (level === 1) {
-      for (const [id, val] of Object.entries(progress.treeState[tree])) {
-        if (id !== nodeId && val === true) {
-          const cl = id.split('.').length - 1;
-          progress.unspentSkillPoints += NODE_COST[`L${cl}`];
-          progress.treeState[tree][id] = false;
-        }
+    // Cascade refund: clear all purchased descendants (children, grandchildren, etc.)
+    for (const [id, val] of Object.entries(progress.treeState[tree])) {
+      if (val === true && id.startsWith(nodeId + '.')) {
+        const cl = id.split('.').length - 1;
+        progress.unspentSkillPoints += NODE_COST[`L${cl}`];
+        progress.treeState[tree][id] = false;
       }
     }
 

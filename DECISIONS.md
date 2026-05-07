@@ -5,6 +5,63 @@
 
 ---
 
+## MIND Powerup Implementations (v0.3)
+
+**[v0.3 | 2026-05-07] Espresso Shot resolves by comparing primary and backup throws; best outcome (win > tie > loss) counts. When backup is better, `currentThrow` is updated to the backup before reveal so the correct throw image is shown. Force-win and force-loss still override after Espresso Shot comparison.**
+**[v0.3 | 2026-05-07] Espresso Shot backup throw is chosen by the player in gut_check (not generated randomly). `roundEspressoShotActive` flag is set on activation; READY is disabled until `roundEspressoShotBonus` is set. The picker shows all 3 throw buttons with `data-espresso` attributes.**
+
+**[v0.3 | 2026-05-07] A Word From Your Coach is match-scoped. Each round at gut_check, the system picks a random throw that is NOT the NPC's throw and shows it as eliminated. Stored in `roundWordFromCoachElim` (per-round, resets in `resetRoundScopeState`). Always grants throw-change.**
+
+**[v0.3 | 2026-05-07] Reading Glasses (15%, tournament), Smart Glasses (20%, season), Courtside with Jessie (40%, tournament) are passive per-round rolls added to `generateRoundRead` candidates. All grant throw-change. Higher-confidence active reads (Focus Group, Focused FG) take precedence via sort. Constants: `READING_GLASSES_CHANCE`, `SMART_GLASSES_CHANCE`, `COURTSIDE_CHANCE`.**
+
+**[v0.3 | 2026-05-07] `resetMatch()` (Cosmic Insurance Policy) now explicitly resets all match-scope powerup flags including `matchWordFromCoach`, Focus Group, Hiccup Potion, etc. Previously only skill-scope state was reset — powerup flags were accidentally preserved across the reset.**
+
+---
+
+## L3 Skill Tree Nodes (v0.3)
+
+**[v0.3 | 2026-05-05] All 12 L3 nodes defined across MIND / MYSTIC / FORTUNE and wired into match.js.**
+Node list: MIND.1.1.1 (Neural Scan, active), MIND.1.1.2 (Desperate Clarity, passive), MIND.1.2.1 (Memory Wipe, active), MIND.1.2.2 (Mind Shield, passive no-op until NPC NPR), MYSTIC.1.1.1 (Alter Reality, passive — replaces Tweak Reality at 60%), MYSTIC.1.1.2 (Third Time's the Charm, passive), MYSTIC.1.2.1 (Oblivious, passive no-op until NPC skills), MYSTIC.1.2.2 (The Cooler, passive no-op until NPC TML), FORTUNE.1.1.1 (Lucky Socks, passive — bump TML to 85%; effect wired), FORTUNE.1.1.2 (Due for a Win, passive), FORTUNE.1.2.1 (Force Your Hand, active), FORTUNE.1.2.2 (Change My Luck, active).
+
+**[v0.3 | 2026-05-05] L3 node locking: requires parent L2 to be purchased. Gate in both skillTreePanel.js (display) and skillTree.js (handleBuy).**
+
+**[v0.3 | 2026-05-05] L3 synergy nodes now trigger synergy loadout keys in powerupEngine.js `getLoadoutKey()`.**
+MIND.1.1.2 + MYSTIC root → `MIND_MYSTIC_synergy`. FORTUNE.1.1.2 + MIND root → `MIND_FORTUNE_synergy` (6th slot). MYSTIC.1.1.2 + FORTUNE root → `MYSTIC_FORTUNE_synergy`.
+
+**[v0.3 | 2026-05-05] Neural Scan (MIND.1.1.1) uses `progress.crossMatchState.neuralScanMatchesSinceLastUse` for cross-match cooldown.** Counter saved to localStorage on use (reset to 0) and incremented in `finishMatch()` (capped at cooldown value). Loaded at match mount. Active cooldown = 5 matches (or 3 with MIND.1.1.1.1). One tracker serves both Neural Scan and Neural Scan 2.0 (L4).
+
+**[v0.3 | 2026-05-05] Alter Reality (MYSTIC.1.1.1) replaces Tweak Reality when purchased — 60% not 30%, not additive.**
+
+**[v0.3 | 2026-05-05] Third Time's the Charm (MYSTIC.1.1.2) tracks consecutive passive tie-conversion failures (`thirdTimesCharmFails`). Force Your Hand activation (active, different skill) does NOT count as a failure for this tracker — only Tweak/Alter Reality passive failures count.**
+
+**[v0.3 | 2026-05-05] `tieIsImmune` flag added for future Refuse to Lose (L4). Always false currently. Clears in `resetRoundScopeState()` (every round). Blocks all tie-altering skills when true.**
+
+**[v0.3 | 2026-05-05] Force Your Hand (FORTUNE.1.2.1) armed during picking/gut_check, resolves in `handleReady()` before passive Tweak/Alter Reality. Per Section 6.5: active runs before passive; if active triggered, passive does not roll.**
+
+**[v0.3 | 2026-05-05] Lucky Socks (FORTUNE.1.1.1) bumps TML success chance from 75% → 85% immediately when purchased. Effect wired in `handleTrustMyLuck()`. Fingers Crossed (L4) will further bump to 95%.**
+
+**[v0.3 | 2026-05-05] Due for a Win boost consumed on first TML activation after 2+ failures, regardless of outcome. Marked `dueForAWinUsed = true` so it cannot fire again that match.**
+
+**[v0.3 | 2026-05-05] Desperate Clarity (MIND.1.1.2) adds `+20%` permanently to NPR floor (`desperateClarityBonus`). On NPR fire, accumulation resets to `desperateClarityBonus` (not 0). Triggers once per match after 2 consecutive round losses.**
+
+---
+
+## Off-Season Respec & Season 2 Tree Selection (v0.3)
+
+**[v0.3 | 2026-05-05] `canRefund = !midSeason` (not `isSeason1 && !midSeason` as previously stated).**
+Refunds are now allowed during any pre-season phase, not just Season 1. Rationale: off-season clears all nodes before pre-season begins, so the player is always building from a blank slate. Preventing refunds during Season 2+ pre-season would punish accidental mis-spends with no escape before Lock In. Mid-season remains add-only (no refunds between tournaments).
+
+**[v0.3 | 2026-05-05] Refund cascade uses `id.startsWith(nodeId + '.')` to cover all descendants, not just L2 children of L1.**
+Old code only cascaded when `level === 1`, which left L3 nodes orphaned if the player refunded their L2 parent during pre-season. New code cascades L1→L2→L3→L4 depth regardless of the refunded node's level.
+
+**[v0.3 | 2026-05-05] `needsSecondaryPick` changed from a `const` to a `function` in `skillTree.js`.**
+Bug: the const was evaluated once at mount when `secondaryTree` was still null. After the player committed a second tree root (which updates the `let secondaryTree` variable), the Lock In gate remained permanently disabled. Fix: `function needsSecondaryPick() { return !isSeason1 && !midSeason && secondaryTree === null; }` — evaluated fresh on every `render()` call.
+
+**[v0.3 | 2026-05-05] `handleBuy()` initialises missing tree entries in treeState before writing.**
+Bug: Season 2 players choosing a second tree would crash with "Cannot set properties of undefined" because only the primary tree's entry existed in treeState. Fix: `if (!progress.treeState[tree]) progress.treeState[tree] = getInitialTreeState(tree);` guards the write. Tree entry is created on first buy; the third (never-chosen) tree remains absent from treeState per architecture rules.
+
+---
+
 ## L2 Skill Tree Nodes (v0.3-pre)
 
 **[v0.3 | 2026-05-03] All 6 L2 nodes implemented across MIND / MYSTIC / FORTUNE.**
@@ -21,6 +78,9 @@ This lets players spend accumulated skill points on L2 nodes between seasons. In
 
 **[v0.3 | 2026-05-03] Identity tracks `secondaryTree` for Season 2+ tree picks.**
 Season 1 enforces "single tree only" (other roots locked once primary is purchased). Season 2+ allows the player to pick a second tree by purchasing its L1 root — that tree is then committed as `identity.secondaryTree`. Once both are picked, the third remains permanently locked.
+
+**[v0.3 | 2026-05-05] Season 2+ pre-season Lock In is blocked until secondary tree is chosen.**
+`needsSecondaryPick = !isSeason1 && !midSeason && secondaryTree === null`. When true: Lock In button disabled, header reads "SEASON N — CHOOSE YOUR SECOND TREE", footer reads "BUY A ROOT NODE IN A SECOND TREE TO UNLOCK LOCK IN." Buying any L1 root in a non-primary tree commits it as `identity.secondaryTree` (existing mechanism in `handleBuy`) and clears the gate.
 
 **[v0.3 | 2026-05-03] One active skill per round enforced via `roundActiveSkillUsed` flag.**
 Set on TML use; reset in `resetRoundScopeState`. Future L3+ active skills will share this flag.
@@ -56,7 +116,13 @@ Functional: Fait Accompli (forced win), Dizzy Spell (NPC random this round), Hic
 No-op marked-implemented (consume on USE, no observable effect until later systems land): Clockwork Orange and Molasses (need v0.3 active skills), Padlock (needs NPC powerup activation), Cuckoo Clock (auto-fires Clockwork Orange).
 `POWERUP_NO_OP` set distinguishes these from genuinely-effective implementations.
 
+**[v0.3 | 2026-05-07] Clockwork Orange implemented: resets `tmlCooldownRemaining`, `forceYourHandCooldown`, `changeMyLuckCooldown` to 0 via `resetActiveCooldowns()`. Removed from `POWERUP_NO_OP`.**
+**[v0.3 | 2026-05-07] Cuckoo Clock implemented: activates as tournament-scope effect. `advanceRound()` auto-calls `resetActiveCooldowns()` when `roundNumber === 3` and Cuckoo Clock is tournament-active. Fires once per match (only round 3). Removed from `POWERUP_NO_OP`.**
+**[v0.3 | 2026-05-07] Molasses and Padlock remain in `POWERUP_NO_OP` — NPCs still have no active skills or powerup activation.**
+**[v0.3 | 2026-05-07] Cooldown pip display added to skills panel. Round-based CDs show `Xr ■■■□□` format (cdPips helper). Neural Scan shows match-count pips. Memory Wipe shows USED/READY.**
+
 **[v0.3 | 2026-05-03] MYSTIC deferred (2 of 12): Schrödinger's Amulet (complex throw-change interaction) and Jonesing to Help (requires cross-match start-of-match drop hook).**
+**[v0.3 | 2026-05-07] Schrödinger's Amulet implemented. `activationPhase` changed to `'gut_check'` (requires throw to already be selected). On activation, captures `roundSchrodingerOriginalThrow = currentThrow` and enables throw-change. At resolution (after Espresso Shot, before force-win/loss): if player changed throw AND original would have beaten the NPC, result = player win and `currentThrow` updates to original so reveal shows the winning throw. If player never changes throw, amulet has no effect.**
 
 **[v0.3 | 2026-05-03] NPC throw computed via `computeNpcThrow()` to honour Tabula Rasa / Hiccup Potion / Dizzy Spell.**
 The function checks effects in priority order (round-scope first, then match-scope) and falls back to the standard strategy engine. Activation mid-round (after the throw was already chosen) overrides `pendingOpponentThrow` and re-runs the read generator if applicable.
@@ -386,8 +452,8 @@ Both paths guard against duplicates with `Array.includes` before pushing. `newTr
 
 ## Off-Season Screen
 
-**[v0.2 | 2026-05-02] Off-season screen (`js/screens/offSeason.js`) is a placeholder — skill tree respec and starting loadout both show `[UNLOCKS V0.3]` stubs.**
-The screen shows: player identity panel (portrait, ELO, rank), skill points available (accumulated, no respec yet), powerup inventory cleared notice. "BEGIN SEASON N" locks in the transition: clears `powerupInventory`, increments `currentSeason`, resets `currentTournamentTier = 1` and `previousFinalists = null`, sets `phase = 'active_season'`, then navigates to tournament.
+**[v0.3 | 2026-05-05] Full off-season respec implemented in `offSeason.js`.**
+On mount, all purchased nodes are refunded: `computeRefund` sums costs of every true node, `clearTreeState` zeros treeState, refund is added to `unspentSkillPoints`, and progress is saved. Idempotent — if treeState is already all-false, refund = 0. UI shows refund amount and total available points. "RESPEC SKILL TREE FOR SEASON N" increments `currentSeason`, clears inventory + carry-over effects, sets `phase = 'pre_season'`, navigates to skillTree. Tree identity (primaryTree / secondaryTree) is locked — only node purchases change.
 
 **[v0.2 | 2026-05-02] `routeByPhase` updated: `off_season` now routes to `offSeason` screen (was incorrectly pointing to `skillTree`).**
 

@@ -1,5 +1,5 @@
 import {
-  SKILL_TREE_INFO, SKILL_TREE_L2, SKILL_NODE_INFO, NODE_COST,
+  SKILL_TREE_INFO, SKILL_TREE_L2, SKILL_TREE_L3, SKILL_NODE_INFO, NODE_COST,
 } from '../constants.js';
 
 const TREES = ['MIND', 'MYSTIC', 'FORTUNE'];
@@ -53,15 +53,19 @@ const CONNECTIONS = [
   [3,3, 4,6], [3,3, 4,7],
 ];
 
-// 15-node descriptor list (L1+L2 real, L3/L4 future placeholders)
+// 15-node descriptor list (L1+L2+L3 real, L4 future placeholders)
 function getTreeNodes(tree) {
   const info = SKILL_TREE_INFO[tree];
   const l2   = SKILL_TREE_L2[tree];
+  const l3   = SKILL_TREE_L3[tree] ?? [];
   return [
-    { id: info.rootId, level: 1, branch: 0 },
-    { id: l2[0].id,   level: 2, branch: 0 },
-    { id: l2[1].id,   level: 2, branch: 1 },
-    ...Array.from({ length: 4 }, (_, b) => ({ id: null, level: 3, branch: b })),
+    { id: info.rootId,         level: 1, branch: 0 },
+    { id: l2[0].id,            level: 2, branch: 0 },
+    { id: l2[1].id,            level: 2, branch: 1 },
+    { id: l3[0]?.id ?? null,   level: 3, branch: 0 },
+    { id: l3[1]?.id ?? null,   level: 3, branch: 1 },
+    { id: l3[2]?.id ?? null,   level: 3, branch: 2 },
+    { id: l3[3]?.id ?? null,   level: 3, branch: 3 },
     ...Array.from({ length: 8 }, (_, b) => ({ id: null, level: 4, branch: b })),
   ];
 }
@@ -75,6 +79,10 @@ function nodeState(nodeId, tree, treeState, { isSeason1, primaryTree, secondaryT
       tree !== primaryTree && tree !== secondaryTree) return 'locked';
   const level = nodeId.split('.').length - 1;
   if (level === 2 && !treeState?.[tree]?.[`${tree}.1`]) return 'locked';
+  if (level === 3) {
+    const parentId = nodeId.split('.').slice(0, -1).join('.');
+    if (!treeState?.[tree]?.[parentId]) return 'locked';
+  }
   return 'available';
 }
 
@@ -87,7 +95,7 @@ function buildSVGPaths(treeColor, COL, CW) {
     const chy = LY[cl - 1];
     const mid = (py + chy) / 2;
 
-    const future  = cl >= 3;
+    const future  = cl >= 4;  // L4 nodes are still placeholders; L3 nodes are real
     const opacity = future ? 0.12 : 0.5;
     const stroke  = future ? 'var(--snes-border)' : treeColor;
     const width   = future ? 1 : 2;
@@ -119,7 +127,7 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, C
   const costPx = Math.max(6, Math.round(COL * 0.085));
 
   let labelHTML = '';
-  if (level === 1 || level === 2) {
+  if (level === 1 || level === 2 || level === 3) {
     const statusStr = st === 'purchased' ? '✓' : `${cost} pts`;
     const statusCls = st === 'purchased' ? 'st-cost--owned'
                     : (!affordable && st === 'available') ? 'st-cost--broke' : '';
@@ -127,8 +135,6 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, C
       <span class="st-node-name" style="font-size:${namePx}px">${rawName ?? '???'}</span>
       <span class="st-node-cost ${statusCls}" style="font-size:${costPx}px">${statusStr}</span>
     `;
-  } else if (level === 3) {
-    labelHTML = `<span class="st-node-future-label" style="font-size:${costPx}px">L3</span>`;
   }
   // L4: tiny box, no text
 
@@ -162,11 +168,9 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
   const name       = level === 1 ? (info?.rootName ?? treeInfo.rootName) : (info?.name ?? '???');
   const effect     = level === 1 ? (info?.rootEffect ?? treeInfo.rootEffect) : (info?.effect ?? '');
   const kind       = info?.kind ?? 'passive';
-  const branch     = info?.branch ?? null;
   const affordable = unspentPoints >= cost;
 
   const kindBadge   = kind === 'active' ? '⚡ ACTIVE' : '◉ PASSIVE';
-  const branchBadge = branch ? ` · ${branch.toUpperCase()}` : '';
 
   let actionHTML = '';
   if (!readOnly) {
@@ -183,7 +187,9 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
                       ${affordable ? `▶ BUY (${cost} PTS)` : `✗ NEED ${cost} PTS`}
                     </button>`;
     } else if (st === 'locked') {
-      const reason = level === 2 ? 'Requires L1 root node' : 'Tree locked this season';
+      const reason = level === 2 ? 'Requires L1 root node'
+                   : level === 3 ? 'Requires L2 parent node'
+                   : 'Tree locked this season';
       actionHTML = `<p class="snes-small snes-muted" style="font-size:7px">🔒 ${reason}</p>`;
     }
   }
@@ -194,7 +200,7 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
         <div style="flex:1;min-width:0">
           <p class="snes-label snes-highlight" style="font-size:11px;line-height:1.6">${name.toUpperCase()}</p>
           <p class="snes-small snes-muted" style="font-size:7px;margin-top:6px">
-            L${level} · ${kindBadge}${branchBadge} · ${cost} PTS
+            L${level} · ${kindBadge} · ${cost} PTS
           </p>
         </div>
         <button class="snes-btn" id="btn-st-close" style="font-size:7px;padding:8px 12px;flex-shrink:0">✕ CLOSE</button>

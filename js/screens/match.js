@@ -13,8 +13,14 @@ import {
   POWERUP_ICONS, POWERUP_DESCRIPTIONS, POWERUP_IMPLEMENTED,
   POWERUP_NO_OP, POWERUP_BY_NAME, TOTAL_PLAYERS,
   NPR_ACCUMULATION_PER_ROUND, NPR_FALSE_RESULT_CHANCE,
-  TWEAK_REALITY_CHANCE, CONSOLATION_PRIZE_CHANCE,
-  TML_SUCCESS_CHANCE, TML_COOLDOWN_ROUNDS,
+  TWEAK_REALITY_CHANCE, ALTER_REALITY_CHANCE, CONSOLATION_PRIZE_CHANCE,
+  TML_SUCCESS_CHANCE, TML_COOLDOWN_ROUNDS, LUCKY_SOCKS_TML_CHANCE,
+  THIRD_TIMES_CHARM_BOOST, DUE_FOR_A_WIN_BOOST,
+  FORCE_YOUR_HAND_CHANCE, FORCE_YOUR_HAND_COOLDOWN_ROUNDS, CHANGE_MY_LUCK_COOLDOWN_ROUNDS,
+  DESPERATE_CLARITY_NPR_BOOST,
+  NEURAL_SCAN_COOLDOWN_MATCHES, NEURAL_SCAN_2_COOLDOWN_MATCHES,
+  READING_GLASSES_CHANCE, SMART_GLASSES_CHANCE, COURTSIDE_CHANCE,
+  SKILL_NODE_INFO,
 } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
@@ -78,6 +84,10 @@ export function mount(container, options = {}) {
   let roundRead            = null;    // { source, throwName } — informational read shown in gut_check
   let roundStrategyRead    = null;    // { source, strategy, accurate } — NPR strategy reveal
   let roundActivated       = [];      // names of powerups activated this round (display)
+  let roundEspressoShotActive     = false; // Espresso Shot activated this round
+  let roundEspressoShotBonus      = null;  // player's chosen backup throw (null until picked)
+  let roundWordFromCoachElim      = null;  // throw eliminated by A Word From Your Coach (string | null)
+  let roundSchrodingerOriginalThrow = null; // throw at Schrödinger's Amulet activation
 
   // Per-match state (in-memory)
   let matchHotSauce          = false;
@@ -88,13 +98,38 @@ export function mount(container, options = {}) {
   let matchHiccupPotion      = false;   // NPC throws random every 3rd round
   let matchFocusGroup        = false;   // 65% per-round NPC-throw hint
   let matchFocusedFG         = false;   // 80% per-round NPC-throw hint
+  let matchWordFromCoach      = false;  // A Word From Your Coach: eliminate one wrong throw per round
   let matchMysticPizza       = false;   // available "rewind on loss" charge (consumed on use)
   let matchPizzaUsedThisRound = false;  // prevents infinite replay
 
   // L2 skill state
-  let nprAccumulation     = 0;          // MIND.1.1 — % per round, resets on fire/match start
+  let nprAccumulation      = 0;         // MIND.1.1 — % per round, resets on fire/match start
   let hasNPRFiredThisMatch = false;     // for v1.0 Mental Mysticism precondition
   let tmlCooldownRemaining = 0;         // FORTUNE.1.1 — rounds before TML usable again
+
+  // L3 skill state — MIND
+  // Neural Scan cross-match cooldown — loaded from persistent crossMatchState.
+  // Default to cooldown value (= ready) when no prior use recorded.
+  const _nsCooldown = () => Boolean(progress.treeState?.MIND?.['MIND.1.1.1.1'])
+    ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
+  let neuralScanMatchesSinceLastUse =
+    (progress.crossMatchState?.neuralScanMatchesSinceLastUse ?? _nsCooldown());
+  let consecutiveLosses       = 0;      // MIND.1.1.2 Desperate Clarity tracker
+  let desperateClarityBonus   = 0;      // permanent NPR floor added by Desperate Clarity
+  let desperateClarityApplied = false;  // one-time trigger per match
+  let memoryWipeUsed          = false;  // MIND.1.2.1 — once per match
+
+  // L3 skill state — MYSTIC
+  let thirdTimesCharmFails    = 0;      // MYSTIC.1.1.2 — consecutive failed tie conversions
+  let thirdTimesCharmUsed     = false;  // one-time per match
+  let tieIsImmune             = false;  // future Refuse to Lose — blocks all tie-altering skills
+
+  // L3 skill state — FORTUNE
+  let dueForAWinFails         = 0;      // FORTUNE.1.1.2 — consecutive TML failures
+  let dueForAWinUsed          = false;  // one-time per match
+  let forceYourHandCooldown   = 0;      // FORTUNE.1.2.1
+  let roundForceHandActive    = false;  // per-round: Force Your Hand activated this round
+  let changeMyLuckCooldown    = 0;      // FORTUNE.1.2.2
   let playerWinStreak        = computeStreak(tournamentData.currentMatch.roundHistory ?? []);
   // Tracks per-effect "already-awarded-at" thresholds for the current streak run.
   // Reset whenever streak resets to 0 (after a non-win round).
@@ -272,6 +307,11 @@ export function mount(container, options = {}) {
     if (pu.name === 'Hiccup Potion' && matchHiccupPotion)          return { ok: false, note: 'Already active this match' };
     if (pu.name === 'Focus Group' && matchFocusGroup)              return { ok: false, note: 'Already active this match' };
     if (pu.name === 'Focused Focus Group' && matchFocusedFG)       return { ok: false, note: 'Already active this match' };
+    if (pu.name === 'A Word From Your Coach' && matchWordFromCoach) return { ok: false, note: 'Already active this match' };
+    if (pu.name === 'Reading Glasses'       && tournamentEffectActive('Reading Glasses'))       return { ok: false, note: 'Already active this tournament' };
+    if (pu.name === 'Courtside with Jessie' && tournamentEffectActive('Courtside with Jessie')) return { ok: false, note: 'Already active this tournament' };
+    if (pu.name === 'Cuckoo Clock'          && tournamentEffectActive('Cuckoo Clock'))          return { ok: false, note: 'Already active this tournament' };
+    if (pu.name === 'Smart Glasses'         && seasonEffectActive('Smart Glasses'))             return { ok: false, note: 'Already active this season' };
 
     return { ok: true, note: '' };
   }
@@ -322,9 +362,14 @@ export function mount(container, options = {}) {
     if (matchHotSauce)                              list.push('HOT SAUCE');
     if (matchThreesCompany && !matchThreesCompanyDone) list.push("THREE'S COMPANY");
     if (matchLuckyPenny)                            list.push('LUCKY PENNY');
+    if (matchWordFromCoach)                         list.push('COACH TIP');
     if (tournamentEffectActive('Ghost Pepper'))     list.push('GHOST PEPPER');
     if (tournamentEffectActive('Carolina Reaper'))  list.push('CAROLINA REAPER');
+    if (tournamentEffectActive('Reading Glasses'))  list.push('READING GLASSES');
+    if (tournamentEffectActive('Courtside with Jessie')) list.push('COURTSIDE');
+    if (tournamentEffectActive('Cuckoo Clock'))     list.push('CUCKOO CLOCK');
     if (seasonEffectActive('The Ballad of Jessie Jones')) list.push('BALLAD OF JJ');
+    if (seasonEffectActive('Smart Glasses'))        list.push('SMART GLASSES');
     if (list.length === 0) return '';
     return `
       <p class="snes-small snes-success" style="font-size:5px;text-align:center">
@@ -333,27 +378,89 @@ export function mount(container, options = {}) {
     `;
   }
 
-  // Active-skill bar — shown above the action area when player has active skills.
-  // Currently only TML at L2; will expand with more L3/L4 actives.
-  function renderActiveSkillsBar() {
-    if (!hasSkill('FORTUNE.1.1')) return '';
-    const ready    = tmlCooldownRemaining === 0 && !roundActiveSkillUsed;
-    const cdLabel  = tmlCooldownRemaining > 0
-      ? `${tmlCooldownRemaining} ROUND${tmlCooldownRemaining > 1 ? 'S' : ''}`
-      : 'READY';
-    const usedThis = roundTmlPending !== null;
+  // Renders a pip string showing cooldown remaining vs total, e.g. "3r ■■■□□"
+  function cdPips(remaining, total) {
+    if (remaining <= 0) return 'READY';
+    const pips = Array.from({ length: total }, (_, i) => i < remaining ? '■' : '□').join('');
+    return `${remaining}r ${pips}`;
+  }
+
+  // Returns state for a single active skill node.
+  function getActiveSkillState(nodeId) {
+    switch (nodeId) {
+      case 'FORTUNE.1.1': {
+        const ready    = tmlCooldownRemaining === 0 && !roundActiveSkillUsed;
+        const usedThis = roundTmlPending !== null;
+        const cdLabel  = cdPips(tmlCooldownRemaining, TML_COOLDOWN_ROUNDS);
+        let btnLabel = '▶ USE';
+        if (usedThis) btnLabel = roundTmlPending === 'success' ? '✓ SUCCEEDED' : '✗ FAILED';
+        return { ready, cdLabel, btnLabel, btnId: 'btn-tml' };
+      }
+      case 'MIND.1.1.1': {
+        const cooldown    = hasSkill('MIND.1.1.1.1') ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
+        const ready       = neuralScanMatchesSinceLastUse >= cooldown && !roundActiveSkillUsed;
+        const matchesLeft = cooldown - neuralScanMatchesSinceLastUse;
+        const cdLabel     = ready ? 'READY' : `${matchesLeft}m ` + Array.from({ length: cooldown }, (_, i) => i < matchesLeft ? '■' : '□').join('');
+        return { ready, cdLabel, btnLabel: '▶ SCAN', btnId: 'btn-neural-scan' };
+      }
+      case 'MIND.1.2.1': {
+        const ready = !memoryWipeUsed && !roundActiveSkillUsed;
+        return { ready, cdLabel: memoryWipeUsed ? 'USED' : 'READY', btnLabel: '▶ WIPE', btnId: 'btn-memory-wipe' };
+      }
+      case 'FORTUNE.1.2.1': {
+        const ready   = forceYourHandCooldown === 0 && !roundActiveSkillUsed;
+        const cdLabel = cdPips(forceYourHandCooldown, FORCE_YOUR_HAND_COOLDOWN_ROUNDS);
+        const used    = roundForceHandActive;
+        return { ready: ready && !used, cdLabel, btnLabel: used ? '✓ ARMED' : '▶ USE', btnId: 'btn-force-hand' };
+      }
+      case 'FORTUNE.1.2.2': {
+        const ready   = changeMyLuckCooldown === 0 && !roundActiveSkillUsed;
+        const cdLabel = cdPips(changeMyLuckCooldown, CHANGE_MY_LUCK_COOLDOWN_ROUNDS);
+        return { ready, cdLabel, btnLabel: '▶ USE', btnId: 'btn-change-luck' };
+      }
+      default:
+        return { ready: false, cdLabel: '—', btnLabel: '▶ USE', btnId: `btn-skill-${nodeId}` };
+    }
+  }
+
+  // Skills panel — lists every purchased active skill with its cooldown and USE button.
+  // Driven by SKILL_NODE_INFO so it picks up future L3/L4 actives automatically.
+  function renderSkillsPanel() {
+    // Collect all purchased active skill node ids
+    const activeSkills = Object.entries(SKILL_NODE_INFO)
+      .filter(([id, info]) => info.kind === 'active' && hasSkill(id))
+      .map(([id, info]) => ({ id, name: info.name }));
+
+    if (activeSkills.length === 0) return '';
+
+    const cards = activeSkills.map(({ id, name }) => {
+      const { ready, cdLabel, btnLabel, btnId } = getActiveSkillState(id);
+      return `
+        <div style="display:flex;align-items:center;gap:10px;
+                    padding:8px 12px;background:var(--snes-panel-dark);
+                    border:2px solid ${ready ? 'var(--snes-yellow)' : 'var(--snes-border)'};
+                    border-radius:2px">
+          <div style="flex:1;min-width:0">
+            <p class="snes-small" style="font-size:7px;color:${ready ? 'var(--snes-yellow)' : 'var(--snes-text)'}">
+              ${name.toUpperCase()}
+            </p>
+            <p class="snes-small snes-muted" style="font-size:5px;margin-top:3px">
+              ⚡ ACTIVE · ${cdLabel}
+            </p>
+          </div>
+          <button class="snes-btn${ready ? ' snes-btn-yellow' : ''}" id="${btnId}"
+                  style="font-size:7px;padding:7px 12px${ready ? '' : ';opacity:0.4;cursor:not-allowed'}"
+                  ${ready ? '' : 'disabled'}>
+            ${btnLabel}
+          </button>
+        </div>
+      `;
+    }).join('');
+
     return `
-      <div class="snes-panel" style="display:flex;align-items:center;gap:10px;padding:10px">
-        <p class="snes-small snes-muted" style="font-size:5px">ACTIVE SKILL</p>
-        <p class="snes-small" style="flex:1;font-size:6px">
-          TRUST MY LUCK
-          <span class="snes-muted" style="font-size:5px">· ${cdLabel}</span>
-        </p>
-        <button class="snes-btn${ready ? ' snes-btn-yellow' : ''}" id="btn-tml"
-                style="font-size:6px;padding:6px 10px${ready ? '' : ';opacity:0.4;cursor:not-allowed'}"
-                ${ready ? '' : 'disabled'}>
-          ${usedThis ? (roundTmlPending === 'success' ? '✓ TRUSTED' : '✗ FAILED') : '▶ TRUST'}
-        </button>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <p class="snes-small snes-muted" style="font-size:5px">ACTIVE SKILLS</p>
+        ${cards}
       </div>
     `;
   }
@@ -361,10 +468,13 @@ export function mount(container, options = {}) {
   // NPR accumulation indicator (L2 MIND.1.1 passive).
   function renderNPRIndicator() {
     if (!hasSkill('MIND.1.1')) return '';
-    const pct = Math.round(nprAccumulation * 100);
+    const pct    = Math.round(nprAccumulation * 100);
+    const dcNote = desperateClarityBonus > 0
+      ? ` <span class="snes-success" style="font-size:4px">[+${Math.round(desperateClarityBonus * 100)}% floor]</span>`
+      : '';
     return `
       <p class="snes-small snes-muted" style="font-size:5px;text-align:center">
-        NPR: <span class="snes-highlight">${pct}%</span>
+        NPR: <span class="snes-highlight">${pct}%</span>${dcNote}
       </p>
     `;
   }
@@ -406,7 +516,7 @@ export function mount(container, options = {}) {
         ${renderActiveEffects()}
         ${renderNPRIndicator()}
         ${pickingActivatedHTML}
-        ${renderActiveSkillsBar()}
+        ${renderSkillsPanel()}
         <p class="snes-small snes-muted" style="text-align:center">CHOOSE YOUR THROW</p>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
           <button class="throw-btn" data-throw="rock">
@@ -444,16 +554,68 @@ export function mount(container, options = {}) {
         : '';
 
       // Read panel — shown when any reveal effect produced an informational read
+      const isFocusGroupRead = roundRead &&
+        (roundRead.source === 'Focus Group' || roundRead.source === 'Focused Focus Group');
+      const readMsg = !roundRead ? '' : isFocusGroupRead
+        ? `Most of the crowd seems to be on your side — and right now, it looks like most of them are throwing <span class="snes-highlight">${THROW_NAME[roundRead.throwName]}</span>.`
+        : `They're throwing <span class="snes-highlight">${THROW_NAME[roundRead.throwName]}</span> <span class="snes-muted">(${roundRead.confidence}%)</span>`;
       const readHTML = roundRead ? `
         <div class="snes-panel" style="display:flex;align-items:center;gap:10px">
           <p class="snes-small snes-highlight" style="font-size:7px">★ READ</p>
           <p class="snes-small" style="flex:1;font-size:6px;line-height:1.5">
             <span class="snes-muted">${roundRead.source.toUpperCase()}:</span>
-            They're throwing <span class="snes-highlight">${THROW_NAME[roundRead.throwName]}</span>
-            <span class="snes-muted">(${roundRead.confidence}%)</span>
+            ${readMsg}
           </p>
         </div>
       ` : '';
+
+      // Schrödinger's Amulet: show original throw and whether player has changed yet
+      const schrodingerHTML = roundSchrodingerOriginalThrow !== null ? `
+        <div class="snes-panel" style="display:flex;align-items:center;gap:10px">
+          <p class="snes-small snes-highlight" style="font-size:7px">★ AMULET</p>
+          <p class="snes-small" style="flex:1;font-size:6px;line-height:1.5">
+            ${currentThrow === roundSchrodingerOriginalThrow
+              ? `Original: <span class="snes-highlight">${THROW_NAME[roundSchrodingerOriginalThrow]}</span>. Change throw — if either wins, you win!`
+              : `Both <span class="snes-highlight">${THROW_NAME[roundSchrodingerOriginalThrow]}</span> &amp; <span class="snes-highlight">${THROW_NAME[currentThrow]}</span> count. If either wins, you win!`
+            }
+          </p>
+        </div>
+      ` : '';
+
+      // A Word From Your Coach: show eliminated throw
+      const coachHTML = roundWordFromCoachElim ? `
+        <div class="snes-panel" style="display:flex;align-items:center;gap:10px">
+          <p class="snes-small snes-highlight" style="font-size:7px">★ COACH</p>
+          <p class="snes-small" style="flex:1;font-size:6px;line-height:1.5">
+            Coach confirms: opponent is <strong>NOT</strong> throwing
+            <span class="snes-highlight">${THROW_NAME[roundWordFromCoachElim]}</span>.
+          </p>
+        </div>
+      ` : '';
+
+      // Espresso Shot: picker when no backup chosen yet, confirmation once chosen
+      const espressoHTML = !roundEspressoShotActive ? '' : roundEspressoShotBonus === null ? `
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:6px">
+          <p class="snes-small snes-highlight" style="font-size:7px;text-align:center">★ ESPRESSO SHOT — PICK BACKUP THROW</p>
+          <p class="snes-small snes-muted" style="font-size:5px;text-align:center">Best of your two throws counts</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+            ${['rock','paper','scissors'].map(t => `
+              <button class="throw-btn" data-espresso="${t}">
+                <img src="assets/hands/${t}.png" alt="${t}" draggable="false">
+                <span>${THROW_NAME[t]}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : `
+        <div class="snes-panel" style="display:flex;align-items:center;gap:10px">
+          <p class="snes-small snes-highlight" style="font-size:7px">★ ESPRESSO</p>
+          <p class="snes-small" style="flex:1;font-size:6px;line-height:1.5">
+            Backup: <span class="snes-highlight">${THROW_NAME[roundEspressoShotBonus]}</span>.
+            Best result counts!
+          </p>
+        </div>
+      `;
 
       // Lucky Penny per-round H/T prompt
       const luckyPennyHTML = matchLuckyPenny ? `
@@ -468,10 +630,12 @@ export function mount(container, options = {}) {
         </div>
       ` : '';
 
-      const readyDisabled = matchLuckyPenny && roundLuckyPennyCall === null;
-      const readyDisabledNote = readyDisabled
-        ? `<p class="snes-small snes-muted" style="font-size:5px;text-align:center">Call heads or tails first</p>`
-        : '';
+      const readyDisabled = (matchLuckyPenny && roundLuckyPennyCall === null)
+                         || (roundEspressoShotActive && roundEspressoShotBonus === null);
+      const readyDisabledNote = !readyDisabled ? ''
+        : (roundEspressoShotActive && roundEspressoShotBonus === null)
+          ? `<p class="snes-small snes-muted" style="font-size:5px;text-align:center">Pick your backup throw first</p>`
+          : `<p class="snes-small snes-muted" style="font-size:5px;text-align:center">Call heads or tails first</p>`;
 
       const activatedHTML = roundActivated.length > 0
         ? `<p class="snes-small snes-success" style="font-size:5px;text-align:center">★ ACTIVATED: ${roundActivated.map(n => n.toUpperCase()).join(' · ')}</p>`
@@ -481,26 +645,39 @@ export function mount(container, options = {}) {
         <p class="snes-small snes-highlight" style="text-align:center">── ROUND ${roundNumber} · GUT CHECK ──</p>
         ${renderActiveEffects()}
         ${renderNPRIndicator()}
-        ${activatedHTML}
-        ${renderActiveSkillsBar()}
+        ${roundTmlPending === null ? activatedHTML : ''}
+        ${renderSkillsPanel()}
         ${renderStrategyRead()}
         ${readHTML}
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <p class="snes-small snes-muted" style="font-size:5px">THROWING</p>
-            <p class="snes-small snes-highlight">${THROW_NAME[currentThrow]}</p>
-          </div>
-          <button class="snes-btn snes-btn-yellow" id="btn-ready"
-                  style="${readyDisabled ? 'opacity:0.4;cursor:not-allowed' : ''}"
-                  ${readyDisabled ? 'disabled' : ''}>
-            ▶ READY
-          </button>
-        </div>
-        ${readyDisabledNote}
-        ${luckyPennyHTML}
-        ${throwChangeHTML}
-        ${lockedNote}
-        <p class="snes-small snes-muted" style="font-size:5px;text-align:center">[SKILL PHASE V0.3]</p>
+        ${schrodingerHTML}
+        ${coachHTML}
+        ${espressoHTML}
+        ${roundTmlPending !== null
+          ? `<div class="snes-panel" style="text-align:center;display:flex;flex-direction:column;gap:12px;padding:20px 16px">
+               <p class="snes-small snes-highlight" style="font-size:8px">⚡ TRUST MY LUCK</p>
+               <p class="snes-small" style="font-size:6px;line-height:2.2">
+                 You're trusting your luck and throwing whatever fortune decides.
+               </p>
+             </div>
+             <button class="snes-btn snes-btn-yellow" id="btn-ready" style="width:100%">
+               ▶ LET FORTUNE DECIDE
+             </button>`
+          : `<div style="display:flex;align-items:center;justify-content:space-between">
+               <div>
+                 <p class="snes-small snes-muted" style="font-size:5px">THROWING</p>
+                 <p class="snes-small snes-highlight">${THROW_NAME[currentThrow]}</p>
+               </div>
+               <button class="snes-btn snes-btn-yellow" id="btn-ready"
+                       style="${readyDisabled ? 'opacity:0.4;cursor:not-allowed' : ''}"
+                       ${readyDisabled ? 'disabled' : ''}>
+                 ▶ READY
+               </button>
+             </div>
+             ${readyDisabledNote}
+             ${luckyPennyHTML}
+             ${throwChangeHTML}
+             ${lockedNote}`
+        }
         <p class="snes-small snes-muted" style="font-size:5px;text-align:center">Tap a powerup to inspect or use it</p>
       `;
     } else if (screenState === 'revealing') {
@@ -510,9 +687,15 @@ export function mount(container, options = {}) {
       const resultColor = lastRoundResult === 'player'   ? 'snes-success'
                         : lastRoundResult === 'opponent' ? 'snes-error'
                         : 'snes-highlight';
+      const revealActivatedHTML = roundActivated.length > 0
+        ? `<p class="snes-small snes-success" style="font-size:5px;text-align:center">
+             ★ ${roundActivated.map(n => n.toUpperCase()).join(' · ')}
+           </p>`
+        : '';
       bodyHTML = `
         <p class="snes-small snes-highlight" style="text-align:center">── ROUND ${roundNumber} ──</p>
         ${renderActiveEffects()}
+        ${revealActivatedHTML}
         <div class="snes-panel">
           <div class="throw-reveal">
             <div class="throw-reveal-side">
@@ -704,8 +887,12 @@ export function mount(container, options = {}) {
       render();
     });
 
-    // TML button (visible in picking + gut_check phases)
+    // Active skill buttons (visible in picking + gut_check phases)
     document.getElementById('btn-tml')?.addEventListener('click', handleTrustMyLuck);
+    document.getElementById('btn-neural-scan')?.addEventListener('click', handleNeuralScan);
+    document.getElementById('btn-memory-wipe')?.addEventListener('click', handleMemoryWipe);
+    document.getElementById('btn-force-hand')?.addEventListener('click', handleForceYourHand);
+    document.getElementById('btn-change-luck')?.addEventListener('click', handleChangeMyLuck);
 
     if (screenState === 'picking') {
       container.querySelectorAll('[data-throw]').forEach(btn => {
@@ -723,6 +910,12 @@ export function mount(container, options = {}) {
       container.querySelectorAll('[data-coin]').forEach(btn => {
         btn.addEventListener('click', () => {
           roundLuckyPennyCall = btn.dataset.coin;
+          render();
+        });
+      });
+      container.querySelectorAll('[data-espresso]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          roundEspressoShotBonus = btn.dataset.espresso;
           render();
         });
       });
@@ -785,7 +978,8 @@ export function mount(container, options = {}) {
         : (wrongPool[Math.floor(roll() * wrongPool.length)] ?? realStrategy);
       roundStrategyRead    = { source: 'NPR', strategy: shown, accurate };
       hasNPRFiredThisMatch = true;
-      nprAccumulation      = 0;
+      // Desperate Clarity (MIND.1.1.2): permanent NPR floor — bonus stays after fire.
+      nprAccumulation = desperateClarityBonus;
     }
   }
 
@@ -793,8 +987,9 @@ export function mount(container, options = {}) {
   // Picks the highest-confidence active read; sets roundCanChangeThrow if any
   // reveal grants throw-change ability.
   function generateRoundRead() {
-    roundRead           = null;
-    roundCanChangeThrow = false;
+    roundRead              = null;
+    roundCanChangeThrow    = false;
+    roundWordFromCoachElim = null;
 
     const candidates = [];
     if (matchFocusedFG) {
@@ -807,9 +1002,28 @@ export function mount(container, options = {}) {
       candidates.push({ source: 'Focus Group', confidence: 65,
                         throwName: correct ? pendingOpponentThrow : pickWrongThrow(pendingOpponentThrow) });
     }
+    if (tournamentEffectActive('Courtside with Jessie') && roll() < COURTSIDE_CHANCE) {
+      candidates.push({ source: 'Courtside with Jessie', confidence: 40,
+                        throwName: pendingOpponentThrow });
+    }
+    if (seasonEffectActive('Smart Glasses') && roll() < SMART_GLASSES_CHANCE) {
+      candidates.push({ source: 'Smart Glasses', confidence: 20,
+                        throwName: pendingOpponentThrow });
+    }
+    if (tournamentEffectActive('Reading Glasses') && roll() < READING_GLASSES_CHANCE) {
+      candidates.push({ source: 'Reading Glasses', confidence: 15,
+                        throwName: pendingOpponentThrow });
+    }
     if (candidates.length > 0) {
       candidates.sort((a, b) => b.confidence - a.confidence);
       roundRead           = candidates[0];
+      roundCanChangeThrow = true;
+    }
+
+    // A Word From Your Coach: eliminate one throw the NPC is definitely NOT using this round.
+    if (matchWordFromCoach && pendingOpponentThrow) {
+      const wrongThrows = ['rock', 'paper', 'scissors'].filter(t => t !== pendingOpponentThrow);
+      roundWordFromCoachElim = wrongThrows[Math.floor(roll() * wrongThrows.length)];
       roundCanChangeThrow = true;
     }
   }
@@ -949,6 +1163,43 @@ export function mount(container, options = {}) {
         roundActivated.push('Focused Focus Group');
         break;
 
+      // ── MIND — A Word From Your Coach: Monty Hall — eliminate one wrong throw per round ─
+      case 'A Word From Your Coach':
+        consumePowerupByInstance(instanceId);
+        matchWordFromCoach = true;
+        if (screenState === 'gut_check') generateRoundRead();
+        roundActivated.push('A Word From Your Coach');
+        break;
+
+      // ── MIND — Espresso Shot: player picks backup throw in gut_check; better outcome counts ─
+      case 'Espresso Shot':
+        consumePowerupByInstance(instanceId);
+        roundEspressoShotActive = true;
+        roundActivated.push('Espresso Shot');
+        break;
+
+      // ── MIND — passive per-round tells (tournament / season scope) ─────────
+      case 'Reading Glasses':
+        consumePowerupByInstance(instanceId);
+        activateTournamentEffect('Reading Glasses');
+        if (screenState === 'gut_check') generateRoundRead();
+        roundActivated.push('Reading Glasses');
+        break;
+
+      case 'Courtside with Jessie':
+        consumePowerupByInstance(instanceId);
+        activateTournamentEffect('Courtside with Jessie');
+        if (screenState === 'gut_check') generateRoundRead();
+        roundActivated.push('Courtside with Jessie');
+        break;
+
+      case 'Smart Glasses':
+        consumePowerupByInstance(instanceId);
+        activateSeasonEffect('Smart Glasses');
+        if (screenState === 'gut_check') generateRoundRead();
+        roundActivated.push('Smart Glasses');
+        break;
+
       // ── MIND — pre-match strategy reveal (99% accurate) ─────────────────────
       case 'Jessie Did Her Homework': {
         consumePowerupByInstance(instanceId);
@@ -1010,6 +1261,14 @@ export function mount(container, options = {}) {
         roundActivated.push('Tabula Rasa');
         break;
 
+      // ── MYSTIC — Schrödinger's Amulet: change throw; if original OR new beats NPC, win ─
+      case "Schrödinger's Amulet":
+        consumePowerupByInstance(instanceId);
+        roundSchrodingerOriginalThrow = currentThrow;
+        roundCanChangeThrow = true;
+        roundActivated.push("Schrödinger's Amulet");
+        break;
+
       // ── MYSTIC — Mystic Pizza: replay round on loss ────────────────────────
       case 'Mystic Pizza':
         consumePowerupByInstance(instanceId);
@@ -1024,11 +1283,23 @@ export function mount(container, options = {}) {
         roundActivated.push('Cosmic Insurance Policy');
         break;
 
+      // ── MYSTIC — Clockwork Orange: reset all player active-skill round cooldowns ─
+      case 'Clockwork Orange':
+        consumePowerupByInstance(instanceId);
+        resetActiveCooldowns();
+        roundActivated.push('Clockwork Orange');
+        break;
+
+      // ── MYSTIC — Cuckoo Clock: Clockwork Orange auto-fires at round 3, tournament-scope ─
+      case 'Cuckoo Clock':
+        consumePowerupByInstance(instanceId);
+        activateTournamentEffect('Cuckoo Clock');
+        roundActivated.push('Cuckoo Clock');
+        break;
+
       // ── MYSTIC — no-op until later systems land ─────────────────────────────
-      case 'Clockwork Orange':   // resets player active-skill cooldowns; +1 round on opponents
       case 'Molasses':           // +1 round on opponent active-skill cooldowns
       case 'Padlock':            // blocks NPC powerup activation
-      case 'Cuckoo Clock':       // auto-fires Clockwork Orange at round 3 each match
         consumePowerupByInstance(instanceId);
         roundActivated.push(`${pu.name} (no-op until later systems)`);
         break;
@@ -1043,6 +1314,13 @@ export function mount(container, options = {}) {
     }
   }
 
+  // Resets all round-based active-skill cooldowns (Clockwork Orange / Cuckoo Clock).
+  function resetActiveCooldowns() {
+    tmlCooldownRemaining  = 0;
+    forceYourHandCooldown = 0;
+    changeMyLuckCooldown  = 0;
+  }
+
   // ── Match reset (Cosmic Insurance Policy) ────────────────────────────────────
 
   function resetMatch() {
@@ -1052,6 +1330,28 @@ export function mount(container, options = {}) {
     playerWinStreak        = 0;
     matchThreesCompanyDone = false;
     streakAwardedFlags     = {};
+    // Match-scope powerup resets
+    matchFocusGroup         = false;
+    matchFocusedFG          = false;
+    matchWordFromCoach       = false;
+    matchHotSauce           = false;
+    matchThreesCompany      = false;
+    matchLuckyPenny         = false;
+    matchTabulaRasa         = false;
+    matchHiccupPotion       = false;
+    matchMysticPizza        = false;
+    matchPizzaUsedThisRound = false;
+    // L3 match-scope resets
+    consecutiveLosses       = 0;
+    desperateClarityBonus   = 0;
+    desperateClarityApplied = false;
+    memoryWipeUsed          = false;
+    thirdTimesCharmFails    = 0;
+    thirdTimesCharmUsed     = false;
+    dueForAWinFails         = 0;
+    dueForAWinUsed          = false;
+    forceYourHandCooldown   = 0;
+    changeMyLuckCooldown    = 0;
 
     tournamentData.currentMatch.playerRoundsWon   = 0;
     tournamentData.currentMatch.opponentRoundsWon = 0;
@@ -1119,12 +1419,59 @@ export function mount(container, options = {}) {
 
     // Resolve, applying forced outcomes if active
     let result = resolveRound(currentThrow, pendingOpponentThrow);
+
+    // Espresso Shot: also play backup throw, use the better of the two outcomes.
+    if (roundEspressoShotBonus !== null) {
+      const bonusResult = resolveRound(roundEspressoShotBonus, pendingOpponentThrow);
+      const ORDER = { player: 2, tie: 1, opponent: 0 };
+      if (ORDER[bonusResult] > ORDER[result]) {
+        result = bonusResult;
+        currentThrow = roundEspressoShotBonus; // backup was better; show it in reveal
+      }
+    }
+
+    // Schrödinger's Amulet: if player changed throw, check if original would have won too.
+    if (roundSchrodingerOriginalThrow !== null
+        && currentThrow !== roundSchrodingerOriginalThrow) {
+      const originalResult = resolveRound(roundSchrodingerOriginalThrow, pendingOpponentThrow);
+      if (originalResult === 'player' && result !== 'player') {
+        result       = 'player';
+        currentThrow = roundSchrodingerOriginalThrow; // show the throw that actually won
+        roundActivated.push("Schrödinger's Amulet: original throw won!");
+      }
+    }
+
     if (roundForceWin)       result = 'player';
     else if (roundForceLoss) result = 'opponent';
-    // Tweak Reality (MYSTIC.1.1): natural tie → 30% convert to win
-    else if (result === 'tie' && hasSkill('MYSTIC.1.1') && roll() < TWEAK_REALITY_CHANCE) {
-      result = 'player';
-      roundActivated.push('Reality Tweaked');
+    else if (result === 'tie' && !tieIsImmune) {
+      // Tier 1: Force Your Hand (FORTUNE.1.2.1, active) — runs before passives.
+      if (roundForceHandActive) {
+        if (roll() < FORCE_YOUR_HAND_CHANCE) {
+          result = 'player';
+          roundActivated.push('Force Your Hand');
+        }
+        // Active fired (hit or miss) — passives do not roll this round.
+      } else if (hasSkill('MYSTIC.1.1') || hasSkill('MYSTIC.1.1.1')) {
+        // Passive: Alter Reality (60%) replaces Tweak Reality (30%) when purchased.
+        const baseChance = hasSkill('MYSTIC.1.1.1') ? ALTER_REALITY_CHANCE : TWEAK_REALITY_CHANCE;
+        // Third Time's the Charm (MYSTIC.1.1.2): boost to 95% after 2 consecutive failures.
+        let convertChance = baseChance;
+        if (hasSkill('MYSTIC.1.1.2') && !thirdTimesCharmUsed && thirdTimesCharmFails >= 2) {
+          convertChance = THIRD_TIMES_CHARM_BOOST;
+          thirdTimesCharmUsed = true;
+        }
+        if (roll() < convertChance) {
+          result = 'player';
+          if (convertChance === THIRD_TIMES_CHARM_BOOST) {
+            roundActivated.push("Third Time's the Charm!");
+          } else {
+            roundActivated.push(hasSkill('MYSTIC.1.1.1') ? 'Reality Altered' : 'Reality Tweaked');
+          }
+          thirdTimesCharmFails = 0;
+        } else {
+          thirdTimesCharmFails++;
+        }
+      }
     }
 
     lastPlayerThrow   = currentThrow;
@@ -1146,12 +1493,23 @@ export function mount(container, options = {}) {
 
     recordPlayerThrow(npcMatchState, currentThrow);
 
-    // Update streak counters
+    // Update streak counters and L3 passive trackers
     if (result === 'player') {
       playerWinStreak++;
+      consecutiveLosses = 0;
     } else {
       playerWinStreak = 0;
       resetStreakAwardedFlags();
+      if (result === 'opponent') {
+        consecutiveLosses++;
+        // Desperate Clarity (MIND.1.1.2): +20% permanent NPR floor after 2 consecutive losses.
+        if (hasSkill('MIND.1.1.2') && !desperateClarityApplied && consecutiveLosses >= 2) {
+          desperateClarityBonus  += DESPERATE_CLARITY_NPR_BOOST;
+          nprAccumulation        += DESPERATE_CLARITY_NPR_BOOST;
+          desperateClarityApplied = true;
+          roundActivated.push('Desperate Clarity: +20% NPR');
+        }
+      }
     }
 
     screenState = 'revealing';
@@ -1293,8 +1651,14 @@ export function mount(container, options = {}) {
     }
 
     roundNumber++;
+    // Cuckoo Clock: auto-fire Clockwork Orange at the start of round 3.
+    if (tournamentEffectActive('Cuckoo Clock') && roundNumber === 3) {
+      resetActiveCooldowns();
+    }
     // Decrement active-skill cooldowns for the new round.
-    if (tmlCooldownRemaining > 0) tmlCooldownRemaining--;
+    if (tmlCooldownRemaining    > 0) tmlCooldownRemaining--;
+    if (forceYourHandCooldown   > 0) forceYourHandCooldown--;
+    if (changeMyLuckCooldown    > 0) changeMyLuckCooldown--;
     resetRoundScopeState();
     screenState = 'picking';
     render();
@@ -1327,9 +1691,24 @@ export function mount(container, options = {}) {
     roundStrategyRead        = null;
     roundActivated           = [];
     popupPowerup             = null;
+    roundForceHandActive     = false;
+    tieIsImmune              = false;   // Refuse to Lose (future) — clear each round
+    roundEspressoShotActive       = false;
+    roundEspressoShotBonus        = null;
+    roundWordFromCoachElim        = null;
+    roundSchrodingerOriginalThrow = null;
   }
 
   // ── Active skill: Trust My Luck (FORTUNE.1.1) ────────────────────────────────
+
+  // Returns the throw that beats the given throw.
+  function throwThatBeats(t) {
+    return t === 'rock' ? 'paper' : t === 'paper' ? 'scissors' : 'rock';
+  }
+  // Returns the throw that loses to the given throw.
+  function throwThatLosesTo(t) {
+    return t === 'rock' ? 'scissors' : t === 'paper' ? 'rock' : 'paper';
+  }
 
   function handleTrustMyLuck() {
     if (!hasSkill('FORTUNE.1.1'))      return;
@@ -1337,17 +1716,143 @@ export function mount(container, options = {}) {
     if (roundActiveSkillUsed)          return;
     if (screenState !== 'picking' && screenState !== 'gut_check') return;
 
-    const success = roll() < TML_SUCCESS_CHANCE;
-    if (success) {
-      roundForceWin    = true;
-      roundTmlPending  = 'success';
-    } else {
-      roundForceLoss   = true;
-      roundTmlPending  = 'failure';
+    // Compute opponent's throw now — needed to assign the correct player throw.
+    if (pendingOpponentThrow === null) pendingOpponentThrow = computeNpcThrow();
+
+    // Lucky Socks (FORTUNE.1.1.1): upgrades TML success rate to 85%.
+    let successChance = hasSkill('FORTUNE.1.1.1') ? LUCKY_SOCKS_TML_CHANCE : TML_SUCCESS_CHANCE;
+
+    // Due for a Win (FORTUNE.1.1.2): 95% boost after 2 consecutive failures (one-time).
+    let dueForAWinFired = false;
+    if (hasSkill('FORTUNE.1.1.2') && !dueForAWinUsed && dueForAWinFails >= 2) {
+      successChance  = DUE_FOR_A_WIN_BOOST;
+      dueForAWinFired = true;
     }
-    roundActiveSkillUsed   = true;
-    tmlCooldownRemaining   = TML_COOLDOWN_ROUNDS;
+
+    const success = roll() < successChance;
+
+    if (success) {
+      roundForceWin   = true;
+      roundTmlPending = 'success';
+      currentThrow    = throwThatBeats(pendingOpponentThrow);   // fortune picks correctly
+      dueForAWinFails = 0;
+    } else {
+      roundForceLoss  = true;
+      roundTmlPending = 'failure';
+      currentThrow    = throwThatLosesTo(pendingOpponentThrow); // fortune picks wrong
+      dueForAWinFails++;
+    }
+
+    if (dueForAWinFired) {
+      dueForAWinUsed = true;
+      roundActivated.push(success ? 'Due for a Win + TML!' : 'Due for a Win fizzled');
+    }
+
+    roundActiveSkillUsed = true;
+    tmlCooldownRemaining = TML_COOLDOWN_ROUNDS;
+    roundLockThrow       = true;
+    // "TML Succeeded/Failed" is pushed now but only shown in the reveal — the gut_check
+    // TML panel intentionally hides activatedHTML so the player doesn't see the outcome
+    // before hitting "Let Fortune Decide".
     roundActivated.push(success ? 'TML Succeeded' : 'TML Failed');
+
+    // Advance from picking to gut_check to show the TML waiting panel.
+    if (screenState === 'picking') {
+      screenState = 'gut_check';
+      processNPR();
+      generateRoundRead();
+    }
+
+    render();
+  }
+
+  // ── Active skill: Neural Scan (MIND.1.1.1) ───────────────────────────────────
+
+  function handleNeuralScan() {
+    if (!hasSkill('MIND.1.1.1')) return;
+    const cooldown = hasSkill('MIND.1.1.1.1') ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
+    if (neuralScanMatchesSinceLastUse < cooldown) return;
+    if (roundActiveSkillUsed) return;
+    if (screenState !== 'picking' && screenState !== 'gut_check') return;
+
+    const accurate      = roll() >= NPR_FALSE_RESULT_CHANCE; // 10% false read (always flat)
+    const realStrategy  = npcMatchState.strategy ?? 'unknown';
+    const wrongPool     = ['random', 'puristRock', 'puristPaper', 'mirror', 'historian',
+                            'streaker', 'momentum', 'counter', 'cycler']
+                            .filter(s => s !== realStrategy);
+    const shown = accurate
+      ? realStrategy
+      : (wrongPool[Math.floor(roll() * wrongPool.length)] ?? realStrategy);
+
+    roundStrategyRead             = { source: 'Neural Scan', strategy: shown, accurate };
+    hasNPRFiredThisMatch          = true;
+    roundActiveSkillUsed          = true;
+    neuralScanMatchesSinceLastUse = 0;
+
+    // Persist cross-match cooldown immediately.
+    progress.crossMatchState = { ...(progress.crossMatchState ?? {}), neuralScanMatchesSinceLastUse: 0 };
+    saveProgress(charId, progress);
+
+    roundActivated.push('Neural Scan');
+    render();
+  }
+
+  // ── Active skill: Memory Wipe (MIND.1.2.1) ───────────────────────────────────
+
+  function handleMemoryWipe() {
+    if (!hasSkill('MIND.1.2.1')) return;
+    if (memoryWipeUsed)          return;
+    if (roundActiveSkillUsed)    return;
+    if (screenState !== 'picking' && screenState !== 'gut_check') return;
+
+    npcMatchState        = initNpcMatchState(npc); // NPC forgets everything
+    memoryWipeUsed       = true;
+    roundActiveSkillUsed = true;
+
+    // Recompute NPC throw if one is already pending (they've now forgotten strategy).
+    if (pendingOpponentThrow !== null) {
+      pendingOpponentThrow = computeNpcThrow();
+      generateRoundRead();
+    }
+
+    roundActivated.push('Memory Wipe');
+    render();
+  }
+
+  // ── Active skill: Force Your Hand (FORTUNE.1.2.1) ────────────────────────────
+
+  function handleForceYourHand() {
+    if (!hasSkill('FORTUNE.1.2.1'))  return;
+    if (forceYourHandCooldown > 0)   return;
+    if (roundActiveSkillUsed)        return;
+    if (roundForceHandActive)        return; // already armed
+    if (screenState !== 'picking' && screenState !== 'gut_check') return;
+
+    roundForceHandActive   = true;
+    roundActiveSkillUsed   = true;
+    forceYourHandCooldown  = FORCE_YOUR_HAND_COOLDOWN_ROUNDS;
+    roundActivated.push('Force Your Hand armed');
+    render();
+  }
+
+  // ── Active skill: Change My Luck (FORTUNE.1.2.2) ─────────────────────────────
+
+  function handleChangeMyLuck() {
+    if (!hasSkill('FORTUNE.1.2.2')) return;
+    if (changeMyLuckCooldown > 0)   return;
+    if (roundActiveSkillUsed)       return;
+    if (screenState !== 'picking' && screenState !== 'gut_check') return;
+
+    roundDizzySpell      = true; // reuse: NPC throws randomly this round
+    changeMyLuckCooldown = CHANGE_MY_LUCK_COOLDOWN_ROUNDS;
+    roundActiveSkillUsed = true;
+
+    if (pendingOpponentThrow !== null) {
+      pendingOpponentThrow = randomThrow();
+      generateRoundRead();
+    }
+
+    roundActivated.push('Change My Luck');
     render();
   }
 
@@ -1383,6 +1888,16 @@ export function mount(container, options = {}) {
     if (newRank !== null) {
       progress.worldRank     = newRank;
       progress.peakWorldRank = Math.min(progress.peakWorldRank ?? (TOTAL_PLAYERS + 1), newRank);
+    }
+
+    // Neural Scan (MIND.1.1.1): increment cross-match cooldown counter after each match.
+    if (hasSkill('MIND.1.1.1')) {
+      const cooldown = hasSkill('MIND.1.1.1.1') ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
+      const prev = progress.crossMatchState?.neuralScanMatchesSinceLastUse ?? 0;
+      progress.crossMatchState = {
+        ...(progress.crossMatchState ?? {}),
+        neuralScanMatchesSinceLastUse: Math.min(prev + 1, cooldown),
+      };
     }
 
     saveProgress(charId, progress);

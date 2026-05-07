@@ -143,19 +143,20 @@
 - [x] UI element in between tournaments where you can view the whole global ranking
 - [x] Skill point allocation UI: full node graph, tap to inspect, Add/Remove
 - [x] Mid-season point spending after each tournament (add-only)
-- [ ] Active skill system: one active skill per round, cooldowns, UI buttons
-- [ ] Full off-season respec
-- [ ] Season 2 second-tree selection enforced
-- [ ] NPC tree configs active: NPCs spend points per random-from-legal-nodes
-- [ ] Trust My Luck for FORTUNE (levels 1–2, 75% baseline)
+- [x] Active skill system: one active skill per round, cooldowns, UI buttons
+- [x] Full off-season respec
+- [x] Season 2 second-tree selection enforced
+- [x] L3 nodes for all 3 skill trees
+- [x] Trust My Luck for FORTUNE (levels 1–2, 75% baseline)
 - [ ] Cross-tree synergy nodes (level 3) — may slide to v1.0
 - [x] Wire up gameplay effects for all 12 FORTUNE powerups
 - [x] Per-powerup `activationPhase` (Throw Selection vs Gut Check)
 - [x] MIND: 6 of 12 implemented (Jessie Special, Dead Giveaway, Focus Group, Focused FG, Jessie Did Her Homework, Research Notes stub)
-- [ ] MIND remaining: Espresso Shot, A Word From Your Coach, Reading Glasses, Courtside, Smart Glasses, full Research Notes
+- [x] MIND remaining: Espresso Shot, A Word From Your Coach, Reading Glasses, Courtside, Smart Glasses (full Research Notes deferred to NPC history tracking task)
 - [x] MYSTIC: 6 functional + 4 no-op-marked (12 total touched)
-- [ ] MYSTIC remaining: Schrödinger's Amulet, Jonesing to Help (need cross-match hook)
-- [ ] Skill cooldown system (unblocks Clockwork Orange / Molasses / Cuckoo Clock real effects)
+- [x] MYSTIC remaining: Schrödinger's Amulet implemented; Jonesing to Help still deferred (needs cross-match start-of-match drop hook)
+- [x] Skill cooldown system (unblocks Clockwork Orange / Molasses / Cuckoo Clock real effects), including visual indicators of cooldown time
+- [ ] NPC tree configs active: NPCs spend points per random-from-legal-nodes
 - [ ] NPC powerup activation system (unblocks Padlock real effect)
 - [ ] NPC throw history tracking (unblocks full Research Notes display)
 

@@ -122,8 +122,14 @@ export function generateDrops(count, treeState) {
 
 // ── Starting loadout (deterministic, no RNG) ──────────────────────────────────
 
+// Returns true if a specific node is purchased.
+function hasNode(treeState, nodeId) {
+  const tree = nodeId.split('.')[0];
+  return Boolean(treeState?.[tree]?.[nodeId]);
+}
+
 // Maps tree state to the deterministic starting loadout key from STARTING_LOADOUT.
-// For v0.3-pre (L1 only): single-tree players use {tree}_only.
+// Single-tree players use {tree}_only. Multi-root combinations check L3 synergy nodes.
 // Returns null if no roots are purchased (Lock In gate prevents this anyway).
 function getLoadoutKey(treeState) {
   const has = {
@@ -135,11 +141,20 @@ function getLoadoutKey(treeState) {
   if (roots.length === 0) return null;
   if (roots.length === 1) return `${roots[0]}_only`;
 
-  // Multi-root combinations (synergy keys not yet relevant — L3 nodes).
+  // Multi-root: check cross-tree L3 synergy nodes.
   const sorted = roots.sort().join('_');
-  if (sorted === 'MIND_MYSTIC')   return 'MIND_MYSTIC_roots';
-  if (sorted === 'FORTUNE_MIND')  return 'MIND_FORTUNE_roots';
-  if (sorted === 'FORTUNE_MYSTIC') return 'MYSTIC_FORTUNE_roots';
+  if (sorted === 'MIND_MYSTIC') {
+    // MIND.1.1.2 (Desperate Clarity) + MYSTIC root → synergy loadout
+    return hasNode(treeState, 'MIND.1.1.2') ? 'MIND_MYSTIC_synergy' : 'MIND_MYSTIC_roots';
+  }
+  if (sorted === 'FORTUNE_MIND') {
+    // FORTUNE.1.1.2 (Due for a Win) + MIND root → synergy loadout (6th slot)
+    return hasNode(treeState, 'FORTUNE.1.1.2') ? 'MIND_FORTUNE_synergy' : 'MIND_FORTUNE_roots';
+  }
+  if (sorted === 'FORTUNE_MYSTIC') {
+    // MYSTIC.1.1.2 (Third Time's the Charm) + FORTUNE root → synergy loadout
+    return hasNode(treeState, 'MYSTIC.1.1.2') ? 'MYSTIC_FORTUNE_synergy' : 'MYSTIC_FORTUNE_roots';
+  }
   return null;
 }
 

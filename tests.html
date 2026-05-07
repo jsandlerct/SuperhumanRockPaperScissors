@@ -27,15 +27,17 @@
 </head>
 <body>
   <h1>SRPS Test Suite</h1>
-  <p>NPC strategy tests — open browser console for additional detail</p>
+  <p>Full test suite — open browser console for additional detail</p>
   <div id="output">Running…</div>
   <div id="status"></div>
 
   <script type="module">
     import { runAll } from './js/tests/testRunner.js';
+    import './js/tests/round.test.js';
     import './js/tests/npc.test.js';
     import './js/tests/seasonEngine.test.js';
     import './js/tests/powerupEngine.test.js';
+    import './js/tests/skills.test.js';
 
     const output = document.getElementById('output');
     const status = document.getElementById('status');

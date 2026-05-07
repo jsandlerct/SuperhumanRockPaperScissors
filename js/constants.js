@@ -188,7 +188,7 @@ export const POWERUP_CATALOG = [
     effect: 'If you lose: round replays from Throw Selection. If you win or tie: fizzles.' },
   { name: 'Dizzy Spell',          tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
     effect: 'NPC throws randomly this round and cannot change their throw during Gut Check.' },
-  { name: "Schrödinger's Amulet", tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
+  { name: "Schrödinger's Amulet", tier: 'Basic', scope: 'round', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'gut_check',
     effect: 'If you change throw, both your original and new throw exist — if either beats the NPC, you win.' },
   { name: 'Hiccup Potion',        tier: 'Basic', scope: 'match', tree: 'MYSTIC', jessieOnly: false, activationPhase: 'either',
     effect: 'Every third round this match, the NPC throws randomly regardless of strategy.' },
@@ -263,9 +263,11 @@ export const POWERUP_IMPLEMENTED = new Set([
   // MIND
   'The Jessie Special', 'Research Notes', 'Jessie Did Her Homework',
   'Dead Giveaway', 'Focus Group', 'Focused Focus Group',
+  'Espresso Shot', 'A Word From Your Coach', 'Reading Glasses',
+  'Courtside with Jessie', 'Smart Glasses',
   // MYSTIC
   'Fait Accompli', 'Dizzy Spell', 'Hiccup Potion', 'Tabula Rasa',
-  'Mystic Pizza', 'Cosmic Insurance Policy',
+  'Mystic Pizza', 'Cosmic Insurance Policy', "Schrödinger's Amulet",
   // MYSTIC — no-op until later systems land (skill cooldowns / NPC powerup use)
   'Clockwork Orange', 'Molasses', 'Padlock', 'Cuckoo Clock',
 ]);
@@ -273,10 +275,8 @@ export const POWERUP_IMPLEMENTED = new Set([
 // Powerups marked implemented but currently no-op (waiting on dependent systems).
 // Useful for the popup to show "Effect activated, but waits on …" rather than a blanket lock.
 export const POWERUP_NO_OP = new Set([
-  'Clockwork Orange',  // resets your active-skill cooldowns — needs v0.3 active skills
-  'Molasses',          // bumps opponent active-skill cooldowns — needs v0.3 active skills
-  'Padlock',           // blocks NPC powerup activation — NPCs don't yet activate powerups
-  'Cuckoo Clock',      // auto-fires Clockwork Orange — needs v0.3 active skills
+  'Molasses',  // bumps opponent active-skill cooldowns — NPCs don't have active skills yet
+  'Padlock',   // blocks NPC powerup activation — NPCs don't yet activate powerups
 ]);
 
 // ── Skill Trees — L1 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
@@ -315,6 +315,43 @@ export const MYSTIC_UPGRADE_BONUS_TO_LEGENDARY = 0.05; // +5%
 // Drop multiplier from FORTUNE.1 (Fortunate Power).
 export const FORTUNE_DROP_MULTIPLIER = 2;
 
+// ── Skill Trees — L3 constants ────────────────────────────────────────────────
+// MIND.1.1.2 — Desperate Clarity
+export const DESPERATE_CLARITY_NPR_BOOST     = 0.20;  // +20% permanent NPR floor after 2 consecutive losses
+
+// MYSTIC.1.1.1 — Alter Reality (replaces Tweak Reality)
+export const ALTER_REALITY_CHANCE            = 0.60;  // 60% tie→win (replaces TWEAK_REALITY_CHANCE)
+
+// MYSTIC.1.1.2 — Third Time's the Charm
+export const THIRD_TIMES_CHARM_BOOST         = 0.95;  // 95% tie→win after 2 failed conversions (one-time)
+
+// MYSTIC.1.2.1 — Oblivious
+export const OBLIVIOUS_CHANCE                = 0.50;  // 50% block opponent tie-altering skill (no-op until NPC skills)
+
+// MYSTIC.1.2.2 — The Cooler
+export const THE_COOLER_CHANCE               = 0.50;  // 50% block opponent TML/ATML (no-op until NPC TML)
+
+// MIND.1.2.2 — Mind Shield
+export const MIND_SHIELD_CHANCE              = 0.50;  // 50% block opponent strategy reads (no-op until NPC NPR)
+
+// FORTUNE.1.1.1 — Lucky Socks (ATML)
+export const LUCKY_SOCKS_TML_CHANCE          = 0.85;  // 85% TML success (replaces 75%); full effect in separate TODO
+
+// FORTUNE.1.1.2 — Due for a Win
+export const DUE_FOR_A_WIN_BOOST             = 0.95;  // 95% TML after 2 consecutive TML failures (one-time)
+
+// FORTUNE.1.2.1 — Force Your Hand
+export const FORCE_YOUR_HAND_CHANCE          = 0.90;  // 90% tie→win
+export const FORCE_YOUR_HAND_COOLDOWN_ROUNDS = 5;
+
+// FORTUNE.1.2.2 — Change My Luck
+export const CHANGE_MY_LUCK_COOLDOWN_ROUNDS  = 3;
+
+// ── MIND Powerup Passive Reveal Chances ───────────────────────────────────────
+export const READING_GLASSES_CHANCE   = 0.15;  // 15% per round — tournament scope
+export const SMART_GLASSES_CHANCE     = 0.20;  // 20% per round — season scope
+export const COURTSIDE_CHANCE         = 0.40;  // 40% per round — tournament scope
+
 // ── Skill Trees — L2 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
 // L2 nodes per tree. Each costs NODE_COST.L2 (10 pts). Requires L1 root.
 // kind: 'passive' (always-on) or 'active' (player-triggered, with cooldown).
@@ -339,7 +376,42 @@ export const SKILL_TREE_L2 = {
   ],
 };
 
-// Lookup: node id → metadata across L1 + L2.
+// ── Skill Trees — L3 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
+// L3 nodes per tree. Each costs NODE_COST.L3 (15 pts). Requires parent L2.
+export const SKILL_TREE_L3 = {
+  MIND: [
+    { id: 'MIND.1.1.1', name: 'Neural Scan', parent: 'MIND.1.1', branch: 0, kind: 'active',
+      effect: 'Actively scan the NPC\'s strategy at 90% accuracy. Cross-match cooldown: once every 5 matches (3 with upgrade). Always 10% chance of false read.' },
+    { id: 'MIND.1.1.2', name: 'Desperate Clarity', parent: 'MIND.1.1', branch: 1, kind: 'passive',
+      effect: 'After 2 consecutive round losses this match: permanently add +20% to current NPR accumulation. Bonus does not reset when NPR fires. ★ MYSTIC SYNERGY: If you also hold the MYSTIC root, your season starting loadout replaces 1 Basic with 1 Legendary powerup (3 Basic + 1 Advanced + 1 Legendary).' },
+    { id: 'MIND.1.2.1', name: 'Memory Wipe', parent: 'MIND.1.2', branch: 2, kind: 'active',
+      effect: 'Reset NPC\'s strategy to their base behavior — all pattern adaptation erased. Usable once per match.' },
+    { id: 'MIND.1.2.2', name: 'Mind Shield', parent: 'MIND.1.2', branch: 3, kind: 'passive',
+      effect: '50% chance to block opponent strategy reads (NPR, Neural Scan) targeting you.' },
+  ],
+  MYSTIC: [
+    { id: 'MYSTIC.1.1.1', name: 'Alter Reality', parent: 'MYSTIC.1.1', branch: 0, kind: 'passive',
+      effect: 'Replaces Tweak Reality: natural ties convert to wins at 60% instead of 30%.' },
+    { id: 'MYSTIC.1.1.2', name: "Third Time's the Charm", parent: 'MYSTIC.1.1', branch: 1, kind: 'passive',
+      effect: 'After 2 consecutive failed tie conversions: next conversion attempt succeeds at 95%. Resets on success. One-time per match. ★ FORTUNE SYNERGY: If you also hold the FORTUNE root, your season starting loadout gains 1 Legendary powerup (1 Basic + 1 Legendary).' },
+    { id: 'MYSTIC.1.2.1', name: 'Oblivious', parent: 'MYSTIC.1.2', branch: 2, kind: 'passive',
+      effect: '50% chance to block opponent tie-altering skills each round.' },
+    { id: 'MYSTIC.1.2.2', name: 'The Cooler', parent: 'MYSTIC.1.2', branch: 3, kind: 'passive',
+      effect: '50% chance to block opponent Trust My Luck / Advanced Trust My Luck activation.' },
+  ],
+  FORTUNE: [
+    { id: 'FORTUNE.1.1.1', name: 'Lucky Socks', parent: 'FORTUNE.1.1', branch: 0, kind: 'passive',
+      effect: 'Upgrades Trust My Luck success chance from 75% to 85% (Advanced Trust My Luck).' },
+    { id: 'FORTUNE.1.1.2', name: 'Due for a Win', parent: 'FORTUNE.1.1', branch: 1, kind: 'passive',
+      effect: 'After 2 consecutive Trust My Luck failures this match: next TML attempt succeeds at 95%. Resets on success. One-time per match. ★ MIND SYNERGY: If you also hold the MIND root, your starting powerup inventory gains +1 slot (6 slots total instead of 5).' },
+    { id: 'FORTUNE.1.2.1', name: 'Force Your Hand', parent: 'FORTUNE.1.2', branch: 2, kind: 'active', cooldownRounds: 5,
+      effect: '90% chance to convert a tie into a win this round. 5-round cooldown.' },
+    { id: 'FORTUNE.1.2.2', name: 'Change My Luck', parent: 'FORTUNE.1.2', branch: 3, kind: 'active', cooldownRounds: 3,
+      effect: 'Force the NPC to throw randomly this round, forgetting their strategy. 3-round cooldown.' },
+  ],
+};
+
+// Lookup: node id → metadata across L1 + L2 + L3.
 export const SKILL_NODE_INFO = (() => {
   const map = {};
   for (const [tree, info] of Object.entries(SKILL_TREE_INFO)) {
@@ -348,6 +420,11 @@ export const SKILL_NODE_INFO = (() => {
   for (const [tree, nodes] of Object.entries(SKILL_TREE_L2)) {
     for (const node of nodes) {
       map[node.id] = { ...node, level: 2, tree };
+    }
+  }
+  for (const [tree, nodes] of Object.entries(SKILL_TREE_L3)) {
+    for (const node of nodes) {
+      map[node.id] = { ...node, level: 3, tree };
     }
   }
   return map;
