@@ -5,6 +5,7 @@ import {
   TOURNAMENT_CONFIG, SKILL_POINTS_AWARD, CONSOLATION_BONUS_BY_LEVEL,
   RANKING_MILESTONES, MILESTONE_FIRST_CHAMP_MSG, MILESTONE_THREE_TIME_CHAMP_MSG,
   TOTAL_PLAYERS, JESSIE_CONSOLATION_DIALOGUE, TROPHY_CONFIG,
+  JESSIE_MILESTONE_DIALOGUE, JESSIE_MILESTONE_PRIORITY,
 } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
@@ -14,6 +15,7 @@ import {
   loadWorld,
 } from '../storage.js';
 import { runSeasonSimulation, detectRankingMilestones } from '../systems/seasonEngine.js';
+import { showJessieDialogue } from '../ui/jessieDialogue.js';
 
 // ── Outcome detection ─────────────────────────────────────────────────────────
 
@@ -275,6 +277,9 @@ export function mount(container, options = {}) {
     const freshProgress = loadProgress(charId);
     const newWorldRank  = freshProgress.worldRank;
 
+    // Snapshot which milestones were already achieved before this season
+    const prevAchievedSet = new Set(trophies.achievedMilestones ?? []);
+
     // Detect ranking milestones
     const { messages: rankMessages, newAchieved } =
       detectRankingMilestones(newWorldRank, prevPeakRank, trophies.achievedMilestones);
@@ -288,60 +293,35 @@ export function mount(container, options = {}) {
 
     const allMilestones = [...champMilestones, ...rankMessages];
 
-    // Show Jessie consolation dialogue before results for eliminated players
+    // Determine which Jessie milestone beat fires this season (highest priority only)
+    const champMilestoneId = outcome === 'champion' && tier === 5
+      ? (t5WinsBefore + 1 === 3 ? 'three_time_champ' : t5WinsBefore === 0 ? 'first_champ' : null)
+      : null;
+    const newRankingIds    = newAchieved.filter(id => !prevAchievedSet.has(id));
+    const personalBestFired = (prevPeakRank === null || newWorldRank < prevPeakRank);
+    const allFiredIds = [
+      ...(champMilestoneId ? [champMilestoneId] : []),
+      ...newRankingIds,
+      ...(personalBestFired ? ['personal_best'] : []),
+    ];
+    const topMilestoneId = JESSIE_MILESTONE_PRIORITY.find(id => allFiredIds.includes(id)) ?? null;
+
+    const proceedToResults = () => renderSeasonResults(newWorldRank, prevWorldRank, allMilestones, newTrophy);
+
     if (outcome === 'eliminated') {
-      const dialogue = JESSIE_CONSOLATION_DIALOGUE[tier] ?? [];
-      renderJessieDialogue(dialogue, () => renderSeasonResults(newWorldRank, prevWorldRank, allMilestones, null));
+      // Consolation dialogue — no trophy shown for eliminated players
+      showJessieDialogue(
+        container,
+        JESSIE_CONSOLATION_DIALOGUE[tier] ?? [],
+        'sad',
+        () => renderSeasonResults(newWorldRank, prevWorldRank, allMilestones, null),
+      );
+    } else if (topMilestoneId && JESSIE_MILESTONE_DIALOGUE[topMilestoneId]) {
+      const { lines, expression } = JESSIE_MILESTONE_DIALOGUE[topMilestoneId];
+      showJessieDialogue(container, lines, expression, proceedToResults);
     } else {
-      renderSeasonResults(newWorldRank, prevWorldRank, allMilestones, newTrophy);
+      proceedToResults();
     }
-  }
-
-  // ── Jessie dialogue box (stub — portrait sprites deferred to v1.0) ───────────
-
-  function renderJessieDialogue(messages, onComplete) {
-    let idx = 0;
-
-    function showMessage() {
-      const isLast = idx === messages.length - 1;
-      container.innerHTML = `
-        <div class="screen fade-in" style="justify-content:center">
-          <div class="content-card" style="gap:20px">
-
-            <div class="snes-panel" style="display:flex;align-items:flex-start;gap:16px">
-              <div class="portrait-frame portrait-frame--lg" style="flex-shrink:0">
-                <img src="assets/portraits/jessie/Jessie_sad.png" alt="Jessie"
-                  style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
-              </div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:10px">
-                <p class="snes-small snes-highlight">JESSIE</p>
-                <p class="snes-small" style="line-height:1.8">${messages[idx]}</p>
-              </div>
-            </div>
-
-            <p class="snes-small snes-muted" style="text-align:right">
-              ${idx + 1} / ${messages.length}
-            </p>
-
-            <button class="snes-btn snes-btn-yellow" id="btn-jessie-next" style="width:100%">
-              ${isLast ? '▶ CONTINUE' : '▼ NEXT'}
-            </button>
-
-          </div>
-        </div>
-      `;
-
-      document.getElementById('btn-jessie-next').addEventListener('click', () => {
-        idx++;
-        if (idx < messages.length) {
-          showMessage();
-        } else {
-          onComplete();
-        }
-      });
-    }
-
-    showMessage();
   }
 
   // ── Season results panel ─────────────────────────────────────────────────────

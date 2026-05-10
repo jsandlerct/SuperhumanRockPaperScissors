@@ -148,7 +148,7 @@
 - [x] Season 2 second-tree selection enforced
 - [x] L3 nodes for all 3 skill trees
 - [x] Trust My Luck for FORTUNE (levels 1–2, 75% baseline)
-- [ ] Cross-tree synergy nodes (level 3) — may slide to v1.0
+- [x] Cross-tree synergy nodes (level 3) — may slide to v1.0
 - [x] Wire up gameplay effects for all 12 FORTUNE powerups
 - [x] Per-powerup `activationPhase` (Throw Selection vs Gut Check)
 - [x] MIND: 6 of 12 implemented (Jessie Special, Dead Giveaway, Focus Group, Focused FG, Jessie Did Her Homework, Research Notes stub)
@@ -156,31 +156,30 @@
 - [x] MYSTIC: 6 functional + 4 no-op-marked (12 total touched)
 - [x] MYSTIC remaining: Schrödinger's Amulet implemented; Jonesing to Help still deferred (needs cross-match start-of-match drop hook)
 - [x] Skill cooldown system (unblocks Clockwork Orange / Molasses / Cuckoo Clock real effects), including visual indicators of cooldown time
-- [ ] NPC tree configs active: NPCs spend points per random-from-legal-nodes
-- [ ] NPC powerup activation system (unblocks Padlock real effect)
-- [ ] NPC throw history tracking (unblocks full Research Notes display)
+- [x] Full 4-level skill trees (all 15 nodes per tree)
+- [x] Trust My Luck full implementation (75% / 85% / 95%)
+- [x] Skill information phase fully implemented
+- [x] Coach Jessie: complete tutorial + all milestone dialogues
+- [x] Complete powerup catalog: Basic, Advanced, Legendary.  Ensure working correctly and test cases.
+- [x] All cross-tree synergy pairs and counter-skill classifications. Ensure working correctly and test cases.
+- [ ] Audio: 8-bit chiptune music and SFX
 
 ---
 
 ## v1.0 Tasks (do not start until v0.3 ships)
 
-- [ ] Full 4-level skill trees (all 15 nodes per tree)
-- [ ] All cross-tree synergy pairs
-- [ ] All counter skill classifications
-- [ ] Complete powerup catalog: Basic, Advanced, Legendary
+
+- [ ] NPC tree configs active: NPCs spend points per random-from-legal-nodes
+- [ ] NPC powerup activation system (unblocks Padlock real effect)
+- [ ] NPC throw history tracking (unblocks full Research Notes display)
 - [ ] Hall of Fame: 10-season evaluation, induction screen
 - [ ] Full NPC behaviors: strategy + skill tree + powerup
-- [ ] Trust My Luck full implementation (75% / 85% / 95%)
-- [ ] Skill information phase fully implemented
-- [ ] Coach Jessie: complete tutorial + all milestone dialogues
 
 
 ---
 
 ## Backlog / Post-v1.0
 
-- [ ] Audio: 8-bit chiptune music and SFX
-- [ ] Full bracket view: all NPC matches visible
 - [ ] Difficulty levels (easy/normal/hard)
 - [ ] Additional NPC strategies
 - [ ] Achievement system beyond HOF

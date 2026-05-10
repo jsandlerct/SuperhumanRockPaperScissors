@@ -1,7 +1,7 @@
 import { navigate } from '../main.js';
 import {
   SKILL_TREE_INFO, SKILL_TREE_L2, NODE_COST, STARTING_SKILL_POINTS_SEASON_1,
-  TOURNAMENT_CONFIG,
+  TOURNAMENT_CONFIG, JESSIE_TUTORIAL_DIALOGUE,
 } from '../constants.js';
 import { mount as mountTreePanel } from '../ui/skillTreePanel.js';
 import { getInitialTreeState } from '../systems/seasonEngine.js';
@@ -9,7 +9,9 @@ import { generateStartingLoadout } from '../systems/powerupEngine.js';
 import {
   loadSession, loadIdentity, saveIdentity,
   loadProgress, saveProgress,
+  loadTrophies, saveTrophies,
 } from '../storage.js';
+import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
 
 export function mount(container, options = {}) {
   const session   = loadSession();
@@ -170,8 +172,8 @@ export function mount(container, options = {}) {
 
     // L2 requires L1 root
     if (level === 2 && !isPurchased(`${tree}.1`)) return;
-    // L3 requires parent L2
-    if (level === 3) {
+    // L3 and L4 require direct parent
+    if (level === 3 || level === 4) {
       const parentId = nodeId.split('.').slice(0, -1).join('.');
       if (!isPurchased(parentId)) return;
     }
@@ -233,6 +235,38 @@ export function mount(container, options = {}) {
   // ── Lock In / Continue ───────────────────────────────────────────────────────
 
   function handleLockIn() {
+    const unspent = progress.unspentSkillPoints ?? 0;
+    if (unspent >= 10) {
+      showUnspentConfirm(unspent, proceedWithLockIn);
+      return;
+    }
+    proceedWithLockIn();
+  }
+
+  function showUnspentConfirm(unspent, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(13,13,26,0.92);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+    overlay.innerHTML = `
+      <div class="content-card" style="max-width:400px;width:100%;gap:20px">
+        <p class="snes-title" style="font-size:10px;text-align:center">UNSPENT POINTS</p>
+        <div class="snes-panel">
+          <p class="snes-small" style="text-align:center;line-height:2.2">
+            You have <span class="snes-highlight">${unspent}</span> unspent skill points.<br>
+            Lock in without spending them?
+          </p>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button class="snes-btn snes-btn-yellow" id="btn-confirm-lockin" style="flex:1">▶ YES, LOCK IN</button>
+          <button class="snes-btn" id="btn-cancel-lockin" style="flex:1">✕ GO BACK</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('btn-confirm-lockin').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+    document.getElementById('btn-cancel-lockin').addEventListener('click', () => overlay.remove());
+  }
+
+  function proceedWithLockIn() {
     if (midSeason) {
       // Mid-season: just save whatever was spent (or nothing) and head to next tournament
       saveProgress(charId, progress);
@@ -248,5 +282,50 @@ export function mount(container, options = {}) {
     }
   }
 
+  if (!midSeason) {
+    const trophies = loadTrophies(charId);
+    if (isSeason1) {
+      // T-02: tree selection intro; T-03: skill allocation detail — fire in sequence
+      if (!tutorialBeatShown(trophies, 'T-02')) {
+        const t02 = JESSIE_TUTORIAL_DIALOGUE['T-02'];
+        showJessieDialogue(container, t02.lines, t02.expression, () => {
+          markTutorialBeat(trophies, 'T-02');
+          saveTrophies(charId, trophies);
+          // T-03 immediately after T-02
+          if (!tutorialBeatShown(trophies, 'T-03')) {
+            const t03 = JESSIE_TUTORIAL_DIALOGUE['T-03'];
+            showJessieDialogue(container, t03.lines, t03.expression, () => {
+              markTutorialBeat(trophies, 'T-03');
+              saveTrophies(charId, trophies);
+              render();
+            });
+          } else {
+            render();
+          }
+        });
+        return;
+      }
+      if (!tutorialBeatShown(trophies, 'T-03')) {
+        const t03 = JESSIE_TUTORIAL_DIALOGUE['T-03'];
+        showJessieDialogue(container, t03.lines, t03.expression, () => {
+          markTutorialBeat(trophies, 'T-03');
+          saveTrophies(charId, trophies);
+          render();
+        });
+        return;
+      }
+    } else {
+      // T-14: second tree unlock — fires on Season 2+ pre-season first visit
+      if (!tutorialBeatShown(trophies, 'T-14')) {
+        const t14 = JESSIE_TUTORIAL_DIALOGUE['T-14'];
+        showJessieDialogue(container, t14.lines, t14.expression, () => {
+          markTutorialBeat(trophies, 'T-14');
+          saveTrophies(charId, trophies);
+          render();
+        });
+        return;
+      }
+    }
+  }
   render();
 }

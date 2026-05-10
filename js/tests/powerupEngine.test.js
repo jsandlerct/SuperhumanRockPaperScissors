@@ -5,6 +5,13 @@ import {
   generateStartingLoadout, generateBonusDrops,
   randomThrow, randomCoinFlip,
 } from '../systems/powerupEngine.js';
+import {
+  POWERUP_CATALOG, POWERUP_IMPLEMENTED, POWERUP_NO_OP,
+  POWERUP_UPGRADE_CHANCE_BASE,
+  MYSTIC_UPGRADE_BONUS_TO_ADVANCED, MYSTIC_UPGRADE_BONUS_TO_LEGENDARY,
+  UNCANNY_MIND_UPGRADE_BONUS, UNCANNY_MIND_LEGENDARY_BONUS,
+  PROBABILITY_STORM_CHANCE,
+} from '../constants.js';
 import { setRollFn, resetRoll } from '../utils/rng.js';
 
 // Helper: queue of roll values; excess rolls fall back to 0.5.
@@ -17,6 +24,20 @@ function withRolls(values, fn) {
 const treeMIND     = { MIND:    { 'MIND.1': true }, MYSTIC: {}, FORTUNE: {} };
 const treeMYSTIC   = { MIND: {}, MYSTIC:  { 'MYSTIC.1': true }, FORTUNE: {} };
 const treeFORTUNE  = { MIND: {}, MYSTIC: {}, FORTUNE: { 'FORTUNE.1': true } };
+
+// Uncanny Mind (MIND.1.1.2.2): stacks upgrade bonus additively with MYSTIC.1
+const treeUncannyMind = {
+  MIND: { 'MIND.1': true, 'MIND.1.1.2.2': true },
+};
+const treeUncannyMindAndMYSTIC = {
+  MIND:  { 'MIND.1': true, 'MIND.1.1.2.2': true },
+  MYSTIC: { 'MYSTIC.1': true },
+};
+
+// Probability Storm (MYSTIC.1.1.2.2): 50% chance of duplicate non-Basic drop
+const treeProbStorm = {
+  MYSTIC: { 'MYSTIC.1': true, 'MYSTIC.1.1.2.2': true },
+};
 
 // ── calcDropCount ─────────────────────────────────────────────────────────────
 
@@ -77,6 +98,37 @@ describe('getUpgradeBonus', () => {
     const b = getUpgradeBonus(treeMYSTIC);
     assert(Math.abs(b.advanced - 0.15) < 1e-9, '+15% advanced');
     assert(Math.abs(b.legendary - 0.05) < 1e-9, '+5% legendary');
+  });
+
+  test('Uncanny Mind alone (no MYSTIC root): +10% advanced, +5% legendary', () => {
+    const b = getUpgradeBonus(treeUncannyMind);
+    assert(Math.abs(b.advanced  - UNCANNY_MIND_UPGRADE_BONUS) < 1e-9,
+      `advanced should be ${UNCANNY_MIND_UPGRADE_BONUS}, got ${b.advanced}`);
+    assert(Math.abs(b.legendary - UNCANNY_MIND_LEGENDARY_BONUS) < 1e-9,
+      `legendary should be ${UNCANNY_MIND_LEGENDARY_BONUS}, got ${b.legendary}`);
+  });
+
+  test('Uncanny Mind + MYSTIC.1 stack additively: +25% advanced, +10% legendary', () => {
+    const b = getUpgradeBonus(treeUncannyMindAndMYSTIC);
+    const expectedAdv = MYSTIC_UPGRADE_BONUS_TO_ADVANCED + UNCANNY_MIND_UPGRADE_BONUS; // 0.25
+    const expectedLeg = MYSTIC_UPGRADE_BONUS_TO_LEGENDARY + UNCANNY_MIND_LEGENDARY_BONUS; // 0.10
+    assert(Math.abs(b.advanced  - expectedAdv) < 1e-9,
+      `stacked advanced should be ${expectedAdv}, got ${b.advanced}`);
+    assert(Math.abs(b.legendary - expectedLeg) < 1e-9,
+      `stacked legendary should be ${expectedLeg}, got ${b.legendary}`);
+  });
+
+  test('Uncanny Mind stacking beats MYSTIC.1 alone', () => {
+    const mysticOnly   = getUpgradeBonus(treeMYSTIC);
+    const withUncanny  = getUpgradeBonus(treeUncannyMindAndMYSTIC);
+    assert(withUncanny.advanced  > mysticOnly.advanced,  'stacked > MYSTIC-only advanced');
+    assert(withUncanny.legendary > mysticOnly.legendary, 'stacked > MYSTIC-only legendary');
+  });
+
+  test('null treeState returns zero bonus', () => {
+    const b = getUpgradeBonus(null);
+    assertEqual(b.advanced, 0);
+    assertEqual(b.legendary, 0);
   });
 
 });
@@ -140,6 +192,30 @@ describe('generateDrops', () => {
     // base 0.10 + 0.15 = 0.25; roll 0.20 → Advanced
     const drops = withRolls([0.20, 0.50, 0.50], () => generateDrops(1, treeMYSTIC));
     assertEqual(drops[0].tier, 'Advanced');
+  });
+
+  test('Uncanny Mind alone raises upgrade threshold: roll 0.19 → Advanced', () => {
+    // advChance = base 0.10 + Uncanny 0.10 = 0.20; roll 0.19 < 0.20 → Advanced
+    const drops = withRolls([0.19, 0, 0], () => generateDrops(1, treeUncannyMind));
+    assertEqual(drops[0].tier, 'Advanced');
+  });
+
+  test('Uncanny Mind alone: roll 0.20 stays Basic (boundary)', () => {
+    // 0.20 >= 0.20 → no upgrade → Basic
+    const drops = withRolls([0.20, 0, 0], () => generateDrops(1, treeUncannyMind));
+    assertEqual(drops[0].tier, 'Basic');
+  });
+
+  test('Uncanny Mind + MYSTIC.1: roll 0.34 → Advanced (0.10+0.15+0.10=0.35)', () => {
+    // advChance = 0.10 + 0.15 + 0.10 = 0.35; roll 0.34 < 0.35 → Advanced
+    const drops = withRolls([0.34, 0, 0], () => generateDrops(1, treeUncannyMindAndMYSTIC));
+    assertEqual(drops[0].tier, 'Advanced');
+  });
+
+  test('Uncanny Mind + MYSTIC.1: roll 0.35 stays Basic (boundary)', () => {
+    // 0.35 >= 0.35 → no upgrade → Basic
+    const drops = withRolls([0.35, 0, 0], () => generateDrops(1, treeUncannyMindAndMYSTIC));
+    assertEqual(drops[0].tier, 'Basic');
   });
 
 });
@@ -322,6 +398,104 @@ describe('generateStartingLoadout — synergy combinations', () => {
     assertEqual(ids.size, loadout.length, 'all instanceIds must be unique');
   });
 
+  // ── Negative synergy: L3 node without the partner tree root ──────────────────
+  // Synergy requires BOTH: the L3 node AND the partner tree's root.
+  // Having the L3 node alone must fall back to the single-tree loadout.
+
+  test('MIND.1.1.2 without MYSTIC root: MIND-only loadout, no synergy Legendary', () => {
+    const loadout = generateStartingLoadout({
+      MIND: { 'MIND.1': true, 'MIND.1.1.2': true },
+    });
+    assertEqual(loadout.length, 5, 'MIND-only: 5 powerups');
+    assertEqual(loadout.filter(p => p.tier === 'Basic').length,     4);
+    assertEqual(loadout.filter(p => p.tier === 'Advanced').length,  1);
+    assertEqual(loadout.filter(p => p.tier === 'Legendary').length, 0, 'Legendary requires MYSTIC root');
+  });
+
+  test("MYSTIC.1.1.2 without FORTUNE root: MYSTIC-only loadout (1 Basic), no synergy Legendary", () => {
+    const loadout = generateStartingLoadout({
+      MYSTIC: { 'MYSTIC.1': true, 'MYSTIC.1.1.2': true },
+    });
+    assertEqual(loadout.length, 1, 'MYSTIC-only: 1 powerup');
+    assertEqual(loadout[0].tier, 'Basic', 'Legendary requires FORTUNE root');
+  });
+
+  test('FORTUNE.1.1.2 without MIND root: FORTUNE-only loadout (1 Basic), no synergy, no extra slot', () => {
+    const ts = { FORTUNE: { 'FORTUNE.1': true, 'FORTUNE.1.1.2': true } };
+    const loadout = generateStartingLoadout(ts);
+    assertEqual(loadout.length, 1, 'FORTUNE-only: 1 powerup');
+    assertEqual(loadout[0].tier, 'Basic');
+    assertEqual(getMaxSlots(ts), 3, '6th slot requires MIND root');
+  });
+
+  test('MIND.1.1.2 + MYSTIC root WITH synergy beats MIND-only: Legendary present', () => {
+    const withSynergy    = generateStartingLoadout(treeMIND_MYSTIC_synergy);
+    const withoutSynergy = generateStartingLoadout({ MIND: { 'MIND.1': true, 'MIND.1.1.2': true } });
+    assert(withSynergy.some(p => p.tier === 'Legendary'),    'synergy: has Legendary');
+    assert(!withoutSynergy.some(p => p.tier === 'Legendary'), 'no partner root: no Legendary');
+  });
+
+});
+
+// ── Probability Storm (MYSTIC.1.1.2.2) ───────────────────────────────────────
+//
+// When purchased, each non-Basic drop from generateDrops has a 50% chance of
+// yielding a second copy of the same powerup. Basic drops are never duplicated.
+// Roll sequence for generateDrops(1, treeProbStorm):
+//   [0] resolveTier (Basic→Advanced check)
+//   [1] pickRandomFromPool (index into candidates)
+//   [2] createPowerupInstance instanceId
+//   [3] PROBABILITY_STORM_CHANCE check (only if tier !== 'Basic')
+//   [4] second instanceId (only if storm fires)
+
+describe('Probability Storm (MYSTIC.1.1.2.2)', () => {
+
+  test('constant is 50%', () => {
+    assertEqual(PROBABILITY_STORM_CHANCE, 0.50);
+  });
+
+  test('storm not purchased: non-Basic drop yields 1 copy', () => {
+    // treeMYSTIC has MYSTIC.1 but NOT MYSTIC.1.1.2.2
+    // roll 0.20 → Advanced (0.10+0.15=0.25; 0.20<0.25)
+    const drops = withRolls([0.20, 0, 0], () => generateDrops(1, treeMYSTIC));
+    assertEqual(drops.length, 1, 'no storm: only 1 drop');
+    assertEqual(drops[0].tier, 'Advanced');
+  });
+
+  test('storm purchased, non-Basic, storm fires (0.49 < 0.50): 2 copies', () => {
+    // treeProbStorm has MYSTIC.1 + MYSTIC.1.1.2.2
+    const drops = withRolls([0.20, 0, 0, 0.49, 0.1], () => generateDrops(1, treeProbStorm));
+    assertEqual(drops.length, 2, 'storm fires: 2 drops');
+    assert(drops.every(d => d.tier === 'Advanced'), 'both copies are Advanced');
+    assert(drops[0].name === drops[1].name, 'both copies are the same powerup');
+  });
+
+  test('storm purchased, non-Basic, storm does NOT fire at boundary (0.50 >= 0.50): 1 copy', () => {
+    const drops = withRolls([0.20, 0, 0, 0.50], () => generateDrops(1, treeProbStorm));
+    assertEqual(drops.length, 1, 'boundary: storm does not fire at 0.50');
+  });
+
+  test('storm purchased, Basic drop: no duplication regardless of roll', () => {
+    // roll 0.25 >= advChance (0.10+0.15=0.25) → Basic, storm not checked
+    const drops = withRolls([0.25, 0, 0], () => generateDrops(1, treeProbStorm));
+    assertEqual(drops.length, 1, 'Basic never duplicated');
+    assertEqual(drops[0].tier, 'Basic');
+  });
+
+  test('storm duplicates are independent instances (unique instanceIds)', () => {
+    const drops = withRolls([0.20, 0, 0, 0.49, 0.9], () => generateDrops(1, treeProbStorm));
+    assertEqual(drops.length, 2);
+    assert(drops[0].instanceId !== drops[1].instanceId, 'duplicate copies have distinct instanceIds');
+  });
+
+  test('storm only fires once per drop (not recursive)', () => {
+    // Two drops, storm fires on both — result is exactly 4, not 8 (no recursive storm)
+    const rolls = [0.20, 0, 0, 0.49, 0.1,   // drop 1: Advanced + storm fires
+                   0.20, 0, 0, 0.49, 0.2];   // drop 2: Advanced + storm fires
+    const drops = withRolls(rolls, () => generateDrops(2, treeProbStorm));
+    assertEqual(drops.length, 4, 'two drops + two storm dupes = 4 total, not 8');
+  });
+
 });
 
 // ── generateBonusDrops ────────────────────────────────────────────────────────
@@ -472,6 +646,151 @@ describe('randomCoinFlip', () => {
       const result = withRolls([r], () => randomCoinFlip());
       assert(valid.has(result), `roll ${r} produced invalid result: ${result}`);
     }
+  });
+
+});
+
+// ── POWERUP_CATALOG completeness ──────────────────────────────────────────────
+
+describe('POWERUP_CATALOG completeness', () => {
+
+  test('catalog contains exactly 37 powerups', () => {
+    assertEqual(POWERUP_CATALOG.length, 37);
+  });
+
+  test('every catalog entry has required fields', () => {
+    for (const p of POWERUP_CATALOG) {
+      assert(p.name,            `missing name`);
+      assert(p.tier,            `${p.name}: missing tier`);
+      assert(p.scope,           `${p.name}: missing scope`);
+      assert(p.tree,            `${p.name}: missing tree`);
+      assert(p.effect,          `${p.name}: missing effect`);
+      assert(p.activationPhase, `${p.name}: missing activationPhase`);
+      assert(['Basic', 'Advanced', 'Legendary'].includes(p.tier),       `${p.name}: invalid tier`);
+      assert(['round','match','tournament','season'].includes(p.scope),  `${p.name}: invalid scope`);
+      assert(['either','gut_check'].includes(p.activationPhase),        `${p.name}: invalid activationPhase`);
+    }
+  });
+
+  test('no duplicate names in catalog', () => {
+    const names = POWERUP_CATALOG.map(p => p.name);
+    const unique = new Set(names);
+    assertEqual(unique.size, names.length, 'duplicate name detected');
+  });
+
+  test('tier distribution: 1 universal + 12 MIND + 12 MYSTIC + 12 FORTUNE', () => {
+    const byTree = { UNIVERSAL: 0, MIND: 0, MYSTIC: 0, FORTUNE: 0 };
+    for (const p of POWERUP_CATALOG) byTree[p.tree] = (byTree[p.tree] ?? 0) + 1;
+    assertEqual(byTree.UNIVERSAL, 1,  'must be 1 universal powerup');
+    assertEqual(byTree.MIND,      12, 'must be 12 MIND powerups');
+    assertEqual(byTree.MYSTIC,    12, 'must be 12 MYSTIC powerups');
+    assertEqual(byTree.FORTUNE,   12, 'must be 12 FORTUNE powerups');
+  });
+
+  test('Protein Shake is in POWERUP_IMPLEMENTED', () => {
+    assert(POWERUP_IMPLEMENTED.has('Protein Shake'), 'Protein Shake must be implemented');
+  });
+
+  test('Jonesing to Help is in POWERUP_IMPLEMENTED', () => {
+    assert(POWERUP_IMPLEMENTED.has('Jonesing to Help'), 'Jonesing to Help must be implemented');
+  });
+
+  test('POWERUP_NO_OP contains only Molasses and Padlock', () => {
+    assertEqual(POWERUP_NO_OP.size, 2, 'exactly 2 no-op powerups');
+    assert(POWERUP_NO_OP.has('Molasses'), 'Molasses must be no-op');
+    assert(POWERUP_NO_OP.has('Padlock'),  'Padlock must be no-op');
+    assert(!POWERUP_NO_OP.has('Clockwork Orange'), 'Clockwork Orange must NOT be no-op');
+  });
+
+  test('POWERUP_NO_OP is a subset of POWERUP_IMPLEMENTED', () => {
+    for (const name of POWERUP_NO_OP) {
+      assert(POWERUP_IMPLEMENTED.has(name),
+        `${name} is in NO_OP but not in IMPLEMENTED`);
+    }
+  });
+
+});
+
+// ── Protein Shake — bonus drop condition ──────────────────────────────────────
+// Mirrors the condition in match.js handleAdvanceFromReveal:
+//   proteinShakeBonus = originalThrow !== null && currentThrow !== originalThrow && result === 'player'
+
+describe('Protein Shake bonus drop condition', () => {
+
+  function proteinShakeBonusFires(originalThrow, currentThrow, result) {
+    return originalThrow !== null &&
+           currentThrow !== originalThrow &&
+           result === 'player';
+  }
+
+  test('fires when throw was changed and round won', () => {
+    assert(proteinShakeBonusFires('rock', 'paper', 'player'));
+  });
+
+  test('does not fire when throw was not changed', () => {
+    assert(!proteinShakeBonusFires('rock', 'rock', 'player'));
+  });
+
+  test('does not fire when round was lost', () => {
+    assert(!proteinShakeBonusFires('rock', 'paper', 'opponent'));
+  });
+
+  test('does not fire when round tied', () => {
+    assert(!proteinShakeBonusFires('rock', 'paper', 'tie'));
+  });
+
+  test('does not fire when not activated (null original)', () => {
+    assert(!proteinShakeBonusFires(null, 'paper', 'player'));
+  });
+
+  test('bonus drop is 1 Basic from the player tree pool', () => {
+    const treeMYSTIC = { MYSTIC: { 'MYSTIC.1': true } };
+    const drops = withRolls([0.5, 0.5], () =>
+      generateBonusDrops([{ tier: 'Basic', count: 1 }], treeMYSTIC));
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].tier, 'Basic');
+    assert(['MYSTIC', 'UNIVERSAL'].includes(drops[0].tree));
+  });
+
+});
+
+// ── Jonesing to Help — match-start Advanced drop ──────────────────────────────
+
+describe('Jonesing to Help — match-start Advanced drop', () => {
+
+  const treeMYSTIC = { MYSTIC: { 'MYSTIC.1': true } };
+
+  test('delivers exactly 1 Advanced drop', () => {
+    const drops = withRolls([0.5, 0.5], () =>
+      generateBonusDrops([{ tier: 'Advanced', count: 1 }], treeMYSTIC));
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].tier, 'Advanced');
+  });
+
+  test('drop comes from the MYSTIC pool (or UNIVERSAL)', () => {
+    const drops = withRolls([0.5, 0.5], () =>
+      generateBonusDrops([{ tier: 'Advanced', count: 1 }], treeMYSTIC));
+    assert(['MYSTIC', 'UNIVERSAL'].includes(drops[0].tree),
+      `unexpected tree: ${drops[0].tree}`);
+  });
+
+  test('drop has all required inventory fields', () => {
+    const drops = withRolls([0.5, 0.5], () =>
+      generateBonusDrops([{ tier: 'Advanced', count: 1 }], treeMYSTIC));
+    const d = drops[0];
+    assert(d.instanceId.startsWith('pu_'), 'instanceId must start with pu_');
+    assert(d.name,  'must have name');
+    assert(d.tier,  'must have tier');
+    assert(d.tree,  'must have tree');
+    assert(d.scope, 'must have scope');
+  });
+
+  test('Jonesing to Help catalog entry is jessieOnly and season-scoped', () => {
+    const entry = POWERUP_CATALOG.find(p => p.name === 'Jonesing to Help');
+    assert(entry,             'Jonesing to Help must be in catalog');
+    assertEqual(entry.scope,  'season');
+    assertEqual(entry.tree,   'MYSTIC');
+    assert(entry.jessieOnly,  'must be jessieOnly');
   });
 
 });

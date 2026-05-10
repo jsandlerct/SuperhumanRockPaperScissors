@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRPS Skill Tree Diagrams — v1.0</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f4f0;
+    --text-primary: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --border: rgba(0,0,0,0.15);
+    --border-med: rgba(0,0,0,0.25);
+    --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #252523;
+      --text-primary: #e8e6de;
+      --text-secondary: #9c9a92;
+      --border: rgba(255,255,255,0.12);
+      --border-med: rgba(255,255,255,0.22);
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    padding: 2rem 1.5rem 4rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 0.3rem; }
+  .doc-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 0.6rem; }
+  .doc-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 2rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 2.5rem; padding: 0.75rem 1rem; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .legend-title { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-right: 4px; }
+
+  .tree-section { margin-bottom: 3.5rem; }
+  .tree-header { margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+  .tree-title { font-size: 17px; font-weight: 500; margin-bottom: 0.2rem; }
+  .tree-meta-line { font-size: 12px; color: var(--text-secondary); }
+  .reversal-note {
+    font-size: 11px; color: #854F0B; font-style: italic;
+    border-left: 3px solid #EF9F27; padding: 4px 8px;
+    margin-top: 0.6rem; background: #FAEEDA;
+    border-radius: 0 4px 4px 0;
+  }
+  @media (prefers-color-scheme: dark) {
+    .reversal-note { color: #FAC775; background: #412402; border-color: #BA7517; }
+  }
+
+  .level-label {
+    font-size: 11px; font-weight: 500; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 6px; margin-top: 12px;
+  }
+
+  .level-row { display: flex; justify-content: center; align-items: flex-start; gap: 6px; }
+  .node-col { display: flex; flex-direction: column; align-items: center; }
+
+  .node {
+    border-radius: 8px;
+    border: 1px solid;
+    padding: 9px 10px;
+    width: 150px;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .node-id   { font-size: 10px; font-weight: 600; letter-spacing: 0.03em; font-family: monospace; }
+  .node-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
+  .node-type { font-size: 10px; font-style: italic; line-height: 1.3; margin-top: 1px; }
+  .node-desc { font-size: 10px; line-height: 1.45; margin-top: 3px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 3px; }
+
+  .connector-row { position: relative; height: 28px; width: 100%; }
+  .connector-row svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+
+  /* MIND — purple */
+  .mind-l1 { background: #EEEDFE; border-color: #534AB7; }
+  .mind-l1 .node-id { color: #534AB7; } .mind-l1 .node-name { color: #26215C; }
+  .mind-l1 .node-type { color: #7F77DD; } .mind-l1 .node-desc { color: #3C3489; border-color: rgba(83,74,183,0.2); }
+
+  .mind-l2 { background: #D6D4F9; border-color: #7F77DD; }
+  .mind-l2 .node-id { color: #534AB7; } .mind-l2 .node-name { color: #26215C; }
+  .mind-l2 .node-type { color: #7F77DD; } .mind-l2 .node-desc { color: #3C3489; border-color: rgba(83,74,183,0.2); }
+
+  .mind-l3 { background: #AFA9EC; border-color: #534AB7; }
+  .mind-l3 .node-id { color: #26215C; } .mind-l3 .node-name { color: #26215C; }
+  .mind-l3 .node-type { color: #3C3489; } .mind-l3 .node-desc { color: #26215C; border-color: rgba(38,33,92,0.2); }
+
+  .mind-l4 { background: #EEEDFE; border-color: #AFA9EC; }
+  .mind-l4 .node-id { color: #7F77DD; } .mind-l4 .node-name { color: #26215C; }
+  .mind-l4 .node-type { color: #7F77DD; } .mind-l4 .node-desc { color: #534AB7; border-color: rgba(127,119,221,0.2); }
+
+  /* MYSTIC — teal */
+  .mystic-l1 { background: #E1F5EE; border-color: #0F6E56; }
+  .mystic-l1 .node-id { color: #0F6E56; } .mystic-l1 .node-name { color: #04342C; }
+  .mystic-l1 .node-type { color: #1D9E75; } .mystic-l1 .node-desc { color: #085041; border-color: rgba(15,110,86,0.2); }
+
+  .mystic-l2 { background: #9FE1CB; border-color: #1D9E75; }
+  .mystic-l2 .node-id { color: #0F6E56; } .mystic-l2 .node-name { color: #04342C; }
+  .mystic-l2 .node-type { color: #0F6E56; } .mystic-l2 .node-desc { color: #085041; border-color: rgba(15,110,86,0.2); }
+
+  .mystic-l3 { background: #5DCAA5; border-color: #0F6E56; }
+  .mystic-l3 .node-id { color: #04342C; } .mystic-l3 .node-name { color: #04342C; }
+  .mystic-l3 .node-type { color: #085041; } .mystic-l3 .node-desc { color: #04342C; border-color: rgba(4,52,44,0.2); }
+
+  .mystic-l4 { background: #E1F5EE; border-color: #9FE1CB; }
+  .mystic-l4 .node-id { color: #1D9E75; } .mystic-l4 .node-name { color: #04342C; }
+  .mystic-l4 .node-type { color: #1D9E75; } .mystic-l4 .node-desc { color: #0F6E56; border-color: rgba(29,158,117,0.2); }
+
+  /* FORTUNE — amber */
+  .fortune-l1 { background: #FAEEDA; border-color: #854F0B; }
+  .fortune-l1 .node-id { color: #854F0B; } .fortune-l1 .node-name { color: #412402; }
+  .fortune-l1 .node-type { color: #BA7517; } .fortune-l1 .node-desc { color: #633806; border-color: rgba(133,79,11,0.2); }
+
+  .fortune-l2 { background: #FAC775; border-color: #BA7517; }
+  .fortune-l2 .node-id { color: #854F0B; } .fortune-l2 .node-name { color: #412402; }
+  .fortune-l2 .node-type { color: #854F0B; } .fortune-l2 .node-desc { color: #633806; border-color: rgba(133,79,11,0.2); }
+
+  .fortune-l3 { background: #EF9F27; border-color: #854F0B; }
+  .fortune-l3 .node-id { color: #412402; } .fortune-l3 .node-name { color: #412402; }
+  .fortune-l3 .node-type { color: #633806; } .fortune-l3 .node-desc { color: #412402; border-color: rgba(65,36,2,0.2); }
+
+  .fortune-l4 { background: #FAEEDA; border-color: #FAC775; }
+  .fortune-l4 .node-id { color: #BA7517; } .fortune-l4 .node-name { color: #412402; }
+  .fortune-l4 .node-type { color: #BA7517; } .fortune-l4 .node-desc { color: #854F0B; border-color: rgba(186,117,23,0.2); }
+
+  /* Dark mode overrides */
+  @media (prefers-color-scheme: dark) {
+    .mind-l1 { background: #3C3489; border-color: #AFA9EC; }
+    .mind-l1 .node-id { color: #CECBF6; } .mind-l1 .node-name { color: #EEEDFE; }
+    .mind-l1 .node-type { color: #AFA9EC; } .mind-l1 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+    .mind-l2 { background: #534AB7; border-color: #7F77DD; }
+    .mind-l2 .node-id { color: #CECBF6; } .mind-l2 .node-name { color: #EEEDFE; }
+    .mind-l2 .node-type { color: #AFA9EC; } .mind-l2 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+    .mind-l3 { background: #534AB7; border-color: #AFA9EC; }
+    .mind-l3 .node-id { color: #EEEDFE; } .mind-l3 .node-name { color: #EEEDFE; }
+    .mind-l3 .node-type { color: #CECBF6; } .mind-l3 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+    .mind-l4 { background: #26215C; border-color: #7F77DD; }
+    .mind-l4 .node-id { color: #AFA9EC; } .mind-l4 .node-name { color: #EEEDFE; }
+    .mind-l4 .node-type { color: #AFA9EC; } .mind-l4 .node-desc { color: #CECBF6; border-color: rgba(127,119,221,0.2); }
+
+    .mystic-l1 { background: #085041; border-color: #5DCAA5; }
+    .mystic-l1 .node-id { color: #9FE1CB; } .mystic-l1 .node-name { color: #E1F5EE; }
+    .mystic-l1 .node-type { color: #5DCAA5; } .mystic-l1 .node-desc { color: #9FE1CB; border-color: rgba(93,202,165,0.15); }
+
+    .mystic-l2 { background: #0F6E56; border-color: #5DCAA5; }
+    .mystic-l2 .node-id { color: #9FE1CB; } .mystic-l2 .node-name { color: #E1F5EE; }
+    .mystic-l2 .node-type { color: #5DCAA5; } .mystic-l2 .node-desc { color: #9FE1CB; border-color: rgba(93,202,165,0.15); }
+
+    .mystic-l3 { background: #0F6E56; border-color: #9FE1CB; }
+    .mystic-l3 .node-id { color: #E1F5EE; } .mystic-l3 .node-name { color: #E1F5EE; }
+    .mystic-l3 .node-type { color: #9FE1CB; } .mystic-l3 .node-desc { color: #9FE1CB; border-color: rgba(159,225,203,0.15); }
+
+    .mystic-l4 { background: #04342C; border-color: #1D9E75; }
+    .mystic-l4 .node-id { color: #5DCAA5; } .mystic-l4 .node-name { color: #E1F5EE; }
+    .mystic-l4 .node-type { color: #5DCAA5; } .mystic-l4 .node-desc { color: #9FE1CB; border-color: rgba(29,158,117,0.2); }
+
+    .fortune-l1 { background: #633806; border-color: #EF9F27; }
+    .fortune-l1 .node-id { color: #FAC775; } .fortune-l1 .node-name { color: #FAEEDA; }
+    .fortune-l1 .node-type { color: #EF9F27; } .fortune-l1 .node-desc { color: #FAC775; border-color: rgba(239,159,39,0.2); }
+
+    .fortune-l2 { background: #854F0B; border-color: #EF9F27; }
+    .fortune-l2 .node-id { color: #FAC775; } .fortune-l2 .node-name { color: #FAEEDA; }
+    .fortune-l2 .node-type { color: #EF9F27; } .fortune-l2 .node-desc { color: #FAC775; border-color: rgba(239,159,39,0.2); }
+
+    .fortune-l3 { background: #854F0B; border-color: #FAC775; }
+    .fortune-l3 .node-id { color: #FAEEDA; } .fortune-l3 .node-name { color: #FAEEDA; }
+    .fortune-l3 .node-type { color: #FAC775; } .fortune-l3 .node-desc { color: #FAC775; border-color: rgba(250,199,117,0.2); }
+
+    .fortune-l4 { background: #412402; border-color: #BA7517; }
+    .fortune-l4 .node-id { color: #EF9F27; } .fortune-l4 .node-name { color: #FAEEDA; }
+    .fortune-l4 .node-type { color: #EF9F27; } .fortune-l4 .node-desc { color: #FAC775; border-color: rgba(186,117,23,0.2); }
+  }
+
+  @media print {
+    body { padding: 1rem; }
+    .tree-section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>SRPS skill tree diagrams — v1.0</h1>
+<p class="doc-subtitle">All 45 nodes across three trees. Each node shows: ID · name · type · brief effect.</p>
+<p class="doc-meta">Generated from SRPS_Design_Doc_v1_0 · Session output · One version per session rule applies</p>
+
+<div class="legend">
+  <span class="legend-title">Cost by level:</span>
+  <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div> L1 Root — 5 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div> L2 — 10 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#AFA9EC"></div> L3 — 15 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#CECBF6"></div> L4 Aspirational — 20 pts</div>
+  <span style="margin-left:1rem" class="legend-title">Prerequisite rule:</span>
+  <div class="legend-item">Each node requires its direct parent node to be purchased first.</div>
+</div>
+
+
+<!-- ═══════════════════════ MIND TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title">🧠 MIND — "Deduce it"</div>
+    <div class="tree-meta-line">Theme: Cold analytical deduction &nbsp;·&nbsp; Counters: FORTUNE &nbsp;·&nbsp; Synergizes with: MYSTIC</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l1">
+        <span class="node-id">MIND.1</span>
+        <span class="node-name">Mind Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">5 powerup slots. Start season with 4 Basic + 1 Advanced powerups.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#888780" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#888780" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l2">
+        <span class="node-id">MIND.1.1</span>
+        <span class="node-name">Neural Pattern Recognition</span>
+        <span class="node-type">Passive Offense — L2 · 10 pts</span>
+        <span class="node-desc">+10%/round accumulating chance to read NPC throw logic at 90% accuracy. Flat 10% false result always applies — never scales.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node mind-l2">
+        <span class="node-id">MIND.1.2</span>
+        <span class="node-name">Blank Slate</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">NPC pattern strategies (Historian, Streaker, Mimic) treat your last 2 throws as unknown. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.1.1</span>
+        <span class="node-name">Neural Scan</span>
+        <span class="node-type">Active Offense — L3 · 15 pts</span>
+        <span class="node-desc">On-demand 90% read of NPC throw logic. Cooldown: once every 5 matches. Player-only.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.1.2</span>
+        <span class="node-name">Desperate Clarity</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">Lose 2 consecutive rounds → +20% NPR permanently for match remainder. Once/match. Synergy (MYSTIC): swap season loadout to 3B + 1A + 1L.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.2.1</span>
+        <span class="node-name">Memory Wipe</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">Purges NPC throw history — NPC reverts to base strategy as if match just started. Once/match. Player-only.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.2.2</span>
+        <span class="node-name">The Cooler</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% chance opponent TML/ATML fails → opponent loses round. Only on TML/ATML use. Upgrades to 75% with The Freezer.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.1.1</span>
+        <span class="node-name">Neural Scan 2.0</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces Neural Scan. Same 90% on-demand read. Cooldown: every 3 matches (was 5). Shared UI button and tracker.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.1.2</span>
+        <span class="node-name">Adv. Neural Pattern Rec.</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">NPR per-round accumulation: 10% → 15%. Always active. Does not affect accuracy or false result chance.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.2.1</span>
+        <span class="node-name">Mental Mysticism</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">Precondition: NPR fired this match. 90% tie → win. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.2.2</span>
+        <span class="node-name">Uncanny Mind</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">+10% tier upgrade chance / +5% Legendary chance on drops. Stacks additively with MYSTIC.1.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.1.1</span>
+        <span class="node-name">Total Recall</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Memory Wipe AND reveals the base strategy NPC reverts to. Once/match.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.1.2</span>
+        <span class="node-name">Clean Slate</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">After any purge (Memory Wipe or Total Recall): NPC pattern strategies locked out for 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.2.1</span>
+        <span class="node-name">Not Today!</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">95% chance TML/ATML fails → opponent loses round. Cooldown: every 3 rounds. Takes precedence over Cooler/Freezer.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.2.2</span>
+        <span class="node-name">The Freezer</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades The Cooler: 50% → 75% block chance against TML/ATML.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ MYSTIC TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title">🔮 MYSTIC — "Bend it"</div>
+    <div class="tree-meta-line">Theme: Supernatural reality alteration &nbsp;·&nbsp; Counters: MIND &nbsp;·&nbsp; Synergizes with: FORTUNE</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l1">
+        <span class="node-id">MYSTIC.1</span>
+        <span class="node-name">Mystical Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">+15% chance of one tier higher on random drops. +5% Legendary chance. Stacks additively with Uncanny Mind.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#888780" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#888780" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l2">
+        <span class="node-id">MYSTIC.1.1</span>
+        <span class="node-name">Tweak Reality</span>
+        <span class="node-type">Passive Offense — L2 · 10 pts</span>
+        <span class="node-desc">30% chance a natural tie converts to a win. Always active. Upgrades to 60% with Alter Reality.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node mystic-l2">
+        <span class="node-id">MYSTIC.1.2</span>
+        <span class="node-name">Reverse Card</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">25% chance any opponent active skill fires for the MYSTIC player instead. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.1.1</span>
+        <span class="node-name">Force Your Hand</span>
+        <span class="node-type">Active Offense — L3 · 15 pts</span>
+        <span class="node-desc">90% tie → win. No effect on non-tie rounds. Cooldown: every 5 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.1.2</span>
+        <span class="node-name">Third Time's the Charm</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">2 consecutive failed tie conversions → 95% next attempt. Once/match. Synergy (FORTUNE): start season with 1 Legendary powerup.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.2.1</span>
+        <span class="node-name">Brain Fart</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">Nullify opponent active skill + add 2 rounds to its cooldown. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.2.2</span>
+        <span class="node-name">Mind Shield</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% block NPR / Neural Scan reads. Always active. Upgrades to 90% with Mind Fortress.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.1.1</span>
+        <span class="node-name">Twist Your Arm</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces Force Your Hand. Same 90% tie → win. Cooldown: every 3 rounds (was 5).</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.1.2</span>
+        <span class="node-name">Alter Reality</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Tweak Reality: 30% tie conversion → 60%. Always active.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.2.1</span>
+        <span class="node-name">Refuse to Lose</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">90% chance a loss converts to an immune tie. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.2.2</span>
+        <span class="node-name">Probability Storm</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">50% chance any non-Basic drop yields 2 powerups instead of 1.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.1.1</span>
+        <span class="node-name">Massive Brain Fart</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Nullify + 3 rounds on target's cooldown + 1 round on all other opponent cooldowns. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.1.2</span>
+        <span class="node-name">Bamboozle</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">25% chance any opponent powerup activates for you instead. Always active.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.2.1</span>
+        <span class="node-name">Phantom Memory</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">When Neural X fires (after block check): plant a false strategy read. 1-round cooldown.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.2.2</span>
+        <span class="node-name">Mind Fortress</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Mind Shield: 50% → 90% block chance against Neural X reads.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ FORTUNE TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title">🍀 FORTUNE — "Trust it"</div>
+    <div class="tree-meta-line">Theme: Luck and probability manipulation &nbsp;·&nbsp; Counters: MYSTIC &nbsp;·&nbsp; Synergizes with: MIND</div>
+    <div class="reversal-note">* FORTUNE intentionally reverses Active/Passive roles in the offense branch at L2 and L3. FORTUNE.1.1 (L2) is Active rather than Passive; FORTUNE.1.1.1 (L3) is Passive rather than Active.</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l1">
+        <span class="node-id">FORTUNE.1</span>
+        <span class="node-name">Fortunate Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">2× powerup drop rate per round. (Playtesting flag — easy nerf to 1.5× if needed.)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#888780" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#888780" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split (* offense branch is Active, not Passive)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l2">
+        <span class="node-id">FORTUNE.1.1</span>
+        <span class="node-name">Trust My Luck (TML)</span>
+        <span class="node-type">Active L2* (intentional reversal) · 10 pts</span>
+        <span class="node-desc">75% auto-win / 25% auto-loss. Supersedes RPS throw entirely. Cooldown: every 5 rounds.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node fortune-l2">
+        <span class="node-id">FORTUNE.1.2</span>
+        <span class="node-name">Consolation Prize</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">30% chance to earn a Basic luck powerup on a round loss. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch (* offense sub-branch is Passive, not Active)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.1.1</span>
+        <span class="node-name">Lucky Socks</span>
+        <span class="node-type">Passive L3* (intentional reversal) · 15 pts</span>
+        <span class="node-desc">TML/ATML success chance: 75% → 85%. Always active. Replaced by Fingers Crossed (95%) at L4.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.1.2</span>
+        <span class="node-name">Due for a Win</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">2 consecutive TML/ATML failures → next attempt 95%. Once/match. Synergy (MIND): gain 6th powerup slot (starts empty each season).</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.2.1</span>
+        <span class="node-name">Change My Luck</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">On round loss: earn 2 Basic+ luck-themed powerups. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.2.2</span>
+        <span class="node-name">Oblivious</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% block MYSTIC tie-altering skills. Always active. Upgrades to 90% with Totes Oblivious.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#888780" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#888780" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.1.1</span>
+        <span class="node-name">Advanced TML (ATML)</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces TML entirely. Same 75/25 odds. Cooldown: every 3 rounds (was 5). Shared UI button and tracker.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.1.2</span>
+        <span class="node-name">Fingers Crossed</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">TML/ATML: 85% → 95% success chance. Replaces Lucky Socks value — does not stack.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.2.1</span>
+        <span class="node-name">I've Got a Hunch (IGaH)</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">50% chance of a 90% strategy read. Not blocked by MYSTIC counters. Failure: silent fizzle. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.2.2</span>
+        <span class="node-name">Make Your Own Luck</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">On any powerup drop: system generates 2 options, player chooses 1 via blocking UI prompt.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.1.1</span>
+        <span class="node-name">Reversal of Fortune</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Round loss → earn 2 Advanced+ luck-themed powerups. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.1.2</span>
+        <span class="node-name">Look What I Found</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">On loss: 25% independent chance of powerup one tier above Consolation Prize. Both can trigger on same loss.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.2.1</span>
+        <span class="node-name">Lucky Charm</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">MYSTIC tie-alter fires → reverse result to Lucky Charm player's favor. Fires after Oblivious fails. Fizzles if no tie-alter fires. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.2.2</span>
+        <span class="node-name">Totes Oblivious</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Oblivious: 50% → 90% block chance against MYSTIC tie-altering skills.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

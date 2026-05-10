@@ -49,6 +49,19 @@ export function loadAccount(username) {
   return JSON.parse(localStorage.getItem(`srps_acct_${username.toLowerCase()}`) || 'null');
 }
 
+// ── Account Settings ──────────────────────────────────────────────────────────
+
+export function loadAccountSettings(username) {
+  const acct = loadAccount(username);
+  return acct?.settings ?? { music: true, sfx: true };
+}
+
+export function saveAccountSettings(username, settings) {
+  const acct = loadAccount(username) ?? {};
+  acct.settings = settings;
+  saveAccount(username, acct);
+}
+
 // ── Identity ──────────────────────────────────────────────────────────────────
 
 export function saveIdentity(charId, identity) {

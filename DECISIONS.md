@@ -5,6 +5,87 @@
 
 ---
 
+## Complete Powerup Catalog (v0.3)
+
+**[v0.3 | 2026-05-09] Protein Shake (Basic | MIND | round) implemented: sets `roundCanChangeThrow = true`, records `roundProteinShakeOriginalThrow` at activation. In `handleAdvanceFromReveal`, if throw changed AND result was player win (before force overrides), awards 1 Basic drop via `generateBonusDrops`. Reset in `resetRoundScopeState`.**
+
+**[v0.3 | 2026-05-09] Jonesing to Help (Legendary | MYSTIC | season | jessieOnly) implemented: activates via `activateSeasonEffect('Jonesing to Help')` in `activatePowerup`. At match start (mount-time), `deliverJonesingDropIfActive()` checks `seasonEffectActive('Jonesing to Help')` — if true, generates 1 Advanced drop via `generateBonusDrops`, sets `matchStartPhase = true`, and calls `processNextDrop()` to deliver it before first round. `matchStartPhase` flag reroutes `btn-drop-ok` to `checkT08ThenRender()` instead of `advanceRound()` so round number is not incremented by the match-start delivery.**
+
+**[v0.3 | 2026-05-09] Clockwork Orange removed from POWERUP_NO_OP. It was never in the set — it has a working implementation (`resetActiveCooldowns()` in the switch case). Comment in POWERUP_IMPLEMENTED corrected accordingly.**
+
+---
+
+## Coach Jessie — Tutorial Beat Rework (v0.3)
+
+**[v0.3 | 2026-05-09] Tutorial beat system fully reworked to match design doc Section 15.4 (SRPS_Tutorial_Flow_DRAFT_v3.pdf). Beats T-01 through T-14 replace earlier T-01 through T-05 implementation.**
+Beat mapping and trigger points: T-01 (Meet Jessie — 14-box narration+Jessie sequence, 4 narration-only boxes) fires in `characterCreate.js` after saving character data, before `navigate('skillTree')`; T-02 (skill trees intro) + T-03 (skill allocation) fire in sequence in `skillTree.js` on Season 1 pre-season mount; T-04 (bracket navigation) fires in `tournament.js` on tier 1 mount; T-05 (round mechanic) fires in `match.js` at mount before first render; T-06 (gut check intro) fires on first gut_check phase entry via `enterGutCheckPhase()` helper; T-07 (first round result — win/loss/tie variants) fires in `handleReady()` after first round resolves, auto-dismisses after 3s; T-08 (active skill introduction) fires when first ready active skill exists, via `checkT08ThenRender()` helper called from `advanceRound` / `replayRound`; T-09 (powerup intro) fires at match mount for MIND players with starting inventory, otherwise at first `drop_result` state; T-10 dropped (merged into T-08); T-11 merged into T-08; T-12 (ELO & rankings) fires in `rankingsOverlay.js` on first ever overlay open, using a temporary full-screen container; T-13 (off-season respec) fires in `offSeason.js` on first mount; T-14 (second tree unlock) fires in `skillTree.js` on Season 2+ pre-season mount.
+
+**[v0.3 | 2026-05-09] `showJessieDialogue` extended to support narration boxes and auto-dismiss.**
+New signature: `showJessieDialogue(container, messages, expression, onComplete, opts = {})`. Message items can be strings (standard Jessie box) or `{ text, narration: true }` objects (no portrait, centered italic panel). `opts.autoDismissMs` adds `setTimeout(onComplete, ms)` on last message; button label changes to "▶ SKIP"; tap clears the timer and advances. Used by T-01 (narration boxes) and T-07 (auto-dismiss 3s).
+
+**[v0.3 | 2026-05-09] T-01 `[SKILL_POINTS]` placeholder replaced at call site in `characterCreate.js`.**
+The constant stores the literal string `[SKILL_POINTS]`; `characterCreate.js` maps the messages array and replaces it with `String(STARTING_SKILL_POINTS_SEASON_1)` before calling `showJessieDialogue`.
+
+**[v0.3 | 2026-05-09] T-08 `[SKILL_NAME]` placeholder replaced at call site in `match.js`.**
+`JESSIE_TUTORIAL_DIALOGUE['T-08']` stores `lineTemplate` with `[SKILL_NAME]`. `getFirstReadyActiveSkillName()` returns the display name of the first active skill with cooldown ready (or null). The template is replaced before calling `showJessieDialogue`.
+
+---
+
+## Skill Information Phase (v0.3)
+
+**[v0.3 | 2026-05-09] Passive skills panel added to match screen (picking + gut_check phases).**
+All purchased passive skills (and L1 roots) appear as tappable cards with a live status line below active skills. MIND.1.1 (NPR) is excluded from the passive panel (handled by renderNPRIndicator). Replaced passives are suppressed (e.g. Lucky Socks hidden when Fingers Crossed owned). Tapping any skill card (active or passive) opens a skill inspect popup showing full effect text, level/tree/kind badge, and current status. Popup uses the same pu-popup-layer and backdrop as the powerup popup — only one popup can be open at a time. skillPopup state is cleared on transition to revealing phase.
+
+**[v0.3 | 2026-05-09] L4 skill tree node boxes: height 50 → 64px; font size reduced for L4 only.**
+`nh(4)` changed from 50 to 64 (CH updated accordingly). L4 name font uses `Math.max(6, COL * 0.088)` instead of `Math.max(7, COL * 0.10)`, cost font uses `Math.max(5, COL * 0.075)`. Ensures long names like "Mental Mysticism" and "Adv. Neural Pattern Rec." fit without clipping and the word "Mysticism" does not split across lines.
+
+---
+
+## Coach Jessie — Tutorial + Milestone Dialogues (v0.3)
+
+**[v0.3 | 2026-05-09] Jessie tutorial + milestone system fully implemented.**
+Shared utility in `js/ui/jessieDialogue.js` exports `showJessieDialogue` (full-screen tap-through), `jessieInlinePanel` (static inline HTML), `tutorialBeatShown`, `markTutorialBeat`. All dialogue constants live in `constants.js`: `JESSIE_TUTORIAL_DIALOGUE` (T-01–T-05), `JESSIE_MILESTONE_DIALOGUE`, `JESSIE_MILESTONE_PRIORITY`, `JESSIE_SEASON_CHECKIN` (8 rotating M-12 entries). One-shot beats tracked in `_trophies.jessieOneShots`; M-12 rotation tracked in `_trophies.jessieSeasonCheckInHistory` (resets after all 8 used).
+
+**[v0.3 | 2026-05-09] Tutorial beat firing points.**
+T-01 (skill trees): `skillTree.js` mount — Season 1, pre-season only, fires before `render()`. T-02 (tournament/bracket): `tournament.js` mount — tier 1 only, fires before first `renderScreen()`. T-03 (round mechanic): `match.js` mount — fires before first `render()` on any match. T-04 (powerups): `match.js` `processNextDrop()` — fires once when `drop_result` state is first entered. T-05 (off-season respec): `offSeason.js` mount — first visit; no M-12 panel on the same visit. M-12 inline panel shown on all subsequent off-seasons from the `JESSIE_SEASON_CHECKIN` rotation array.
+
+**[v0.3 | 2026-05-09] Milestone dialogue routing in summary.js.**
+`runSeasonEnd()` snapshots `prevAchievedSet` before calling `detectRankingMilestones`. Championship milestone IDs (`first_champ`, `three_time_champ`) derived from `t5WinsBefore`. `JESSIE_MILESTONE_PRIORITY` array picks the single highest-priority beat when multiple milestones fire the same season. Eliminated players route through `JESSIE_CONSOLATION_DIALOGUE`; champion/runner-up with a milestone route through `JESSIE_MILESTONE_DIALOGUE`; all others skip to results. Old local `renderJessieDialogue` function removed (replaced by imported `showJessieDialogue`).
+
+---
+
+## Full 4-Level Skill Trees (v0.3)
+
+**[v0.3 | 2026-05-08] 6 L3 nodes were incorrectly named/assigned vs the design doc; all corrected to match SRPS_skill_trees_v1_0.html.**
+Corrected mappings: MIND.1.2.2 = The Cooler (was Mind Shield passive). MYSTIC.1.1.1 = Force Your Hand active (was Alter Reality passive). MYSTIC.1.2.1 = Brain Fart active (was Oblivious passive). MYSTIC.1.2.2 = Mind Shield passive (was The Cooler passive). FORTUNE.1.2.1 = Change My Luck active (was Force Your Hand active). FORTUNE.1.2.2 = Oblivious passive (was Change My Luck active). Constant names (ALTER_REALITY_CHANCE, MIND_SHIELD_CHANCE, etc.) retained unchanged — only node metadata and hasSkill() references updated.
+
+**[v0.3 | 2026-05-08] All 24 L4 nodes defined in SKILL_TREE_L4 and made fully purchasable.**
+Gate: requires parent L3 purchased. Cost NODE_COST.L4 (20 pts). Added to SKILL_NODE_INFO loop. skillTreePanel.js updated to render real L4 IDs (no more null placeholders), show labels, and use full-opacity connections. skillTree.js handleBuy now checks L4 parent same as L3.
+
+**[v0.3 | 2026-05-08] Alter Reality (L4, MYSTIC.1.1.1.2) passive tie conversion — node ID corrected in match.js tie resolution.**
+Was checking hasSkill('MYSTIC.1.1.1'); now correctly checks hasSkill('MYSTIC.1.1.1.2').
+
+**[v0.3 | 2026-05-08] Force Your Hand moved to MYSTIC.1.1.1; Change My Luck moved to FORTUNE.1.2.1 with new effect.**
+Force Your Hand: active, 5-round CD (3 with Twist Your Arm MYSTIC.1.1.1.1 — shared tracker). Arms `roundForceHandActive` flag; resolves in handleReady before passives. Change My Luck: active, 3-round CD; arms `roundChangeMyLuckActive`; if round is lost, generates 2 Basic+ drops in handleAdvanceFromReveal. No longer sets roundDizzySpell.
+
+**[v0.3 | 2026-05-08] Brain Fart (MYSTIC.1.2.1) is a no-op active skill; button + 3-round cooldown tracking implemented.**
+No gameplay effect until NPC active skills are implemented (v1.0). Same applies to Massive Brain Fart (MYSTIC.1.2.1.1), Lucky Charm (FORTUNE.1.2.2.1), Not Today! (MIND.1.2.2.1), Phantom Memory (MYSTIC.1.2.2.1).
+
+**[v0.3 | 2026-05-08] L4 active skills with real effects wired up in match.js.**
+Mental Mysticism (MIND.1.1.2.1, 3-round CD): precondition hasNPRFiredThisMatch; 90% tie→win. Twist Your Arm (MYSTIC.1.1.1.1): replaces Force Your Hand in panel, 3-round CD, shares forceYourHandCooldown. Refuse to Lose (MYSTIC.1.1.2.1, 3-round CD): 90% loss→immune tie (tieIsImmune prevents all alteration). IGaH (FORTUNE.1.1.2.1, 3-round CD): 50% chance of strategy read at 90% accuracy, NOT blocked by Mind Shield. Reversal of Fortune (FORTUNE.1.2.1.1, 3-round CD): arms flag; 2 Advanced+ drops if round lost. Look What I Found (FORTUNE.1.2.1.2, passive): 25% independent chance on loss (stacks with Consolation Prize). ATML (FORTUNE.1.1.1.1): replaces TML in panel, 3-round CD instead of 5. Fingers Crossed (FORTUNE.1.1.1.2, passive): bumps TML/ATML success to 95% (replaces Lucky Socks). Adv. NPR (MIND.1.1.1.2, passive): accumulation 10%→15%/round. Total Recall (MIND.1.2.1.1): replaces Memory Wipe in panel, shares memoryWipeUsed flag, once per match. Uncanny Mind (MIND.1.1.2.2, passive): +10% advanced / +5% legendary upgrade bonus, stacks with MYSTIC.1. Probability Storm (MYSTIC.1.1.2.2, passive): 50% chance non-Basic drop in generateDrops yields 2 copies.
+
+**[v0.3 | 2026-05-08] renderSkillsPanel suppresses parent skills when their replacement L4 is purchased.**
+MIND.1.1.1 hidden when MIND.1.1.1.1 owned; MYSTIC.1.1.1 hidden when MYSTIC.1.1.1.1 owned; FORTUNE.1.1 hidden when FORTUNE.1.1.1.1 owned; MIND.1.2.1 hidden when MIND.1.2.1.1 owned.
+
+---
+
+## Cross-Tree Synergy Nodes (v0.3)
+
+**[v0.3 | 2026-05-08] Cross-tree synergy mechanics are fully implemented; task completed by confirming existing coverage and adding negative-synergy tests.**
+All three X.1.1.2 synergy nodes (MIND.1.1.2, MYSTIC.1.1.2, FORTUNE.1.1.2) were already implemented: `getLoadoutKey()` routes to the correct synergy loadout key, `getMaxSlots()` grants the 6th slot for FORTUNE.1.1.2 + MIND root, and skill effects (Desperate Clarity, Third Time's the Charm, Due for a Win) were tested in `skills.test.js`. The missing coverage — negative-synergy cases — was added to `powerupEngine.test.js`: tests confirming that owning an L3 synergy node WITHOUT the partner tree's root does NOT activate the synergy bonus (falls back to single-tree loadout). Four tests added: MIND.1.1.2-alone → MIND_only, MYSTIC.1.1.2-alone → MYSTIC_only, FORTUNE.1.1.2-alone → FORTUNE_only + 3 slots, and a paired comparison verifying synergy activates only with the partner root.
+
+---
+
 ## MIND Powerup Implementations (v0.3)
 
 **[v0.3 | 2026-05-07] Espresso Shot resolves by comparing primary and backup throws; best outcome (win > tie > loss) counts. When backup is better, `currentThrow` is updated to the backup before reveal so the correct throw image is shown. Force-win and force-loss still override after Espresso Shot comparison.**

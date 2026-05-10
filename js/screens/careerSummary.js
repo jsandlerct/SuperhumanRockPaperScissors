@@ -2,7 +2,7 @@ import { navigate }          from '../main.js';
 import { TOURNAMENT_CONFIG, TOTAL_PLAYERS, TROPHY_CONFIG } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress,
-  loadStats, loadTrophies,
+  loadStats, loadTrophies, loadAccountSettings, saveAccountSettings,
 } from '../storage.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -74,9 +74,11 @@ export function mount(container, options = {}) {
     <div class="screen fade-in" style="justify-content:center">
       <div class="content-card" style="gap:20px">
 
-        <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="snes-btn" id="btn-back" style="font-size:7px;padding:8px 10px">← BACK</button>
-          <p class="snes-title">CAREER</p>
+          <p class="snes-title" style="flex:1">CAREER</p>
+          <button class="snes-btn" id="btn-how-to-play" style="font-size:7px;padding:8px 10px">? HOW TO PLAY</button>
+          <button class="snes-btn" id="btn-settings" style="font-size:7px;padding:8px 10px">⚙ SETTINGS</button>
         </div>
 
         <!-- Identity -->
@@ -178,6 +180,90 @@ export function mount(container, options = {}) {
 
   document.getElementById('btn-back').addEventListener('click', () => {
     navigate('characterSelect', { username });
+  });
+
+  document.getElementById('btn-how-to-play').addEventListener('click', () => {
+    window.open('SRPS_how_to_play_v1_0.html', '_blank');
+  });
+
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    openSettingsPopup(username);
+  });
+}
+
+function openSettingsPopup(username) {
+  const existing = document.getElementById('settings-popup-overlay');
+  if (existing) return;
+
+  const settings = loadAccountSettings(username);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'settings-popup-overlay';
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.75);z-index:2000;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  `;
+
+  overlay.innerHTML = `
+    <div class="snes-panel" style="display:flex;flex-direction:column;gap:20px;max-width:320px;width:100%">
+      <p class="snes-title" style="text-align:center;font-size:11px">SETTINGS</p>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <p class="snes-small">MUSIC</p>
+          <button class="snes-btn snes-toggle" id="toggle-music"
+                  data-on="${settings.music}"
+                  style="min-width:64px;font-size:7px;padding:8px 14px;
+                         background:${settings.music ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)'};
+                         color:${settings.music ? 'var(--snes-black)' : 'var(--snes-muted-color, #888)'}">
+            ${settings.music ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <p class="snes-small">SOUND EFFECTS</p>
+          <button class="snes-btn snes-toggle" id="toggle-sfx"
+                  data-on="${settings.sfx}"
+                  style="min-width:64px;font-size:7px;padding:8px 14px;
+                         background:${settings.sfx ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)'};
+                         color:${settings.sfx ? 'var(--snes-black)' : 'var(--snes-muted-color, #888)'}">
+            ${settings.sfx ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+
+      <button class="snes-btn snes-btn-yellow" id="btn-settings-close" style="width:100%">
+        ✕ CLOSE
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  function updateToggle(btn, isOn) {
+    btn.dataset.on = isOn;
+    btn.textContent = isOn ? 'ON' : 'OFF';
+    btn.style.background = isOn ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)';
+    btn.style.color = isOn ? 'var(--snes-black)' : '#888';
+  }
+
+  const musicBtn = document.getElementById('toggle-music');
+  const sfxBtn   = document.getElementById('toggle-sfx');
+
+  musicBtn.addEventListener('click', () => {
+    settings.music = !settings.music;
+    updateToggle(musicBtn, settings.music);
+    saveAccountSettings(username, settings);
+  });
+
+  sfxBtn.addEventListener('click', () => {
+    settings.sfx = !settings.sfx;
+    updateToggle(sfxBtn, settings.sfx);
+    saveAccountSettings(username, settings);
+  });
+
+  document.getElementById('btn-settings-close').addEventListener('click', () => {
+    overlay.remove();
   });
 }
 

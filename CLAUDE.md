@@ -18,7 +18,7 @@ Every Claude Code session begins with this sequence, no exceptions:
 5. When any decision is made (design or implementation), write it to DECISIONS.md immediately — not at end of session
 6. Mark tasks done in TODO.md immediately upon completion — not at end of session
 
-**Design doc:** `docs/SRPS_Design_Doc_v1_0.docx`
+**Design doc:** `docs/SRPS_Design_Doc_v1_0.mht`
 **localStorage schema:** `docs/SRPS_localStorage_schema_v1_0.md`
 **NPC roster:** `data/npc_roster_v0_9.json`
 

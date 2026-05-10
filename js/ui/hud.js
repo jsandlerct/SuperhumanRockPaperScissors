@@ -1,7 +1,7 @@
 import { TOURNAMENT_CONFIG, TOTAL_PLAYERS, TROPHY_CONFIG } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress,
-  loadStats, loadTrophies,
+  loadStats, loadTrophies, loadAccountSettings, saveAccountSettings,
 } from '../storage.js';
 import { openFullScreenTree } from './skillTreePanel.js';
 
@@ -34,7 +34,7 @@ function statRow(label, value) {
 }
 
 
-function buildOverlayHTML(charId) {
+function buildOverlayHTML(charId, username) {
   const identity = loadIdentity(charId);
   const progress = loadProgress(charId);
   const stats    = loadStats(charId);
@@ -78,8 +78,10 @@ function buildOverlayHTML(charId) {
       <div id="hud-overlay-backdrop"></div>
       <div id="hud-overlay-panel">
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <p class="snes-title" style="font-size:10px">STATS</p>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <p class="snes-title" style="font-size:10px;flex:1">STATS</p>
+          <button class="snes-btn" id="hud-how-to-play-btn" style="font-size:7px;padding:8px 10px">? HOW TO PLAY</button>
+          <button class="snes-btn" id="hud-settings-btn" style="font-size:7px;padding:8px 10px">⚙ SETTINGS</button>
           <button class="snes-btn" id="hud-close-btn" style="font-size:7px;padding:8px 10px">✕ CLOSE</button>
         </div>
 
@@ -181,17 +183,89 @@ function buildOverlayHTML(charId) {
 
 // ── Open / close overlay ──────────────────────────────────────────────────────
 
-function openOverlay(charId) {
+function openOverlay(charId, username) {
   const existing = document.getElementById('hud-overlay');
   if (existing) existing.remove();
 
-  hudEl.insertAdjacentHTML('beforeend', buildOverlayHTML(charId));
+  hudEl.insertAdjacentHTML('beforeend', buildOverlayHTML(charId, username));
 
   document.getElementById('hud-view-trees-btn').addEventListener('click', () => {
     openFullScreenTree(charId, loadProgress, loadIdentity);
   });
+  document.getElementById('hud-how-to-play-btn').addEventListener('click', () => {
+    window.open('SRPS_how_to_play_v1_0.html', '_blank');
+  });
+  document.getElementById('hud-settings-btn').addEventListener('click', () => {
+    openSettingsPopup(username);
+  });
   document.getElementById('hud-close-btn').addEventListener('click', closeOverlay);
   document.getElementById('hud-overlay-backdrop').addEventListener('click', closeOverlay);
+}
+
+function openSettingsPopup(username) {
+  const existing = document.getElementById('settings-popup-overlay');
+  if (existing) return;
+
+  const settings = loadAccountSettings(username);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'settings-popup-overlay';
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.75);z-index:2100;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  `;
+
+  overlay.innerHTML = `
+    <div class="snes-panel" style="display:flex;flex-direction:column;gap:20px;max-width:320px;width:100%">
+      <p class="snes-title" style="text-align:center;font-size:11px">SETTINGS</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <p class="snes-small">MUSIC</p>
+          <button id="toggle-music" class="snes-btn"
+                  style="min-width:64px;font-size:7px;padding:8px 14px;
+                         background:${settings.music ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)'};
+                         color:${settings.music ? 'var(--snes-black)' : '#888'}">
+            ${settings.music ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <p class="snes-small">SOUND EFFECTS</p>
+          <button id="toggle-sfx" class="snes-btn"
+                  style="min-width:64px;font-size:7px;padding:8px 14px;
+                         background:${settings.sfx ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)'};
+                         color:${settings.sfx ? 'var(--snes-black)' : '#888'}">
+            ${settings.sfx ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+      <button class="snes-btn snes-btn-yellow" id="btn-settings-close" style="width:100%">
+        ✕ CLOSE
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  function updateToggle(btn, isOn) {
+    btn.textContent = isOn ? 'ON' : 'OFF';
+    btn.style.background = isOn ? 'var(--snes-yellow)' : 'var(--snes-panel-dark)';
+    btn.style.color = isOn ? 'var(--snes-black)' : '#888';
+  }
+
+  document.getElementById('toggle-music').addEventListener('click', e => {
+    settings.music = !settings.music;
+    updateToggle(e.currentTarget, settings.music);
+    saveAccountSettings(username, settings);
+  });
+
+  document.getElementById('toggle-sfx').addEventListener('click', e => {
+    settings.sfx = !settings.sfx;
+    updateToggle(e.currentTarget, settings.sfx);
+    saveAccountSettings(username, settings);
+  });
+
+  document.getElementById('btn-settings-close').addEventListener('click', () => overlay.remove());
 }
 
 function closeOverlay() {
@@ -210,8 +284,9 @@ export function update(screen) {
     return;
   }
 
-  const session = loadSession();
-  const charId  = session?.activeCharId;
+  const session  = loadSession();
+  const charId   = session?.activeCharId;
+  const username = session?.loggedInUsername;
   if (!charId) {
     hudEl.innerHTML = '';
     return;
@@ -223,7 +298,7 @@ export function update(screen) {
 
   hudEl.innerHTML = `
     <button id="hud-chip" title="View stats">
-      <div class="portrait-frame" style="width:32px;height:32px;flex-shrink:0">
+      <div class="portrait-frame" style="width:64px;height:64px;flex-shrink:0">
         <img src="assets/portraits/${portraitId}.png" alt="${name}"
           style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
       </div>
@@ -231,5 +306,5 @@ export function update(screen) {
     </button>
   `;
 
-  document.getElementById('hud-chip').addEventListener('click', () => openOverlay(charId));
+  document.getElementById('hud-chip').addEventListener('click', () => openOverlay(charId, username));
 }

@@ -22,7 +22,7 @@ export function mount(container, options = {}) {
         alt="Superhuman Rock Paper Scissors"
         style="
           max-width: min(100%, 560px);
-          max-height: 80dvh;
+          max-height: 76dvh;
           width: 100%;
           object-fit: contain;
           image-rendering: pixelated;
@@ -30,6 +30,13 @@ export function mount(container, options = {}) {
         "
         draggable="false"
       >
+
+      <p
+        class="snes-small snes-muted"
+        style="margin-top:14px;text-align:center;font-size:6px;line-height:1.8;letter-spacing:1px;max-width:560px"
+      >
+        GAME DESIGN BY JEFF SANDLER&nbsp;&nbsp;·&nbsp;&nbsp;MUSIC &amp; SFX BY RAYAN RAMESH&nbsp;&nbsp;·&nbsp;&nbsp;CODING BY CLAUDE
+      </p>
 
       <p
         class="snes-small snes-highlight cursor-blink"

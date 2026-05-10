@@ -101,9 +101,9 @@ body::after {
 }
 
 .hud-chip-name {
-  font-size: 6px;
+  font-size: 12px;
   line-height: 1;
-  max-width: 80px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

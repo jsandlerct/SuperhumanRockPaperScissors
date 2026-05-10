@@ -266,8 +266,8 @@ export function runSeasonSimulation(charId, worldData, roster, progress, stats, 
 // Computes world rank from the current stored NPC ELOs (no simulation).
 // Called after every tournament match so the HUD rank stays current.
 export function computeMidSeasonRank(playerElo, worldData, roster) {
-  if (!worldData?.npcs) return null;
-  const npcElos = roster.map(n => worldData.npcs[n.id]?.currentElo ?? n.startingElo);
+  // Falls back to startingElo when worldData not yet initialised (Season 1 mid-play)
+  const npcElos = roster.map(n => worldData?.npcs?.[n.id]?.currentElo ?? n.startingElo);
   return npcElos.filter(e => e > playerElo).length + 1;
 }
 

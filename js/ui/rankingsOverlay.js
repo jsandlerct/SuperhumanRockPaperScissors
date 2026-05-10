@@ -1,5 +1,6 @@
-import { loadIdentity, loadProgress, loadWorld } from '../storage.js';
-import { TOTAL_PLAYERS } from '../constants.js';
+import { loadIdentity, loadProgress, loadWorld, loadTrophies, saveTrophies } from '../storage.js';
+import { TOTAL_PLAYERS, JESSIE_TUTORIAL_DIALOGUE } from '../constants.js';
+import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from './jessieDialogue.js';
 
 // ── Global Rankings overlay ───────────────────────────────────────────────────
 // Call openRankingsOverlay(charId, getAllNpcsFn) from any screen.
@@ -8,6 +9,22 @@ import { TOTAL_PLAYERS } from '../constants.js';
 export function openRankingsOverlay(charId, getAllNpcsFn) {
   const existing = document.getElementById('rankings-overlay');
   if (existing) { existing.remove(); return; }
+
+  // T-12: introduce ELO & rankings on first ever view
+  const _trophiesT12 = loadTrophies(charId);
+  if (!tutorialBeatShown(_trophiesT12, 'T-12')) {
+    const { expression, lines } = JESSIE_TUTORIAL_DIALOGUE['T-12'];
+    const tempContainer = document.createElement('div');
+    tempContainer.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:1300;';
+    document.body.appendChild(tempContainer);
+    showJessieDialogue(tempContainer, lines, expression, () => {
+      markTutorialBeat(_trophiesT12, 'T-12');
+      saveTrophies(charId, _trophiesT12);
+      tempContainer.remove();
+      openRankingsOverlay(charId, getAllNpcsFn);
+    });
+    return;
+  }
 
   const identity  = loadIdentity(charId);
   const progress  = loadProgress(charId);

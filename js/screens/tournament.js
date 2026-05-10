@@ -2,11 +2,13 @@ import { navigate }                          from '../main.js';
 import { getNpcById, getAllNpcs }              from '../main.js';
 import { roll }                               from '../utils/rng.js';
 import { winProbability }                     from '../systems/elo.js';
-import { TOURNAMENT_CONFIG }                  from '../constants.js';
+import { TOURNAMENT_CONFIG, JESSIE_TUTORIAL_DIALOGUE } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress,
   loadTournament, saveTournament, loadWorld,
+  loadTrophies, saveTrophies,
 } from '../storage.js';
+import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
 
 // ── NPC helpers ───────────────────────────────────────────────────────────────
 
@@ -410,6 +412,20 @@ export function mount(container, options = {}) {
   }
 
   let showFullBracket = false;
+
+  // T-04: introduce tournament bracket on the very first tournament ever
+  if (tier === 1) {
+    const trophies = loadTrophies(charId);
+    if (!tutorialBeatShown(trophies, 'T-04')) {
+      const { expression, lines } = JESSIE_TUTORIAL_DIALOGUE['T-04'];
+      showJessieDialogue(container, lines, expression, () => {
+        markTutorialBeat(trophies, 'T-04');
+        saveTrophies(charId, trophies);
+        renderScreen(stateInfo);
+      });
+      return;
+    }
+  }
 
   renderScreen(stateInfo);
 

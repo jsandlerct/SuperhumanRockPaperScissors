@@ -1,5 +1,5 @@
 import {
-  SKILL_TREE_INFO, SKILL_TREE_L2, SKILL_TREE_L3, SKILL_NODE_INFO, NODE_COST,
+  SKILL_TREE_INFO, SKILL_TREE_L2, SKILL_TREE_L3, SKILL_TREE_L4, SKILL_NODE_INFO, NODE_COST,
 } from '../constants.js';
 
 const TREES = ['MIND', 'MYSTIC', 'FORTUNE'];
@@ -21,10 +21,10 @@ function getGeo(container) {
 const LY = [20, 170, 330, 450];
 
 // Per-level node heights
-function nh(level) { return level <= 2 ? 88 : level === 3 ? 62 : 50; }
+function nh(level) { return level <= 2 ? 88 : level === 3 ? 62 : 120; }
 
 // Total canvas height
-const CH = LY[3] + nh(4) + 24;
+const CH = LY[3] + 120 + 24;
 
 // Per-level node widths (relative to COL / CW)
 function nw(level, COL, CW) {
@@ -53,11 +53,12 @@ const CONNECTIONS = [
   [3,3, 4,6], [3,3, 4,7],
 ];
 
-// 15-node descriptor list (L1+L2+L3 real, L4 future placeholders)
+// 15-node descriptor list (all 4 levels real and purchasable)
 function getTreeNodes(tree) {
   const info = SKILL_TREE_INFO[tree];
   const l2   = SKILL_TREE_L2[tree];
   const l3   = SKILL_TREE_L3[tree] ?? [];
+  const l4   = SKILL_TREE_L4[tree] ?? [];
   return [
     { id: info.rootId,         level: 1, branch: 0 },
     { id: l2[0].id,            level: 2, branch: 0 },
@@ -66,7 +67,14 @@ function getTreeNodes(tree) {
     { id: l3[1]?.id ?? null,   level: 3, branch: 1 },
     { id: l3[2]?.id ?? null,   level: 3, branch: 2 },
     { id: l3[3]?.id ?? null,   level: 3, branch: 3 },
-    ...Array.from({ length: 8 }, (_, b) => ({ id: null, level: 4, branch: b })),
+    { id: l4[0]?.id ?? null,   level: 4, branch: 0 },
+    { id: l4[1]?.id ?? null,   level: 4, branch: 1 },
+    { id: l4[2]?.id ?? null,   level: 4, branch: 2 },
+    { id: l4[3]?.id ?? null,   level: 4, branch: 3 },
+    { id: l4[4]?.id ?? null,   level: 4, branch: 4 },
+    { id: l4[5]?.id ?? null,   level: 4, branch: 5 },
+    { id: l4[6]?.id ?? null,   level: 4, branch: 6 },
+    { id: l4[7]?.id ?? null,   level: 4, branch: 7 },
   ];
 }
 
@@ -79,7 +87,7 @@ function nodeState(nodeId, tree, treeState, { isSeason1, primaryTree, secondaryT
       tree !== primaryTree && tree !== secondaryTree) return 'locked';
   const level = nodeId.split('.').length - 1;
   if (level === 2 && !treeState?.[tree]?.[`${tree}.1`]) return 'locked';
-  if (level === 3) {
+  if (level === 3 || level === 4) {
     const parentId = nodeId.split('.').slice(0, -1).join('.');
     if (!treeState?.[tree]?.[parentId]) return 'locked';
   }
@@ -95,10 +103,9 @@ function buildSVGPaths(treeColor, COL, CW) {
     const chy = LY[cl - 1];
     const mid = (py + chy) / 2;
 
-    const future  = cl >= 4;  // L4 nodes are still placeholders; L3 nodes are real
-    const opacity = future ? 0.12 : 0.5;
-    const stroke  = future ? 'var(--snes-border)' : treeColor;
-    const width   = future ? 1 : 2;
+    const opacity = 0.5;
+    const stroke  = treeColor;
+    const width   = 2;
 
     return `<path d="M${px},${py} C${px},${mid} ${chx},${mid} ${chx},${chy}"
               stroke="${stroke}" stroke-width="${width}" fill="none" opacity="${opacity}"/>`;
@@ -122,12 +129,16 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, C
   const cost       = node.id ? NODE_COST[`L${level}`] : null;
   const affordable = cost !== null && unspentPoints >= cost;
 
-  // Font sizes scale with column width
-  const namePx = Math.max(7, Math.round(COL * 0.10));
-  const costPx = Math.max(6, Math.round(COL * 0.085));
+  // Font sizes scale with column width; L4 uses smaller sizes to fit long names
+  const namePx = level === 4
+    ? Math.max(5, Math.round(COL * 0.063))
+    : Math.max(7, Math.round(COL * 0.10));
+  const costPx = level === 4
+    ? Math.max(5, Math.round(COL * 0.063))
+    : Math.max(6, Math.round(COL * 0.085));
 
   let labelHTML = '';
-  if (level === 1 || level === 2 || level === 3) {
+  if (node.id && (level === 1 || level === 2 || level === 3 || level === 4)) {
     const statusStr = st === 'purchased' ? '✓' : `${cost} pts`;
     const statusCls = st === 'purchased' ? 'st-cost--owned'
                     : (!affordable && st === 'available') ? 'st-cost--broke' : '';
@@ -136,7 +147,6 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, C
       <span class="st-node-cost ${statusCls}" style="font-size:${costPx}px">${statusStr}</span>
     `;
   }
-  // L4: tiny box, no text
 
   const stClass   = `st-node--${st}${sel ? ' st-node--selected' : ''}`;
   const treeColor = SKILL_TREE_INFO[treeName].color;
@@ -189,6 +199,7 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
     } else if (st === 'locked') {
       const reason = level === 2 ? 'Requires L1 root node'
                    : level === 3 ? 'Requires L2 parent node'
+                   : level === 4 ? 'Requires L3 parent node'
                    : 'Tree locked this season';
       actionHTML = `<p class="snes-small snes-muted" style="font-size:7px">🔒 ${reason}</p>`;
     }

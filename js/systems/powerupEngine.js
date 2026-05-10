@@ -7,7 +7,10 @@ import {
   STARTING_LOADOUT,
   MYSTIC_UPGRADE_BONUS_TO_ADVANCED,
   MYSTIC_UPGRADE_BONUS_TO_LEGENDARY,
+  UNCANNY_MIND_UPGRADE_BONUS,
+  UNCANNY_MIND_LEGENDARY_BONUS,
   FORTUNE_DROP_MULTIPLIER,
+  PROBABILITY_STORM_CHANCE,
 } from '../constants.js';
 
 // ── Tree state inspection ─────────────────────────────────────────────────────
@@ -33,6 +36,7 @@ export function getDropMultiplier(treeState) {
 }
 
 // MYSTIC.1 applies an upgrade-chance bonus to in-season round-win drops.
+// MIND.1.1.2.2 (Uncanny Mind) stacks additively with MYSTIC.1.
 // Returns { advanced, legendary } — independent rolls applied in resolveTier.
 export function getUpgradeBonus(treeState) {
   if (!treeState) return { advanced: 0, legendary: 0 };
@@ -41,6 +45,10 @@ export function getUpgradeBonus(treeState) {
   if (hasRoot(treeState, 'MYSTIC')) {
     advanced  += MYSTIC_UPGRADE_BONUS_TO_ADVANCED;
     legendary += MYSTIC_UPGRADE_BONUS_TO_LEGENDARY;
+  }
+  if (treeState?.MIND?.['MIND.1.1.2.2']) {
+    advanced  += UNCANNY_MIND_UPGRADE_BONUS;
+    legendary += UNCANNY_MIND_LEGENDARY_BONUS;
   }
   return { advanced, legendary };
 }
@@ -105,17 +113,25 @@ function pickRandomFromPool(pool, tier) {
 
 // Generates an array of powerup instances for a round-win drop event.
 // Tree state determines the eligible pool and any upgrade-chance bonus.
+// Probability Storm (MYSTIC.1.1.2.2): 50% chance non-Basic drop yields 2 copies.
+// Duplicate check runs BEFORE overflow prompt (both copies generated first).
 export function generateDrops(count, treeState) {
-  const pool  = getDropPool(treeState);
-  const bonus = getUpgradeBonus(treeState);
-  const drops = [];
+  const pool         = getDropPool(treeState);
+  const bonus        = getUpgradeBonus(treeState);
+  const probStorm    = Boolean(treeState?.MYSTIC?.['MYSTIC.1.1.2.2']);
+  const drops        = [];
 
   for (let i = 0; i < count; i++) {
     const tier   = resolveTier('Basic', bonus);
     const picked = pickRandomFromPool(pool, tier)
-                 ?? pickRandomFromPool(pool, 'Basic'); // fallback if pool lacks tier
+                 ?? pickRandomFromPool(pool, 'Basic');
     if (!picked) continue;
-    drops.push(createPowerupInstance(picked.name, tier, picked.tree, picked.scope));
+    const instance = createPowerupInstance(picked.name, tier, picked.tree, picked.scope);
+    drops.push(instance);
+    // Probability Storm: 50% chance of a second copy for non-Basic drops.
+    if (probStorm && tier !== 'Basic' && roll() < PROBABILITY_STORM_CHANCE) {
+      drops.push(createPowerupInstance(picked.name, tier, picked.tree, picked.scope));
+    }
   }
   return drops;
 }

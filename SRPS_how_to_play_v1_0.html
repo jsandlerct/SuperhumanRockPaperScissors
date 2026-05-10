@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRPS — How to Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:    #000000;
+    --dark:     #0a0a0a;
+    --panel:    #111111;
+    --border:   #2a2a2a;
+    --dim:      #333333;
+
+    --white:    #e8e8e8;
+    --dim-text: #888888;
+    --faint:    #555555;
+
+    --mind:     #7F77DD;
+    --mind-bg:  #1a1830;
+    --mind-hi:  #AFA9EC;
+
+    --mystic:   #1D9E75;
+    --mystic-bg:#0a2018;
+    --mystic-hi:#5DCAA5;
+
+    --fortune:  #EF9F27;
+    --fortune-bg:#221400;
+    --fortune-hi:#FAC775;
+
+    --gold:     #FFD700;
+    --red:      #CC3333;
+    --green:    #33AA55;
+
+    --pixel: 'Press Start 2P', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--pixel);
+    font-size: 8px;
+    line-height: 1.8;
+    padding: 0;
+    margin: 0;
+    image-rendering: pixelated;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ── Hero section ── */
+  .hero {
+    background: var(--dark);
+    border-bottom: 3px solid var(--dim);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--mind), var(--mystic), var(--fortune), var(--mind));
+    background-size: 200% 100%;
+    animation: shimmer 4s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 0% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .game-logo {
+    font-size: 20px;
+    color: var(--gold);
+    text-shadow: 3px 3px 0 #7a5c00, 4px 4px 0 #4a3800;
+    letter-spacing: 2px;
+    margin-bottom: 0.6rem;
+  }
+
+  .hero-sub {
+    font-size: 7px;
+    color: var(--dim-text);
+    margin-bottom: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .blink {
+    animation: blink 1.2s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Layout ── */
+  .page-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Section headers ── */
+  .section-header {
+    font-size: 10px;
+    color: var(--gold);
+    text-shadow: 2px 2px 0 #7a5c00;
+    border-bottom: 2px solid var(--dim);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.2rem;
+    margin-top: 2.5rem;
+    letter-spacing: 1px;
+  }
+
+  .section-header:first-of-type { margin-top: 0; }
+
+  .sub-header {
+    font-size: 8px;
+    color: var(--dim-text);
+    border-left: 3px solid var(--dim);
+    padding-left: 0.7rem;
+    margin-bottom: 0.8rem;
+    margin-top: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── Overview grid (first screen) ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .overview-grid.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  /* ── Panel cards ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    line-height: 2;
+  }
+
+  .panel.mind-panel   { border-color: var(--mind);    background: var(--mind-bg); }
+  .panel.mystic-panel { border-color: var(--mystic);  background: var(--mystic-bg); }
+  .panel.fortune-panel{ border-color: var(--fortune); background: var(--fortune-bg); }
+  .panel.gold-panel   { border-color: var(--gold);    background: #140f00; }
+
+  .panel-title {
+    font-size: 9px;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mind-panel   .panel-title { color: var(--mind-hi); }
+  .mystic-panel .panel-title { color: var(--mystic-hi); }
+  .fortune-panel .panel-title { color: var(--fortune-hi); }
+  .gold-panel   .panel-title { color: var(--gold); }
+
+  /* ── Data table ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+
+  .data-table th {
+    background: var(--panel);
+    color: var(--gold);
+    font-size: 7px;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    border: 1px solid var(--dim);
+    letter-spacing: 0.5px;
+  }
+
+  .data-table td {
+    background: var(--dark);
+    color: var(--white);
+    font-size: 7px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    line-height: 1.8;
+    vertical-align: top;
+  }
+
+  .data-table tr:nth-child(even) td { background: #0d0d0d; }
+
+  /* ── Inline tags ── */
+  .tag {
+    display: inline-block;
+    font-size: 6px;
+    padding: 1px 5px;
+    border: 1px solid;
+    letter-spacing: 0.5px;
+  }
+
+  .tag-mind    { color: var(--mind-hi);    border-color: var(--mind);    background: var(--mind-bg); }
+  .tag-mystic  { color: var(--mystic-hi);  border-color: var(--mystic);  background: var(--mystic-bg); }
+  .tag-fortune { color: var(--fortune-hi); border-color: var(--fortune); background: var(--fortune-bg); }
+  .tag-gold    { color: var(--gold);       border-color: #7a5c00;        background: #140f00; }
+  .tag-red     { color: #ff6666;           border-color: var(--red);     background: #1a0000; }
+  .tag-green   { color: #66cc88;           border-color: var(--green);   background: #001a08; }
+  .tag-white   { color: var(--white);      border-color: var(--dim);     background: var(--panel); }
+
+  /* ── Pixel bullet list ── */
+  .plist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .plist li {
+    font-size: 7px;
+    padding: 0.3rem 0 0.3rem 1rem;
+    position: relative;
+    line-height: 1.9;
+    border-bottom: 1px solid var(--border);
+    color: #cccccc;
+  }
+
+  .plist li:last-child { border-bottom: none; }
+
+  .plist li::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-size: 6px;
+  }
+
+  /* ── Tree counter triangle ── */
+  .counter-triangle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem 0;
+    font-size: 7px;
+  }
+
+  .ct-node {
+    padding: 0.6rem 1rem;
+    border: 2px solid;
+    text-align: center;
+    line-height: 2;
+  }
+
+  .ct-mind    { border-color: var(--mind);    color: var(--mind-hi);    background: var(--mind-bg); }
+  .ct-mystic  { border-color: var(--mystic);  color: var(--mystic-hi);  background: var(--mystic-bg); }
+  .ct-fortune { border-color: var(--fortune); color: var(--fortune-hi); background: var(--fortune-bg); }
+
+  .ct-arrow {
+    color: var(--red);
+    font-size: 10px;
+  }
+
+  /* ── Phase flow boxes ── */
+  .phase-flow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin: 0.8rem 0;
+  }
+
+  .phase-box {
+    background: var(--panel);
+    border: 1px solid var(--dim);
+    padding: 0.5rem 0.7rem;
+    font-size: 6px;
+    line-height: 1.8;
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .phase-num {
+    color: var(--gold);
+    display: block;
+    font-size: 7px;
+    margin-bottom: 0.2rem;
+  }
+
+  .phase-name { color: var(--white); display: block; margin-bottom: 0.2rem; }
+  .phase-desc { color: var(--dim-text); display: block; }
+
+  .phase-arrow {
+    color: var(--dim-text);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* ── Callout / gotcha box ── */
+  .callout {
+    background: #140f00;
+    border: 1px solid var(--fortune);
+    border-left: 4px solid var(--fortune);
+    padding: 0.7rem 1rem;
+    font-size: 7px;
+    color: var(--fortune-hi);
+    margin: 0.8rem 0;
+    line-height: 2;
+  }
+
+  .callout.blue {
+    background: var(--mind-bg);
+    border-color: var(--mind);
+    border-left-color: var(--mind);
+    color: var(--mind-hi);
+  }
+
+  .callout.green {
+    background: var(--mystic-bg);
+    border-color: var(--mystic);
+    border-left-color: var(--mystic);
+    color: var(--mystic-hi);
+  }
+
+  /* ── Divider ── */
+  .pixel-divider {
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--dim) 0px,
+      var(--dim) 6px,
+      transparent 6px,
+      transparent 10px
+    );
+    margin: 2.5rem 0;
+  }
+
+  .pixel-divider.color {
+    background: linear-gradient(90deg, var(--mind), var(--mystic), var(--fortune));
+    height: 1px;
+  }
+
+  /* ── Skill tree reference section ── */
+  .trees-wrapper {
+    background: var(--dark);
+    border-top: 3px solid var(--dim);
+    padding: 2rem 1.5rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .trees-title {
+    font-size: 12px;
+    color: var(--gold);
+    text-shadow: 2px 2px 0 #7a5c00;
+    margin-bottom: 0.4rem;
+  }
+
+  .trees-sub {
+    font-size: 7px;
+    color: var(--dim-text);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--dim);
+  }
+
+  /* ── Tree nodes (adapted from skill_trees_v1_0.html) ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 2rem;
+    padding: 0.7rem 1rem;
+    background: var(--panel);
+    border: 1px solid var(--dim);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 7px; color: var(--dim-text); }
+  .legend-dot  { width: 10px; height: 10px; flex-shrink: 0; }
+  .legend-title{ font-size: 7px; color: var(--white); margin-right: 4px; }
+
+  .tree-section { margin-bottom: 3rem; }
+
+  .tree-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--dim);
+  }
+
+  .tree-title { font-size: 11px; margin-bottom: 0.3rem; }
+
+  .tree-meta-line { font-size: 7px; color: var(--dim-text); }
+
+  .reversal-note {
+    font-size: 7px;
+    color: var(--fortune-hi);
+    font-style: italic;
+    border-left: 3px solid var(--fortune);
+    padding: 4px 8px;
+    margin-top: 0.5rem;
+    background: var(--fortune-bg);
+  }
+
+  .level-label {
+    font-size: 7px;
+    color: var(--dim-text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    margin-top: 10px;
+  }
+
+  .level-row    { display: flex; justify-content: center; align-items: flex-start; gap: 6px; }
+  .node-col     { display: flex; flex-direction: column; align-items: center; }
+
+  .node {
+    border: 1px solid;
+    padding: 8px 9px;
+    width: 148px;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .node-id   { font-size: 9px; font-weight: 600; letter-spacing: 0.03em; }
+  .node-name { font-size: 8px; font-weight: 600; line-height: 1.4; font-family: var(--pixel); }
+  .node-type { font-size: 7px; font-style: italic; line-height: 1.3; margin-top: 1px; font-family: var(--pixel); }
+  .node-desc { font-size: 7px; line-height: 1.5; margin-top: 3px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 3px; font-family: var(--pixel); }
+
+  .connector-row { position: relative; height: 28px; width: 100%; }
+  .connector-row svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+
+  /* MIND nodes — purple palette (dark-mode forced) */
+  .mind-l1 { background: #3C3489; border-color: #AFA9EC; }
+  .mind-l1 .node-id { color: #CECBF6; } .mind-l1 .node-name { color: #EEEDFE; }
+  .mind-l1 .node-type { color: #AFA9EC; } .mind-l1 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+  .mind-l2 { background: #534AB7; border-color: #7F77DD; }
+  .mind-l2 .node-id { color: #CECBF6; } .mind-l2 .node-name { color: #EEEDFE; }
+  .mind-l2 .node-type { color: #AFA9EC; } .mind-l2 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+  .mind-l3 { background: #534AB7; border-color: #AFA9EC; }
+  .mind-l3 .node-id { color: #EEEDFE; } .mind-l3 .node-name { color: #EEEDFE; }
+  .mind-l3 .node-type { color: #CECBF6; } .mind-l3 .node-desc { color: #CECBF6; border-color: rgba(206,203,246,0.15); }
+
+  .mind-l4 { background: #26215C; border-color: #7F77DD; }
+  .mind-l4 .node-id { color: #AFA9EC; } .mind-l4 .node-name { color: #EEEDFE; }
+  .mind-l4 .node-type { color: #AFA9EC; } .mind-l4 .node-desc { color: #CECBF6; border-color: rgba(127,119,221,0.2); }
+
+  /* MYSTIC nodes — teal palette */
+  .mystic-l1 { background: #085041; border-color: #5DCAA5; }
+  .mystic-l1 .node-id { color: #9FE1CB; } .mystic-l1 .node-name { color: #E1F5EE; }
+  .mystic-l1 .node-type { color: #5DCAA5; } .mystic-l1 .node-desc { color: #9FE1CB; border-color: rgba(93,202,165,0.15); }
+
+  .mystic-l2 { background: #0F6E56; border-color: #5DCAA5; }
+  .mystic-l2 .node-id { color: #9FE1CB; } .mystic-l2 .node-name { color: #E1F5EE; }
+  .mystic-l2 .node-type { color: #5DCAA5; } .mystic-l2 .node-desc { color: #9FE1CB; border-color: rgba(93,202,165,0.15); }
+
+  .mystic-l3 { background: #0F6E56; border-color: #9FE1CB; }
+  .mystic-l3 .node-id { color: #E1F5EE; } .mystic-l3 .node-name { color: #E1F5EE; }
+  .mystic-l3 .node-type { color: #9FE1CB; } .mystic-l3 .node-desc { color: #9FE1CB; border-color: rgba(159,225,203,0.15); }
+
+  .mystic-l4 { background: #04342C; border-color: #1D9E75; }
+  .mystic-l4 .node-id { color: #5DCAA5; } .mystic-l4 .node-name { color: #E1F5EE; }
+  .mystic-l4 .node-type { color: #5DCAA5; } .mystic-l4 .node-desc { color: #9FE1CB; border-color: rgba(29,158,117,0.2); }
+
+  /* FORTUNE nodes — amber palette */
+  .fortune-l1 { background: #633806; border-color: #EF9F27; }
+  .fortune-l1 .node-id { color: #FAC775; } .fortune-l1 .node-name { color: #FAEEDA; }
+  .fortune-l1 .node-type { color: #EF9F27; } .fortune-l1 .node-desc { color: #FAC775; border-color: rgba(239,159,39,0.2); }
+
+  .fortune-l2 { background: #854F0B; border-color: #EF9F27; }
+  .fortune-l2 .node-id { color: #FAC775; } .fortune-l2 .node-name { color: #FAEEDA; }
+  .fortune-l2 .node-type { color: #EF9F27; } .fortune-l2 .node-desc { color: #FAC775; border-color: rgba(239,159,39,0.2); }
+
+  .fortune-l3 { background: #854F0B; border-color: #FAC775; }
+  .fortune-l3 .node-id { color: #FAEEDA; } .fortune-l3 .node-name { color: #FAEEDA; }
+  .fortune-l3 .node-type { color: #FAC775; } .fortune-l3 .node-desc { color: #FAC775; border-color: rgba(250,199,117,0.2); }
+
+  .fortune-l4 { background: #412402; border-color: #BA7517; }
+  .fortune-l4 .node-id { color: #EF9F27; } .fortune-l4 .node-name { color: #FAEEDA; }
+  .fortune-l4 .node-type { color: #EF9F27; } .fortune-l4 .node-desc { color: #FAC775; border-color: rgba(186,117,23,0.2); }
+
+  /* ── Responsive / print ── */
+  @media (max-width: 900px) {
+    .game-logo   { font-size: 13px; }
+    .overview-grid, .overview-grid.three-col { grid-template-columns: 1fr; }
+    .phase-flow  { flex-direction: column; }
+    .phase-arrow { display: none; }
+    .counter-triangle { flex-direction: column; }
+  }
+
+  @media print {
+    body::before { display: none; }
+    .hero::after { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║             HERO HEADER             ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="hero">
+  <div class="game-logo">SUPERHUMAN&nbsp;RPS</div>
+  <div class="hero-sub">SET IN 2050 &nbsp;·&nbsp; 10-SEASON CAREER &nbsp;·&nbsp; 99 NPC RIVALS</div>
+  <div style="font-size:7px; color:var(--dim-text);">▼ <span class="blink">HOW TO PLAY</span> ▼</div>
+</div>
+
+<div class="page-wrapper">
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║          GAME OVERVIEW              ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">01 &nbsp;—&nbsp; GAME OVERVIEW</div>
+
+<div style="font-size:7px; color:#cccccc; line-height:2.2; margin-bottom:1.2rem;">
+  It's 2050. Biotech implants unlocked superhuman abilities — and the world immediately used them to get better at Rock Paper Scissors.
+  The UN adopted RPS as the universal dispute resolution framework. The World Champion holds more informal power than any head of state.
+  You've spent your whole life dreaming of that title. Today, in a small gymnasium that smells faintly of linoleum and ambition, your journey begins.
+</div>
+
+<div class="callout blue">
+  ▶ &nbsp;Your goal: compete across up to 5 tournaments per season, climb the global ELO rankings, and — after a 10-season career — earn induction into the <strong>Hall of Fame</strong>.
+</div>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║          THE THREE TREES            ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">02 &nbsp;—&nbsp; THE THREE TREES</div>
+
+<div style="font-size:7px; color:#aaaaaa; margin-bottom:0.8rem;">
+  In Season 1 you choose your <strong style="color:var(--white)">Primary Tree</strong>. In Season 2 you add a <strong style="color:var(--white)">Secondary Tree</strong>. Both are locked for the entire playthrough — they define your competitive identity.
+</div>
+
+<div class="overview-grid three-col">
+  <div class="panel mind-panel">
+    <div class="panel-title">🧠 MIND — "Deduce It"</div>
+    <div style="font-size:7px; color:#cccccc; line-height:2;">
+      Cold analytical deduction. Pattern recognition, tell-reading, strategy decryption.
+      <br><br>
+      <span class="tag tag-red">COUNTERS FORTUNE</span>&nbsp; <span class="tag tag-mystic">SYNERGY: MYSTIC</span>
+    </div>
+  </div>
+  <div class="panel mystic-panel">
+    <div class="panel-title">🔮 MYSTIC — "Bend It"</div>
+    <div style="font-size:7px; color:#cccccc; line-height:2;">
+      Supernatural reality alteration. Tie conversion, psychic deflection, opponent control.
+      <br><br>
+      <span class="tag tag-red">COUNTERS MIND</span>&nbsp; <span class="tag tag-fortune">SYNERGY: FORTUNE</span>
+    </div>
+  </div>
+  <div class="panel fortune-panel">
+    <div class="panel-title">🍀 FORTUNE — "Trust It"</div>
+    <div style="font-size:7px; color:#cccccc; line-height:2;">
+      Cosmic luck and probability manipulation. Auto-win gambles, powerup avalanches, loss compensation.
+      <br><br>
+      <span class="tag tag-red">COUNTERS MYSTIC</span>&nbsp; <span class="tag tag-mind">SYNERGY: MIND</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║          SEASON STRUCTURE           ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">03 &nbsp;—&nbsp; SEASON &amp; TOURNAMENT STRUCTURE</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>TOURNAMENT</th><th>NAME</th><th>PLAYERS</th><th>ROUNDS</th><th>ADVANCE REQUIREMENT</th><th>WIN AWARD</th><th>RUNNER-UP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>T1</td><td>Local Championship</td><td>4</td><td>2</td><td>Reach the Final (win 1 match)</td><td>10 pts</td><td>5 pts</td></tr>
+    <tr><td>T2</td><td>Regional Championship</td><td>8</td><td>3</td><td>Reach the Final (win 2 matches)</td><td>15 pts</td><td>7 pts</td></tr>
+    <tr><td>T3</td><td>National Championship</td><td>16</td><td>4</td><td>Reach the Final (win 3 matches)</td><td>20 pts</td><td>10 pts</td></tr>
+    <tr><td>T4</td><td>Continental Championship</td><td>32</td><td>5</td><td>Reach the Final (win 4 matches)</td><td>25 pts</td><td>12 pts</td></tr>
+    <tr><td>T5</td><td>World Championship</td><td>64</td><td>6</td><td>Win all 6 matches</td><td>30 pts</td><td>15 pts</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║             ROUND FLOW             ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">04 &nbsp;—&nbsp; ROUND FLOW</div>
+
+<div style="font-size:7px; color:#aaaaaa; margin-bottom:0.6rem;">
+  Regular matches are Best-of-5 (first to 3). Finals matches are Best-of-7 (first to 4). Ties replay automatically unless a skill prevents it.
+</div>
+
+<div class="phase-flow">
+  <div class="phase-box">
+    <span class="phase-num">01</span>
+    <span class="phase-name">THROW SELECTION</span>
+    <span class="phase-desc">Pick ✊ ✋ ✌ via the hand buttons. Activate powerups here. Trigger one active skill (uses round's single active skill slot).</span>
+  </div>
+  <div class="phase-arrow">→</div>
+  <div class="phase-box">
+    <span class="phase-num">02</span>
+    <span class="phase-name">GUT CHECK</span>
+    <span class="phase-desc">Skill intel displays: reads, warnings, false reads. Certain skills let you change your throw here. Activate powerups. Use your active skill if not used in Phase 1.</span>
+  </div>
+  <div class="phase-arrow">→</div>
+  <div class="phase-box">
+    <span class="phase-num">03</span>
+    <span class="phase-name">RESOLUTION</span>
+    <span class="phase-desc">Both throws revealed. Winner determined. Score updated. Ties replay from Phase 1.</span>
+  </div>
+</div>
+
+<div class="callout">
+  ⚠ &nbsp;<strong>ONE ACTIVE SKILL PER ROUND</strong> — across both phases combined. This is the primary balance mechanism.
+  You cannot change your throw by default during Gut Check — only specific skills or powerups grant that ability.
+</div>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║           SKILL TREE SYSTEM         ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">05 &nbsp;—&nbsp; SKILL TREE SYSTEM</div>
+
+<div class="overview-grid">
+  <div class="panel">
+    <div class="panel-title" style="color:var(--gold);">TREE STRUCTURE (per tree)</div>
+    <table class="data-table" style="margin-bottom:0;">
+      <thead><tr><th>LEVEL</th><th>NODES</th><th>COST</th><th>FOCUS</th></tr></thead>
+      <tbody>
+        <tr><td>L1 Root</td><td>1</td><td>5 pts</td><td>Powerup system boost</td></tr>
+        <tr><td>L2</td><td>2</td><td>10 pts</td><td>Offense / Defense split</td></tr>
+        <tr><td>L3</td><td>4</td><td>15 pts</td><td>Active skills + Synergies + Counters</td></tr>
+        <tr><td>L4</td><td>8</td><td>20 pts</td><td>Aspirational — rarely reachable in one run</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-title" style="color:var(--gold);">SKILL POINTS ECONOMY</div>
+    <ul class="plist">
+      <li>Start Season 1 with 15 free pts (Jessie's training)</li>
+      <li>Earn pts by winning or placing 2nd in each tournament</li>
+      <li>Mid-season: add pts only — no removal until off-season</li>
+      <li>Off-season: full respec within your two trees</li>
+      <li>Tree identity (which two) is locked for the entire playthrough</li>
+      <li>Must purchase at least one node before starting any season</li>
+      <li>Perfect 10-season run ≈ 1,015 total points — enough for ~4–5 L4 nodes</li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout green">
+  🔗 &nbsp;<strong>CROSS-TREE SYNERGIES:</strong> Each tree's L3 Synergy node (X.1.1.2) unlocks a bonus if you have any points in the synergy partner tree.
+  Example: MIND's Desperate Clarity swaps your season loadout to include a Legendary powerup if you also have MYSTIC points.
+</div>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║           POWERUP SYSTEM            ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">06 &nbsp;—&nbsp; POWERUP SYSTEM</div>
+
+<div class="overview-grid three-col">
+  <div class="panel">
+    <div class="panel-title" style="color:var(--white);">TIERS</div>
+    <ul class="plist">
+      <li><span class="tag tag-white">BASIC</span> — small advantage, longer duration</li>
+      <li><span class="tag tag-mind">ADVANCED</span> — moderate, balanced scope</li>
+      <li><span class="tag tag-gold">LEGENDARY</span> — game-changing, dramatic gold animation</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <div class="panel-title" style="color:var(--white);">SLOTS &amp; DROPS</div>
+    <ul class="plist">
+      <li>Default: 3 slots. MIND.1 → 5 slots. FORTUNE synergy → 6 slots</li>
+      <li>Powerups drop on round wins (10% → 20% → 40% → 80% → 160%+ escalation)</li>
+      <li>10% base chance to upgrade one tier on any drop</li>
+      <li>Overflow: blocking prompt — replace or discard (no timeout)</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <div class="panel-title" style="color:var(--white);">SCOPE</div>
+    <ul class="plist">
+      <li><span class="tag tag-white">ROUND</span> — one throw only</li>
+      <li><span class="tag tag-white">MATCH</span> — rest of current match</li>
+      <li><span class="tag tag-white">TOURNAMENT</span> — rest of current tournament</li>
+      <li><span class="tag tag-gold">SEASON</span> — rare; Legendary tier only</li>
+      <li>Shorter scope = stronger effect within its tier</li>
+    </ul>
+  </div>
+</div>
+
+<div style="font-size:7px; color:#aaaaaa; margin-top:0.6rem; margin-bottom:0.5rem;">
+  Starting loadout is deterministic (no RNG). MYSTIC.1's upgrade bonus applies to in-season drops only — not the starting loadout.
+  Each tree gets thematically linked powerups. The universal powerup <strong style="color:var(--white)">Changed My Mind</strong> (Basic, Round) lets any player change their throw during Gut Check.
+</div>
+
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║        ELO &amp; RANKINGS          ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">07 &nbsp;—&nbsp; ELO RANKINGS &amp; HALL OF FAME</div>
+
+<div style="font-size:7px; color:#aaaaaa; margin-bottom:0.8rem; line-height:2.2;">
+  ELO is the same rating system used in competitive chess. Every player — you and all 99 NPCs — starts with a baseline score.
+  When you win, your rating goes up; when you lose, it goes down. The key wrinkle: the size of the adjustment depends on who you beat.
+  Defeating a higher-rated rival earns you more points than beating someone ranked below you, and losing to a lower-rated opponent costs you more than losing to someone at the top.
+  This makes every match meaningful — playing up rewards you, playing safe barely moves the needle.
+</div>
+
+<div class="overview-grid">
+  <div class="panel">
+    <div class="panel-title" style="color:var(--gold);">GLOBAL RANKINGS</div>
+    <ul class="plist">
+      <li>All 100 players (you + 99 NPCs) share one ELO pool</li>
+      <li>Ratings update at the end of each season based on tournament results</li>
+      <li>NPC vs NPC matches are simulated each season — the world keeps moving whether you win or not</li>
+      <li>Milestones: enter rankings → Top 50 → Top 20 → Top 10 → Top 3 → #1</li>
+    </ul>
+  </div>
+  <div class="panel gold-panel">
+    <div class="panel-title">🏆 HALL OF FAME</div>
+    <ul class="plist">
+      <li>Evaluated after your 10th season ends</li>
+      <li>Eligible if you rank in the Top 3 of cumulative ELO across all 10 seasons</li>
+      <li>Permanent HOF plaque on your Career Summary screen</li>
+      <li>The ultimate achievement of any playthrough</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║            TIPS                     ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div class="section-header">08 &nbsp;—&nbsp; TIPS FOR NEW PLAYERS</div>
+
+<div class="panel" style="margin-bottom:1rem;">
+  <div class="panel-title" style="color:var(--gold);">GETTING STARTED</div>
+  <ul class="plist">
+    <li>Always buy the Root node (L1, 5 pts) first — it seeds your starting powerup loadout</li>
+    <li>You cannot start a season without purchasing at least one node</li>
+    <li>Read the Gut Check messages — even false reads contain clues about the NPC's strategy</li>
+    <li>Powerups escalate fast: winning the 5th round gives 1–2 guaranteed drops</li>
+    <li>FORTUNE's Trust My Luck (75/25) is high variance — use The Cooler to punish opponents using it</li>
+  </ul>
+</div>
+
+</div><!-- end page-wrapper -->
+
+<div class="pixel-divider color"></div>
+
+<!-- ╔══════════════════════════════════════════════════╗ -->
+<!-- ║        SKILL TREE REFERENCE (full diagrams)    ║ -->
+<!-- ╚══════════════════════════════════════════════════╝ -->
+<div class="trees-wrapper">
+
+<div class="trees-title">SKILL TREE REFERENCE</div>
+<p class="trees-sub">All 45 nodes across three trees. Each node shows: ID · name · type · brief effect.
+&nbsp;&nbsp;Prerequisite rule: each node requires its direct parent to be purchased first.</p>
+
+<div class="legend">
+  <span class="legend-title">Cost by level:</span>
+  <div class="legend-item"><div class="legend-dot" style="background:#AFA9EC"></div> L1 Root — 5 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div> L2 — 10 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div> L3 — 15 pts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#26215C"></div> L4 Aspirational — 20 pts</div>
+  <span style="margin-left:1rem" class="legend-title">Node types:</span>
+  <div class="legend-item">Active = player-triggered (cooldown). Passive = always-on.</div>
+</div>
+
+
+<!-- ═══════════════════════ MIND TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title" style="color:var(--mind-hi);">🧠 MIND — "Deduce it"</div>
+    <div class="tree-meta-line">Theme: Cold analytical deduction &nbsp;·&nbsp; Counters: FORTUNE &nbsp;·&nbsp; Synergizes with: MYSTIC</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l1">
+        <span class="node-id">MIND.1</span>
+        <span class="node-name">Mind Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">5 powerup slots. Start season with 4 Basic + 1 Advanced powerups.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#555" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#555" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l2">
+        <span class="node-id">MIND.1.1</span>
+        <span class="node-name">Neural Pattern Recognition</span>
+        <span class="node-type">Passive Offense — L2 · 10 pts</span>
+        <span class="node-desc">+10%/round accumulating chance to read NPC throw logic at 90% accuracy. Flat 10% false result always applies — never scales.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node mind-l2">
+        <span class="node-id">MIND.1.2</span>
+        <span class="node-name">Blank Slate</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">NPC pattern strategies (Historian, Streaker, Mimic) treat your last 2 throws as unknown. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.1.1</span>
+        <span class="node-name">Neural Scan</span>
+        <span class="node-type">Active Offense — L3 · 15 pts</span>
+        <span class="node-desc">On-demand 90% read of NPC throw logic. Cooldown: once every 5 matches. Player-only.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.1.2</span>
+        <span class="node-name">Desperate Clarity</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">Lose 2 consecutive rounds → +20% NPR permanently for match remainder. Once/match. Synergy (MYSTIC): swap season loadout to 3B + 1A + 1L.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.2.1</span>
+        <span class="node-name">Memory Wipe</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">Purges NPC throw history — NPC reverts to base strategy as if match just started. Once/match. Player-only.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mind-l3">
+        <span class="node-id">MIND.1.2.2</span>
+        <span class="node-name">The Cooler</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% chance opponent TML/ATML fails → opponent loses round. Only on TML/ATML use. Upgrades to 75% with The Freezer.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.1.1</span>
+        <span class="node-name">Neural Scan 2.0</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces Neural Scan. Same 90% on-demand read. Cooldown: every 3 matches (was 5). Shared UI button and tracker.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.1.2</span>
+        <span class="node-name">Adv. Neural Pattern Rec.</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">NPR per-round accumulation: 10% → 15%. Always active. Does not affect accuracy or false result chance.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.2.1</span>
+        <span class="node-name">Mental Mysticism</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">Precondition: NPR fired this match. 90% tie → win. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.1.2.2</span>
+        <span class="node-name">Uncanny Mind</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">+10% tier upgrade chance / +5% Legendary chance on drops. Stacks additively with MYSTIC.1.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.1.1</span>
+        <span class="node-name">Total Recall</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Memory Wipe AND reveals the base strategy NPC reverts to. Once/match.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.1.2</span>
+        <span class="node-name">Clean Slate</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">After any purge (Memory Wipe or Total Recall): NPC pattern strategies locked out for 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.2.1</span>
+        <span class="node-name">Not Today!</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">95% chance TML/ATML fails → opponent loses round. Cooldown: every 3 rounds. Takes precedence over Cooler/Freezer.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mind-l4">
+        <span class="node-id">MIND.1.2.2.2</span>
+        <span class="node-name">The Freezer</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades The Cooler: 50% → 75% block chance against TML/ATML.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ MYSTIC TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title" style="color:var(--mystic-hi);">🔮 MYSTIC — "Bend it"</div>
+    <div class="tree-meta-line">Theme: Supernatural reality alteration &nbsp;·&nbsp; Counters: MIND &nbsp;·&nbsp; Synergizes with: FORTUNE</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l1">
+        <span class="node-id">MYSTIC.1</span>
+        <span class="node-name">Mystical Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">+15% chance of one tier higher on random drops. +5% Legendary chance. Stacks additively with Uncanny Mind.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#555" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#555" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l2">
+        <span class="node-id">MYSTIC.1.1</span>
+        <span class="node-name">Tweak Reality</span>
+        <span class="node-type">Passive Offense — L2 · 10 pts</span>
+        <span class="node-desc">30% chance a natural tie converts to a win. Always active. Upgrades to 60% with Alter Reality.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node mystic-l2">
+        <span class="node-id">MYSTIC.1.2</span>
+        <span class="node-name">Reverse Card</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">25% chance any opponent active skill fires for the MYSTIC player instead. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.1.1</span>
+        <span class="node-name">Force Your Hand</span>
+        <span class="node-type">Active Offense — L3 · 15 pts</span>
+        <span class="node-desc">90% tie → win. No effect on non-tie rounds. Cooldown: every 5 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.1.2</span>
+        <span class="node-name">Third Time's the Charm</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">2 consecutive failed tie conversions → 95% next attempt. Once/match. Synergy (FORTUNE): start season with 1 Legendary powerup.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.2.1</span>
+        <span class="node-name">Brain Fart</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">Nullify opponent active skill + add 2 rounds to its cooldown. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node mystic-l3">
+        <span class="node-id">MYSTIC.1.2.2</span>
+        <span class="node-name">Mind Shield</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% block NPR / Neural Scan reads. Always active. Upgrades to 90% with Mind Fortress.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.1.1</span>
+        <span class="node-name">Twist Your Arm</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces Force Your Hand. Same 90% tie → win. Cooldown: every 3 rounds (was 5).</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.1.2</span>
+        <span class="node-name">Alter Reality</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Tweak Reality: 30% tie conversion → 60%. Always active.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.2.1</span>
+        <span class="node-name">Refuse to Lose</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">90% chance a loss converts to an immune tie. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.1.2.2</span>
+        <span class="node-name">Probability Storm</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">50% chance any non-Basic drop yields 2 powerups instead of 1.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.1.1</span>
+        <span class="node-name">Massive Brain Fart</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Nullify + 3 rounds on target's cooldown + 1 round on all other opponent cooldowns. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.1.2</span>
+        <span class="node-name">Bamboozle</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">25% chance any opponent powerup activates for you instead. Always active.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.2.1</span>
+        <span class="node-name">Phantom Memory</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">When Neural X fires (after block check): plant a false strategy read. 1-round cooldown.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node mystic-l4">
+        <span class="node-id">MYSTIC.1.2.2.2</span>
+        <span class="node-name">Mind Fortress</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Mind Shield: 50% → 90% block chance against Neural X reads.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ FORTUNE TREE ═══════════════════════ -->
+<div class="tree-section">
+  <div class="tree-header">
+    <div class="tree-title" style="color:var(--fortune-hi);">🍀 FORTUNE — "Trust it"</div>
+    <div class="tree-meta-line">Theme: Luck and probability manipulation &nbsp;·&nbsp; Counters: MYSTIC &nbsp;·&nbsp; Synergizes with: MIND</div>
+    <div class="reversal-note">* FORTUNE intentionally reverses Active/Passive roles in the offense branch at L2 and L3. FORTUNE.1.1 (L2) is Active rather than Passive; FORTUNE.1.1.1 (L3) is Passive rather than Active.</div>
+  </div>
+
+  <div class="level-label">L1 — Root</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l1">
+        <span class="node-id">FORTUNE.1</span>
+        <span class="node-name">Fortunate Power</span>
+        <span class="node-type">Powerup Root — L1 · 5 pts</span>
+        <span class="node-desc">2× powerup drop rate per round. (Playtesting flag — easy nerf to 1.5× if needed.)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg><line x1="50%" y1="0" x2="25%" y2="28" stroke="#555" stroke-width="1"/><line x1="50%" y1="0" x2="75%" y2="28" stroke="#555" stroke-width="1"/></svg>
+  </div>
+
+  <div class="level-label">L2 — Offense &amp; Defense split (* offense branch is Active, not Passive)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l2">
+        <span class="node-id">FORTUNE.1.1</span>
+        <span class="node-name">Trust My Luck (TML)</span>
+        <span class="node-type">Active L2* (intentional reversal) · 10 pts</span>
+        <span class="node-desc">75% auto-win / 25% auto-loss. Supersedes RPS throw entirely. Cooldown: every 5 rounds.</span>
+      </div>
+    </div>
+    <div style="width:20px"></div>
+    <div class="node-col">
+      <div class="node fortune-l2">
+        <span class="node-id">FORTUNE.1.2</span>
+        <span class="node-name">Consolation Prize</span>
+        <span class="node-type">Passive Defense — L2 · 10 pts</span>
+        <span class="node-desc">30% chance to earn a Basic luck powerup on a round loss. Always active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="25%" y1="0" x2="12.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="25%" y1="0" x2="37.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="62.5%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="75%" y1="0" x2="87.5%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L3 — Offense sub-branch &amp; Defense sub-branch (* offense sub-branch is Passive, not Active)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.1.1</span>
+        <span class="node-name">Lucky Socks</span>
+        <span class="node-type">Passive L3* (intentional reversal) · 15 pts</span>
+        <span class="node-desc">TML/ATML success chance: 75% → 85%. Always active. Replaced by Fingers Crossed (95%) at L4.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.1.2</span>
+        <span class="node-name">Due for a Win</span>
+        <span class="node-type">Passive Synergy — L3 · 15 pts</span>
+        <span class="node-desc">2 consecutive TML/ATML failures → next attempt 95%. Once/match. Synergy (MIND): gain 6th powerup slot (starts empty each season).</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.2.1</span>
+        <span class="node-name">Change My Luck</span>
+        <span class="node-type">Active Defense — L3 · 15 pts</span>
+        <span class="node-desc">On round loss: earn 2 Basic+ luck-themed powerups. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:8px"></div>
+    <div class="node-col">
+      <div class="node fortune-l3">
+        <span class="node-id">FORTUNE.1.2.2</span>
+        <span class="node-name">Oblivious</span>
+        <span class="node-type">Passive Soft Counter — L3 · 15 pts</span>
+        <span class="node-desc">50% block MYSTIC tie-altering skills. Always active. Upgrades to 90% with Totes Oblivious.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector-row">
+    <svg>
+      <line x1="12.5%"  y1="0" x2="6.25%"  y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="12.5%"  y1="0" x2="18.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="31.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="37.5%"  y1="0" x2="43.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="56.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="62.5%"  y1="0" x2="68.75%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="81.25%" y2="28" stroke="#555" stroke-width="1"/>
+      <line x1="87.5%"  y1="0" x2="93.75%" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="level-label">L4 — Aspirational (largely unreachable in a single playthrough)</div>
+  <div class="level-row">
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.1.1</span>
+        <span class="node-name">Advanced TML (ATML)</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Replaces TML entirely. Same 75/25 odds. Cooldown: every 3 rounds (was 5). Shared UI button and tracker.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.1.2</span>
+        <span class="node-name">Fingers Crossed</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">TML/ATML: 85% → 95% success chance. Replaces Lucky Socks value — does not stack.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.2.1</span>
+        <span class="node-name">I've Got a Hunch (IGaH)</span>
+        <span class="node-type">Synergy Active — L4 · 20 pts</span>
+        <span class="node-desc">50% chance of a 90% strategy read. Not blocked by MYSTIC counters. Failure: silent fizzle. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.1.2.2</span>
+        <span class="node-name">Make Your Own Luck</span>
+        <span class="node-type">Synergy Passive — L4 · 20 pts</span>
+        <span class="node-desc">On any powerup drop: system generates 2 options, player chooses 1 via blocking UI prompt.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.1.1</span>
+        <span class="node-name">Reversal of Fortune</span>
+        <span class="node-type">Powerful Active — L4 · 20 pts</span>
+        <span class="node-desc">Round loss → earn 2 Advanced+ luck-themed powerups. Cooldown: every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.1.2</span>
+        <span class="node-name">Look What I Found</span>
+        <span class="node-type">Powerful Passive — L4 · 20 pts</span>
+        <span class="node-desc">On loss: 25% independent chance of powerup one tier above Consolation Prize. Both can trigger on same loss.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.2.1</span>
+        <span class="node-name">Lucky Charm</span>
+        <span class="node-type">Hard Counter Active — L4 · 20 pts</span>
+        <span class="node-desc">MYSTIC tie-alter fires → reverse result to Lucky Charm player's favor. Fires after Oblivious fails. Fizzles if no tie-alter fires. Every 3 rounds.</span>
+      </div>
+    </div>
+    <div style="width:5px"></div>
+    <div class="node-col">
+      <div class="node fortune-l4">
+        <span class="node-id">FORTUNE.1.2.2.2</span>
+        <span class="node-name">Totes Oblivious</span>
+        <span class="node-type">Hard Counter Passive — L4 · 20 pts</span>
+        <span class="node-desc">Upgrades Oblivious: 50% → 90% block chance against MYSTIC tie-altering skills.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="font-size:6px; color:var(--faint); text-align:center; margin-top:2rem; padding-top:1rem; border-top:1px solid var(--border);">
+  SRPS v1.0 &nbsp;·&nbsp; Design by Jeff Sandler &nbsp;·&nbsp; Document assistance by Claude (Anthropic) &nbsp;·&nbsp; © 2026
+</div>
+
+</div><!-- end trees-wrapper -->
+
+</body>
+</html>

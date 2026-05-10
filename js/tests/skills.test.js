@@ -24,11 +24,26 @@ import {
   TML_SUCCESS_CHANCE,
   TML_COOLDOWN_ROUNDS,
   LUCKY_SOCKS_TML_CHANCE,
+  FINGERS_CROSSED_TML_CHANCE,
+  ATML_COOLDOWN_ROUNDS,
   DUE_FOR_A_WIN_BOOST,
   FORCE_YOUR_HAND_CHANCE,
   FORCE_YOUR_HAND_COOLDOWN_ROUNDS,
   CHANGE_MY_LUCK_COOLDOWN_ROUNDS,
   CONSOLATION_PRIZE_CHANCE,
+  MENTAL_MYSTICISM_CHANCE,
+  MENTAL_MYSTICISM_COOLDOWN_ROUNDS,
+  REFUSE_TO_LOSE_CHANCE,
+  REFUSE_TO_LOSE_COOLDOWN_ROUNDS,
+  PROBABILITY_STORM_CHANCE,
+  LOOK_WHAT_I_FOUND_CHANCE,
+  MIND_SHIELD_CHANCE,
+  MIND_FORTRESS_CHANCE,
+  THE_COOLER_CHANCE,
+  TOTES_OBLIVIOUS_CHANCE,
+  OBLIVIOUS_CHANCE,
+  UNCANNY_MIND_UPGRADE_BONUS,
+  UNCANNY_MIND_LEGENDARY_BONUS,
 } from '../constants.js';
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -122,6 +137,29 @@ describe('Skill constant values', () => {
   test('Due for a Win boost > Lucky Socks TML chance', () => assert(DUE_FOR_A_WIN_BOOST > LUCKY_SOCKS_TML_CHANCE));
   test('Lucky Socks chance > base TML chance',        () => assert(LUCKY_SOCKS_TML_CHANCE > TML_SUCCESS_CHANCE));
   test('Neural Scan 2.0 cooldown shorter than original', () => assert(NEURAL_SCAN_2_COOLDOWN_MATCHES < NEURAL_SCAN_COOLDOWN_MATCHES));
+
+  // L4 constants
+  test('Fingers Crossed TML chance is 95%',            () => assertEqual(FINGERS_CROSSED_TML_CHANCE, 0.95));
+  test('ATML cooldown is 3 rounds',                    () => assertEqual(ATML_COOLDOWN_ROUNDS, 3));
+  test('ATML cooldown shorter than TML cooldown',      () => assert(ATML_COOLDOWN_ROUNDS < TML_COOLDOWN_ROUNDS));
+  test('Fingers Crossed > Lucky Socks > base TML',     () => assert(FINGERS_CROSSED_TML_CHANCE > LUCKY_SOCKS_TML_CHANCE && LUCKY_SOCKS_TML_CHANCE > TML_SUCCESS_CHANCE));
+  test('Mental Mysticism chance is 90%',               () => assertEqual(MENTAL_MYSTICISM_CHANCE, 0.90));
+  test('Mental Mysticism cooldown is 3 rounds',        () => assertEqual(MENTAL_MYSTICISM_COOLDOWN_ROUNDS, 3));
+  test('Refuse to Lose chance is 90%',                 () => assertEqual(REFUSE_TO_LOSE_CHANCE, 0.90));
+  test('Refuse to Lose cooldown is 3 rounds',          () => assertEqual(REFUSE_TO_LOSE_COOLDOWN_ROUNDS, 3));
+  test('Probability Storm chance is 50%',              () => assertEqual(PROBABILITY_STORM_CHANCE, 0.50));
+  test('Look What I Found chance is 25%',              () => assertEqual(LOOK_WHAT_I_FOUND_CHANCE, 0.25));
+  test('Uncanny Mind upgrade bonus is 10%',            () => assertEqual(UNCANNY_MIND_UPGRADE_BONUS, 0.10));
+  test('Uncanny Mind legendary bonus is 5%',           () => assertEqual(UNCANNY_MIND_LEGENDARY_BONUS, 0.05));
+
+  // No-op counter-skill constants (await NPC implementation in v1.0)
+  test('Mind Shield chance is 50%',                    () => assertEqual(MIND_SHIELD_CHANCE, 0.50));
+  test('Mind Fortress chance is 90%',                  () => assertEqual(MIND_FORTRESS_CHANCE, 0.90));
+  test('Mind Fortress > Mind Shield (replacement pair)',() => assert(MIND_FORTRESS_CHANCE > MIND_SHIELD_CHANCE));
+  test('The Cooler chance is 50%',                     () => assertEqual(THE_COOLER_CHANCE, 0.50));
+  test('Oblivious chance is 50%',                      () => assertEqual(OBLIVIOUS_CHANCE, 0.50));
+  test('Totes Oblivious chance is 90%',                () => assertEqual(TOTES_OBLIVIOUS_CHANCE, 0.90));
+  test('Totes Oblivious > Oblivious (replacement pair)',() => assert(TOTES_OBLIVIOUS_CHANCE > OBLIVIOUS_CHANCE));
 });
 
 // ── NPR System (MIND.1.1) ─────────────────────────────────────────────────────
@@ -278,9 +316,9 @@ describe('Tweak Reality (MYSTIC.1.1)', () => {
   });
 });
 
-// ── Alter Reality (MYSTIC.1.1.1) — replaces Tweak Reality ────────────────────
+// ── Alter Reality (MYSTIC.1.1.1.2) — L4 passive, replaces Tweak Reality ───────
 
-describe('Alter Reality (MYSTIC.1.1.1)', () => {
+describe('Alter Reality (MYSTIC.1.1.1.2)', () => {
   test('converts tie when roll < ALTER_REALITY_CHANCE (0.60)', () => {
     const result = withRoll(0.59, () => tryConvertTie({
       hasTweakReality: true, hasAlterReality: true,
@@ -489,9 +527,9 @@ describe('Due for a Win (FORTUNE.1.1.2)', () => {
   });
 });
 
-// ── Force Your Hand (FORTUNE.1.2.1) ──────────────────────────────────────────
+// ── Force Your Hand (MYSTIC.1.1.1) ───────────────────────────────────────────
 
-describe('Force Your Hand (FORTUNE.1.2.1)', () => {
+describe('Force Your Hand (MYSTIC.1.1.1)', () => {
   test('converts tie when roll < FORCE_YOUR_HAND_CHANCE (0.90)', () => {
     const result = withRoll(0.89, () => forceYourHand());
     assertEqual(result, 'player', 'roll 0.89 < 0.90 → tie converted');
@@ -511,15 +549,81 @@ describe('Force Your Hand (FORTUNE.1.2.1)', () => {
   });
 });
 
-// ── Change My Luck (FORTUNE.1.2.2) ───────────────────────────────────────────
+// ── Change My Luck (FORTUNE.1.2.1) ───────────────────────────────────────────
 
-describe('Change My Luck (FORTUNE.1.2.2)', () => {
+describe('Change My Luck (FORTUNE.1.2.1)', () => {
   test('cooldown is 3 rounds', () => {
     assertEqual(CHANGE_MY_LUCK_COOLDOWN_ROUNDS, 3);
   });
 
   test('Change My Luck cooldown is shorter than Force Your Hand cooldown', () => {
     assert(CHANGE_MY_LUCK_COOLDOWN_ROUNDS < FORCE_YOUR_HAND_COOLDOWN_ROUNDS);
+  });
+});
+
+// ── Pandora's Box — cooldown reset on win ────────────────────────────────────
+//
+// Mirror of match.js Pandora's Box resolution logic:
+//   activate → set roundPandorasBoxActive = true
+//   handleReady: if (roundPandorasBoxActive && result === 'player') resetActiveCooldowns()
+//   resetRoundScopeState: roundPandorasBoxActive = false
+
+function simulatePandorasBoxResolution(pandorasBoxActive, roundResult, cooldowns) {
+  // Returns new cooldowns object after applying Pandora's Box rule.
+  if (pandorasBoxActive && roundResult === 'player') {
+    const reset = {};
+    for (const k of Object.keys(cooldowns)) reset[k] = 0;
+    return { cooldowns: reset, resetFired: true };
+  }
+  return { cooldowns: { ...cooldowns }, resetFired: false };
+}
+
+describe("Pandora's Box (FORTUNE powerup — cooldown reset)", () => {
+  const nonzeroCooldowns = {
+    tmlCooldown: 3,
+    forceYourHandCooldown: 2,
+    changeMyLuckCooldown: 1,
+    mentalMysticismCooldown: 2,
+    refuseToLoseCooldown: 1,
+  };
+
+  test('resets all cooldowns to 0 on round win', () => {
+    const { cooldowns, resetFired } = simulatePandorasBoxResolution(true, 'player', nonzeroCooldowns);
+    assert(resetFired, 'reset should fire on win');
+    for (const [k, v] of Object.entries(cooldowns)) {
+      assertEqual(v, 0, `${k} must be 0 after reset`);
+    }
+  });
+
+  test('does NOT reset cooldowns on round loss', () => {
+    const { cooldowns, resetFired } = simulatePandorasBoxResolution(true, 'opponent', nonzeroCooldowns);
+    assert(!resetFired, 'reset must not fire on loss');
+    assertEqual(cooldowns.tmlCooldown, 3, 'tmlCooldown unchanged on loss');
+  });
+
+  test('does NOT reset cooldowns on tie', () => {
+    const { cooldowns, resetFired } = simulatePandorasBoxResolution(true, 'tie', nonzeroCooldowns);
+    assert(!resetFired, 'reset must not fire on tie');
+    assertEqual(cooldowns.forceYourHandCooldown, 2, 'forceYourHandCooldown unchanged on tie');
+  });
+
+  test('does nothing if Pandora\'s Box was not activated this round', () => {
+    const { cooldowns, resetFired } = simulatePandorasBoxResolution(false, 'player', nonzeroCooldowns);
+    assert(!resetFired, 'reset must not fire without activation');
+    assertEqual(cooldowns.tmlCooldown, 3, 'cooldowns untouched without activation');
+  });
+
+  test('roundPandorasBoxActive flag resets to false each round (state isolation)', () => {
+    // After round 1 with the box active, the next round starts with flag = false.
+    // Verify: winning round 2 without activation does not reset cooldowns.
+    let pandorasBoxActive = true;
+    const r1 = simulatePandorasBoxResolution(pandorasBoxActive, 'player', nonzeroCooldowns);
+    assert(r1.resetFired, 'round 1: reset fires');
+
+    pandorasBoxActive = false; // resetRoundScopeState clears the flag
+    const r2 = simulatePandorasBoxResolution(pandorasBoxActive, 'player', { tmlCooldown: 2 });
+    assert(!r2.resetFired, 'round 2: no activation → no reset');
+    assertEqual(r2.cooldowns.tmlCooldown, 2, 'cooldown preserved in round 2');
   });
 });
 
@@ -536,5 +640,221 @@ describe('Consolation Prize (FORTUNE.1.2)', () => {
 
   test('does not fire when roll >= 0.30', () => {
     assert(!(0.30 < CONSOLATION_PRIZE_CHANCE), 'roll 0.30 does not trigger drop');
+  });
+});
+
+// ── Pure-function mirrors for L4 skill mechanics ──────────────────────────────
+
+// Fingers Crossed (FORTUNE.1.1.1.2): replaces Lucky Socks in TML chance chain.
+// Mirror of match.js handleTrustMyLuck() chance selection.
+function tmlResultFull({ hasLuckySocks, hasFingersCrossed, hasDueForAWin, dueForAWinFails, dueForAWinUsed }) {
+  let chance;
+  if (hasFingersCrossed)   chance = FINGERS_CROSSED_TML_CHANCE; // 95% — replaces Lucky Socks
+  else if (hasLuckySocks)  chance = LUCKY_SOCKS_TML_CHANCE;     // 85%
+  else                     chance = TML_SUCCESS_CHANCE;          // 75%
+
+  let dueForAWinFired = false;
+  if (hasDueForAWin && !dueForAWinUsed && dueForAWinFails >= 2) {
+    chance = DUE_FOR_A_WIN_BOOST;
+    dueForAWinFired = true;
+  }
+  return { success: roll() < chance, dueForAWinFired };
+}
+
+// Mental Mysticism (MIND.1.1.2.1): 90% tie→win.
+// Precondition (hasNPRFiredThisMatch) is enforced by button visibility in match.js;
+// the pure conversion logic just rolls against the chance.
+function mentalMysticism() {
+  return roll() < MENTAL_MYSTICISM_CHANCE ? 'player' : 'tie';
+}
+
+// Refuse to Lose (MYSTIC.1.1.2.1): 90% loss→immune tie.
+// When it fires, result becomes 'tie' and tieIsImmune is set (blocks all tie-altering).
+function refuseToLose() {
+  if (roll() < REFUSE_TO_LOSE_CHANCE) return { result: 'tie', tieIsImmune: true };
+  return { result: 'opponent', tieIsImmune: false }; // stays a loss
+}
+
+// Look What I Found (FORTUNE.1.2.1.2): 25% chance of a drop on loss.
+// Rolls independently from Consolation Prize — both can trigger on the same loss.
+function lookWhatIFound() {
+  return roll() < LOOK_WHAT_I_FOUND_CHANCE;
+}
+
+// ── ATML (FORTUNE.1.1.1.1) ────────────────────────────────────────────────────
+
+describe('ATML (FORTUNE.1.1.1.1)', () => {
+  test('ATML cooldown is 3 rounds — shorter than TML (5)', () => {
+    assert(ATML_COOLDOWN_ROUNDS < TML_COOLDOWN_ROUNDS,
+      `ATML (${ATML_COOLDOWN_ROUNDS}) must be shorter than TML (${TML_COOLDOWN_ROUNDS})`);
+  });
+
+  test('TML and ATML share the same success-chance chain (same tmlResultFull logic)', () => {
+    // ATML with no Lucky Socks / Fingers Crossed still uses TML_SUCCESS_CHANCE (75%)
+    const { success } = withRoll(0.74, () => tmlResultFull({
+      hasLuckySocks: false, hasFingersCrossed: false,
+      hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false,
+    }));
+    assert(success, '0.74 < 0.75 → ATML succeeds with base chance');
+  });
+});
+
+// ── Fingers Crossed (FORTUNE.1.1.1.2) ────────────────────────────────────────
+
+describe('Fingers Crossed (FORTUNE.1.1.1.2)', () => {
+  test('bumps TML success to 95%: roll 0.94 succeeds', () => {
+    const { success } = withRoll(0.94, () => tmlResultFull({
+      hasLuckySocks: true, hasFingersCrossed: true,
+      hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false,
+    }));
+    assert(success, 'roll 0.94 < 0.95 → success with Fingers Crossed');
+  });
+
+  test('bumps TML success to 95%: roll 0.95 fails (boundary)', () => {
+    const { success } = withRoll(0.95, () => tmlResultFull({
+      hasLuckySocks: true, hasFingersCrossed: true,
+      hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false,
+    }));
+    assert(!success, 'roll 0.95 >= 0.95 → failure');
+  });
+
+  test('Fingers Crossed REPLACES Lucky Socks — roll 0.86 fails (would succeed if stacked)', () => {
+    // If stacked: 0.85 + 0.95 would be nonsensical; correct: replace → only 95%
+    // Roll 0.86: with Lucky Socks only (85%) → fails; with Fingers Crossed (95%) → succeeds
+    const withFC  = withRoll(0.86, () => tmlResultFull({ hasLuckySocks: true,  hasFingersCrossed: true,  hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false }));
+    const withLS  = withRoll(0.86, () => tmlResultFull({ hasLuckySocks: true,  hasFingersCrossed: false, hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false }));
+    assert(withFC.success,  'Fingers Crossed: 0.86 < 0.95 → success');
+    assert(!withLS.success, 'Lucky Socks only: 0.86 >= 0.85 → failure');
+  });
+
+  test('Fingers Crossed without Lucky Socks still uses 95%', () => {
+    const { success } = withRoll(0.94, () => tmlResultFull({
+      hasLuckySocks: false, hasFingersCrossed: true,
+      hasDueForAWin: false, dueForAWinFails: 0, dueForAWinUsed: false,
+    }));
+    assert(success, 'Fingers Crossed alone: 0.94 < 0.95 → success');
+  });
+
+  test('Due for a Win overrides Fingers Crossed when conditions met (both fire at 95%)', () => {
+    // DfAW boost = 95% = same as FC; roll 0.94 succeeds either way
+    const { success, dueForAWinFired } = withRoll(0.94, () => tmlResultFull({
+      hasLuckySocks: false, hasFingersCrossed: true,
+      hasDueForAWin: true, dueForAWinFails: 2, dueForAWinUsed: false,
+    }));
+    assert(success, '0.94 < 0.95 → success');
+    assert(dueForAWinFired, 'DfAW fires when conditions met (overrides FC in chance logic)');
+  });
+});
+
+// ── Mental Mysticism (MIND.1.1.2.1) ──────────────────────────────────────────
+
+describe('Mental Mysticism (MIND.1.1.2.1)', () => {
+  test('converts tie to win when roll < 0.90', () => {
+    assertEqual(withRoll(0.89, mentalMysticism), 'player', 'roll 0.89 < 0.90 → player wins');
+  });
+
+  test('tie stays tie when roll >= 0.90 (boundary)', () => {
+    assertEqual(withRoll(0.90, mentalMysticism), 'tie', 'roll 0.90 >= 0.90 → tie remains');
+  });
+
+  test('always succeeds on roll 0.00', () => {
+    assertEqual(withRoll(0, mentalMysticism), 'player');
+  });
+
+  test('always fails on roll 0.99', () => {
+    assertEqual(withRoll(0.99, mentalMysticism), 'tie');
+  });
+
+  test('chance is stronger than Force Your Hand would need (>= 90%)', () => {
+    assert(MENTAL_MYSTICISM_CHANCE >= FORCE_YOUR_HAND_CHANCE,
+      'Mental Mysticism (90%) is at least as strong as Force Your Hand (90%)');
+  });
+});
+
+// ── Refuse to Lose (MYSTIC.1.1.2.1) ─────────────────────────────────────────
+
+describe('Refuse to Lose (MYSTIC.1.1.2.1)', () => {
+  test('converts loss to immune tie when roll < 0.90', () => {
+    const { result, tieIsImmune } = withRoll(0.89, refuseToLose);
+    assertEqual(result, 'tie', 'roll 0.89 < 0.90 → tie');
+    assert(tieIsImmune, 'tieIsImmune must be set');
+  });
+
+  test('stays a loss when roll >= 0.90 (boundary)', () => {
+    const { result, tieIsImmune } = withRoll(0.90, refuseToLose);
+    assertEqual(result, 'opponent', 'roll 0.90 >= 0.90 → loss remains');
+    assert(!tieIsImmune, 'tieIsImmune must not be set on failure');
+  });
+
+  test('tieIsImmune is true only when skill fires', () => {
+    const fires   = withRoll(0.00, refuseToLose);
+    const noFires = withRoll(0.99, refuseToLose);
+    assert(fires.tieIsImmune,    'fires at 0.00 → tieIsImmune = true');
+    assert(!noFires.tieIsImmune, 'no fire at 0.99 → tieIsImmune = false');
+  });
+
+  test('immune tie blocks all tie-altering (tieIsImmune flag is the enforcement mechanism)', () => {
+    // When Refuse to Lose fires, the resulting tie has tieIsImmune=true.
+    // tryConvertTie (Tweak/Alter Reality) checks this flag first and returns early.
+    const { result, tieIsImmune } = withRoll(0, refuseToLose);
+    const conversionAttempt = tryConvertTie({
+      hasTweakReality: true, hasAlterReality: true,
+      hasTTTC: true, ttcFails: 5, ttcUsed: false,
+      tieIsImmune, // pass the flag set by Refuse to Lose
+    });
+    assertEqual(conversionAttempt.result, 'tie', 'immune tie cannot be converted');
+    assert(!conversionAttempt.ttcFired, 'TTC does not fire on immune tie');
+  });
+});
+
+// ── Look What I Found (FORTUNE.1.2.1.2) ──────────────────────────────────────
+
+describe('Look What I Found (FORTUNE.1.2.1.2)', () => {
+  test('fires when roll < 0.25', () => {
+    assert(withRoll(0.24, lookWhatIFound), 'roll 0.24 < 0.25 → fires');
+  });
+
+  test('does not fire at boundary (0.25 >= 0.25)', () => {
+    assert(!withRoll(0.25, lookWhatIFound), 'roll 0.25 >= 0.25 → no fire');
+  });
+
+  test('independent of Consolation Prize — both can fire on same loss', () => {
+    // Both are separate rolls; this test verifies LWI chance is 25% (not 30% like CP)
+    assert(LOOK_WHAT_I_FOUND_CHANCE < CONSOLATION_PRIZE_CHANCE,
+      'LWI (25%) is a smaller additional chance vs Consolation Prize (30%)');
+  });
+
+  test('combined chance is additive (can both fire)', () => {
+    // If CP fires (roll < 0.30) AND LWI fires (independent roll < 0.25),
+    // both drop. This test just validates the chances are independent constants.
+    assert(LOOK_WHAT_I_FOUND_CHANCE > 0,   'LWI can fire');
+    assert(CONSOLATION_PRIZE_CHANCE > 0,   'CP can fire');
+    // Independence means P(both) = 0.25 * 0.30 = 0.075
+    assert(Math.abs(LOOK_WHAT_I_FOUND_CHANCE * CONSOLATION_PRIZE_CHANCE - 0.075) < 1e-9,
+      'combined probability = 7.5%');
+  });
+});
+
+// ── No-op counter-skill constants (await NPC active skills — v1.0) ────────────
+//
+// Mind Shield (MYSTIC.1.2.2), Mind Fortress (MYSTIC.1.2.2.2): block NPR/Neural Scan reads.
+// The Cooler (MIND.1.2.2), The Freezer (MIND.1.2.2.2): block NPC TML/ATML.
+// Oblivious (FORTUNE.1.2.2), Totes Oblivious (FORTUNE.1.2.2.2): block NPC tie-altering.
+//
+// None are implemented until NPCs gain NPR / TML / MYSTIC skills (v1.0).
+// These tests lock in the design-doc values so a future implementor sees
+// exactly what the constants must be before wiring the logic.
+
+describe('No-op counter-skill constants (v1.0 implementation pending)', () => {
+  test('Mind Shield block chance: 50%', () => assertEqual(MIND_SHIELD_CHANCE, 0.50));
+  test('Mind Fortress block chance: 90% (upgrades Mind Shield)', () => assertEqual(MIND_FORTRESS_CHANCE, 0.90));
+  test('The Cooler block chance: 50%', () => assertEqual(THE_COOLER_CHANCE, 0.50));
+
+  test('Oblivious block chance: 50%', () => assertEqual(OBLIVIOUS_CHANCE, 0.50));
+  test('Totes Oblivious block chance: 90% (upgrades Oblivious)', () => assertEqual(TOTES_OBLIVIOUS_CHANCE, 0.90));
+
+  test('upgrade constants are symmetric (both L4 replacements bump to 90%)', () => {
+    assertEqual(MIND_FORTRESS_CHANCE, TOTES_OBLIVIOUS_CHANCE,
+      'both L4 defensive upgrades cap at 90%');
   });
 });

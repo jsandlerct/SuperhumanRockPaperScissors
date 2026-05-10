@@ -1,8 +1,10 @@
 import { navigate } from '../main.js';
-import { TOTAL_PLAYERS, NODE_COST } from '../constants.js';
+import { TOTAL_PLAYERS, NODE_COST, JESSIE_TUTORIAL_DIALOGUE, JESSIE_SEASON_CHECKIN } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
+  loadTrophies, saveTrophies,
 } from '../storage.js';
+import { showJessieDialogue, jessieInlinePanel, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
 
 // Returns total skill points locked up in purchased nodes across all trees.
 function computeRefund(treeState) {
@@ -42,106 +44,123 @@ export function mount(container, options = {}) {
     saveProgress(charId, progress);
   }
 
-  const name         = identity?.name?.toUpperCase() ?? '???';
-  const portraitId   = identity?.portraitId ?? 'male_1';
-  const elo          = progress?.currentElo ?? 0;
-  const worldRank    = progress?.worldRank ?? null;
-  const season       = progress?.currentSeason ?? 1;
-  const unspent      = progress?.unspentSkillPoints ?? 0;
-  const nextSeason   = season + 1;
-  const inventory    = progress?.powerupInventory ?? [];
-  const primaryTree  = identity?.primaryTree  ?? null;
+  const name          = identity?.name?.toUpperCase() ?? '???';
+  const portraitId    = identity?.portraitId ?? 'male_1';
+  const elo           = progress?.currentElo ?? 0;
+  const worldRank     = progress?.worldRank ?? null;
+  const season        = progress?.currentSeason ?? 1;
+  const unspent       = progress?.unspentSkillPoints ?? 0;
+  const nextSeason    = season + 1;
+  const inventory     = progress?.powerupInventory ?? [];
+  const primaryTree   = identity?.primaryTree  ?? null;
   const secondaryTree = identity?.secondaryTree ?? null;
-
-  // Build the list of available trees for display.
-  const treeNames = { MIND: 'MIND', MYSTIC: 'MYSTIC', FORTUNE: 'FORTUNE' };
   const availableTrees = [primaryTree, secondaryTree].filter(Boolean);
 
-  container.innerHTML = `
-    <div class="screen fade-in" style="justify-content:center">
-      <div class="content-card" style="gap:20px">
+  const trophies = loadTrophies(charId);
 
-        <p class="snes-title" style="text-align:center">OFF-SEASON</p>
-        <p class="snes-small snes-muted" style="text-align:center">SEASON ${season} COMPLETE</p>
+  // T-13: introduce the off-season/respec concept on the very first visit (one-shot)
+  if (!tutorialBeatShown(trophies, 'T-13')) {
+    const { expression, lines } = JESSIE_TUTORIAL_DIALOGUE['T-13'];
+    showJessieDialogue(container, lines, expression, () => {
+      markTutorialBeat(trophies, 'T-13');
+      saveTrophies(charId, trophies);
+      renderScreen('');  // no M-12 panel on first visit — T-13 just covered it
+    });
+    return;
+  }
 
-        <!-- Jessie check-in -->
-        <div class="snes-panel" style="display:flex;align-items:flex-start;gap:14px">
-          <div class="portrait-frame portrait-frame--lg" style="flex-shrink:0">
-            <img src="assets/portraits/jessie/Jessie_default.png" alt="Jessie"
-              style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
-          </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-            <p class="snes-small snes-highlight">JESSIE</p>
-            <p class="snes-small" style="line-height:1.8">Off-season. Time to get to work.</p>
-          </div>
-        </div>
+  // M-12: rotating seasonal check-in for all subsequent off-seasons
+  let jessiePanelHtml = '';
+  if (JESSIE_SEASON_CHECKIN.length > 0) {
+    let history = trophies.jessieSeasonCheckInHistory ?? [];
+    if (history.length >= JESSIE_SEASON_CHECKIN.length) history = [];
+    const idx = history.length;
+    history.push(idx);
+    trophies.jessieSeasonCheckInHistory = history;
+    saveTrophies(charId, trophies);
+    const { expression, text } = JESSIE_SEASON_CHECKIN[idx];
+    jessiePanelHtml = jessieInlinePanel(text, expression);
+  }
 
-        <!-- Player identity -->
-        <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
-          <div class="portrait-frame portrait-frame--lg">
-            <img src="assets/portraits/${portraitId}.png" alt="">
+  renderScreen(jessiePanelHtml);
+
+  function renderScreen(jessiePanelHTML) {
+    container.innerHTML = `
+      <div class="screen fade-in" style="justify-content:center">
+        <div class="content-card" style="gap:20px">
+
+          <p class="snes-title" style="text-align:center">OFF-SEASON</p>
+          <p class="snes-small snes-muted" style="text-align:center">SEASON ${season} COMPLETE</p>
+
+          ${jessiePanelHTML}
+
+          <!-- Player identity -->
+          <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
+            <div class="portrait-frame portrait-frame--lg">
+              <img src="assets/portraits/${portraitId}.png" alt="">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <p class="snes-label snes-highlight">${name}</p>
+              <p class="snes-small">ELO <span class="snes-highlight">${elo}</span></p>
+              <p class="snes-small">
+                RANK
+                ${worldRank !== null
+                  ? `<span class="snes-highlight">#${worldRank}</span><span class="snes-muted"> of ${TOTAL_PLAYERS}</span>`
+                  : `<span class="snes-muted">UNRANKED</span>`}
+              </p>
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <p class="snes-label snes-highlight">${name}</p>
-            <p class="snes-small">ELO <span class="snes-highlight">${elo}</span></p>
-            <p class="snes-small">
-              RANK
-              ${worldRank !== null
-                ? `<span class="snes-highlight">#${worldRank}</span><span class="snes-muted"> of ${TOTAL_PLAYERS}</span>`
-                : `<span class="snes-muted">UNRANKED</span>`}
+
+          <!-- Skill points / respec summary -->
+          <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
+            <p class="snes-small snes-muted">SKILL POINT RESPEC</p>
+            ${refundAmount > 0
+              ? `<p class="snes-small snes-success">▲ ${refundAmount} PTS REFUNDED FROM LAST SEASON</p>`
+              : ''}
+            <p class="snes-label snes-highlight">${unspent} PTS AVAILABLE</p>
+            <p class="snes-small snes-muted">
+              TREES: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'}
+            </p>
+            <p class="snes-small snes-muted" style="font-size:5px">
+              All nodes refunded. Reallocate freely before starting Season ${nextSeason}.
             </p>
           </div>
+
+          <!-- Powerup inventory -->
+          <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
+            <p class="snes-small snes-muted">POWERUP INVENTORY</p>
+            ${inventory.length > 0
+              ? `<p class="snes-small snes-muted">
+                   ${inventory.length} powerup${inventory.length > 1 ? 's' : ''} cleared for the new season.
+                 </p>`
+              : `<p class="snes-small snes-muted">No powerups to clear.</p>`
+            }
+            <p class="snes-small snes-muted" style="font-size:5px">
+              A fresh starting loadout will be drawn from your skill trees.
+            </p>
+          </div>
+
+          <button class="snes-btn snes-btn-yellow" id="btn-begin" style="width:100%">
+            ▶ RESPEC SKILL TREE FOR SEASON ${nextSeason}
+          </button>
+
         </div>
-
-        <!-- Skill points / respec summary -->
-        <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
-          <p class="snes-small snes-muted">SKILL POINT RESPEC</p>
-          ${refundAmount > 0
-            ? `<p class="snes-small snes-success">▲ ${refundAmount} PTS REFUNDED FROM LAST SEASON</p>`
-            : ''}
-          <p class="snes-label snes-highlight">${unspent} PTS AVAILABLE</p>
-          <p class="snes-small snes-muted">
-            TREES: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'}
-          </p>
-          <p class="snes-small snes-muted" style="font-size:5px">
-            All nodes refunded. Reallocate freely before starting Season ${nextSeason}.
-          </p>
-        </div>
-
-        <!-- Powerup inventory -->
-        <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
-          <p class="snes-small snes-muted">POWERUP INVENTORY</p>
-          ${inventory.length > 0
-            ? `<p class="snes-small snes-muted">
-                 ${inventory.length} powerup${inventory.length > 1 ? 's' : ''} cleared for the new season.
-               </p>`
-            : `<p class="snes-small snes-muted">No powerups to clear.</p>`
-          }
-          <p class="snes-small snes-muted" style="font-size:5px">
-            A fresh starting loadout will be drawn from your skill trees.
-          </p>
-        </div>
-
-        <button class="snes-btn snes-btn-yellow" id="btn-begin" style="width:100%">
-          ▶ RESPEC SKILL TREE FOR SEASON ${nextSeason}
-        </button>
-
       </div>
-    </div>
-  `;
+    `;
 
-  document.getElementById('btn-begin').addEventListener('click', () => {
-    const p = loadProgress(charId);
-    p.currentSeason          = nextSeason;
-    p.currentTournamentTier  = 1;
-    p.previousFinalists      = null;
-    p.activePowerupEffects   = { tournament: [], season: [] };
+    document.getElementById('btn-begin').addEventListener('click', () => {
+      const p = loadProgress(charId);
+      p.currentSeason          = nextSeason;
+      p.currentTournamentTier  = 1;
+      p.previousFinalists      = null;
+      p.activePowerupEffects   = { tournament: [], season: [] };
 
-    // Inventory cleared here; starting loadout regenerated in skillTree.js at Lock In
-    // so any new purchases during pre-season affect what gets seeded.
-    p.powerupInventory       = [];
-    p.phase                  = 'pre_season';
-    saveProgress(charId, p);
-    navigate('skillTree', { charId });
-  });
+      // Inventory cleared here; starting loadout regenerated in skillTree.js at Lock In
+      // so any new purchases during pre-season affect what gets seeded.
+      p.powerupInventory       = [];
+      p.phase                  = 'pre_season';
+      saveProgress(charId, p);
+      navigate('skillTree', { charId });
+    });
+  }
 }

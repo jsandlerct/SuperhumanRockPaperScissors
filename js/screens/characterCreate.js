@@ -1,10 +1,12 @@
 import { navigate } from '../main.js';
-import { ELO_BASELINE } from '../constants.js';
+import { ELO_BASELINE, STARTING_SKILL_POINTS_SEASON_1, JESSIE_TUTORIAL_DIALOGUE } from '../constants.js';
 import {
   loadSession, saveSession,
   loadAccount, saveAccount,
   saveIdentity, saveProgress, saveStats, saveTrophies,
+  loadTrophies,
 } from '../storage.js';
+import { showJessieDialogue, markTutorialBeat } from '../ui/jessieDialogue.js';
 
 // All 50 portraits: male_1–25, then female_1–25
 const ALL_PORTRAITS = [
@@ -228,7 +230,20 @@ export function mount(container, options = {}) {
     // Update session
     saveSession({ loggedInUsername: username, activeCharId: charId });
 
-    navigate('skillTree', { charId });
+    // T-01: Meet Jessie — 14-box story sequence before skill tree selection
+    const t01 = JESSIE_TUTORIAL_DIALOGUE['T-01'];
+    const messages = t01.messages.map(m => {
+      if (!m.narration && typeof m.text === 'string' && m.text.includes('[SKILL_POINTS]')) {
+        return { ...m, text: m.text.replace('[SKILL_POINTS]', String(STARTING_SKILL_POINTS_SEASON_1)) };
+      }
+      return m;
+    });
+    const trophies = loadTrophies(charId);
+    showJessieDialogue(container, messages, null, () => {
+      markTutorialBeat(trophies, 'T-01');
+      saveTrophies(charId, trophies);
+      navigate('skillTree', { charId });
+    });
   }
 
   // ── Go ───────────────────────────────────────────────────────────────────────
