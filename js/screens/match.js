@@ -96,6 +96,7 @@ export function mount(container, options = {}) {
   let roundOtherUsesDisabled = false;   // Project Hail Mary disables other USEs this round
   let roundBonusOnWin      = [];      // [{tier, count}] queued for award if round won
   let roundLuckyPennyCall  = null;    // 'heads' | 'tails' (set during gut_check)
+  let roundLuckyPennyResult = null;  // { call, flip, won } — set at resolution for reveal display
   let roundDizzySpell      = false;   // NPC throws random just this round
   let roundMysticPizza     = false;   // round will replay if it ends in a player loss
   let roundForceLoss       = false;   // TML failure: result forced to opponent
@@ -972,15 +973,22 @@ export function mount(container, options = {}) {
         ${coachHTML}
         ${espressoHTML}
         ${roundTmlPending !== null
-          ? `<div class="snes-panel" style="text-align:center;display:flex;flex-direction:column;gap:12px;padding:20px 16px">
+          ? (() => {
+              const tmlCoinBlocked = matchLuckyPenny && roundLuckyPennyCall === null;
+              return `<div class="snes-panel" style="text-align:center;display:flex;flex-direction:column;gap:12px;padding:20px 16px">
                <p class="snes-small snes-highlight" style="font-size:8px">⚡ TRUST MY LUCK</p>
                <p class="snes-small" style="font-size:6px;line-height:2.2">
                  You're trusting your luck and throwing whatever fortune decides.
                </p>
              </div>
-             <button class="snes-btn snes-btn-yellow" id="btn-ready" style="width:100%">
+             ${luckyPennyHTML}
+             ${tmlCoinBlocked ? `<p class="snes-small snes-muted" style="font-size:5px;text-align:center">Call the coin flip first</p>` : ''}
+             <button class="snes-btn snes-btn-yellow" id="btn-ready"
+                     style="width:100%${tmlCoinBlocked ? ';opacity:0.4;cursor:not-allowed' : ''}"
+                     ${tmlCoinBlocked ? 'disabled' : ''}>
                ▶ LET FORTUNE DECIDE
-             </button>`
+             </button>`;
+            })()
           : `<div style="display:flex;align-items:center;justify-content:space-between">
                <div>
                  <p class="snes-small snes-muted" style="font-size:5px">THROWING</p>
@@ -1031,6 +1039,12 @@ export function mount(container, options = {}) {
           </div>
         </div>
         <p class="snes-label ${resultColor}" style="text-align:center">${resultMsg}</p>
+        ${roundLuckyPennyResult ? (() => {
+          const { call, flip, won } = roundLuckyPennyResult;
+          return `<p class="snes-small ${won ? 'snes-success' : 'snes-muted'}" style="text-align:center;font-size:5px">
+            💰 LUCKY PENNY · YOU CALLED ${call.toUpperCase()}, IT WAS ${flip.toUpperCase()} — ${won ? '✓ EARNED A BASIC POWERUP!' : '✗ NO LUCK THIS ROUND'}
+          </p>`;
+        })() : ''}
         <button class="snes-btn snes-btn-yellow" id="btn-next" style="width:100%">▶ NEXT</button>
       `;
     } else if (screenState === 'drop_result') {
@@ -2076,7 +2090,9 @@ export function mount(container, options = {}) {
   function appendLuckyPennyDrop() {
     if (!matchLuckyPenny || !roundLuckyPennyCall) return;
     const flip = randomCoinFlip();
-    if (flip === roundLuckyPennyCall) {
+    const won  = flip === roundLuckyPennyCall;
+    roundLuckyPennyResult = { call: roundLuckyPennyCall, flip, won };
+    if (won) {
       earnedDrops.push(...generateBonusDrops([{ tier: 'Basic', count: 1 }], progress.treeState));
     }
   }
@@ -2189,6 +2205,7 @@ export function mount(container, options = {}) {
     roundOtherUsesDisabled   = false;
     roundBonusOnWin          = [];
     roundLuckyPennyCall      = null;
+    roundLuckyPennyResult    = null;
     roundDizzySpell          = false;
     roundMysticPizza         = false;
     roundCanChangeThrow      = false;
