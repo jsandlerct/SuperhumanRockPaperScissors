@@ -121,9 +121,10 @@ export function mount(container, options = {}) {
           <!-- Tree panel -->
           <div id="st-panel-mount"></div>
 
-          <!-- Continue / Lock In -->
+          <!-- Continue / Lock In — sticky so it stays visible on mobile without needing to scroll -->
           <div style="padding:12px;display:flex;flex-direction:column;gap:8px;
-                      background:var(--snes-panel-dark);border-top:2px solid var(--snes-border)">
+                      background:var(--snes-panel-dark);border-top:2px solid var(--snes-border);
+                      position:sticky;bottom:0;z-index:50">
             <p class="snes-small snes-muted" style="text-align:center;font-size:5px">${footerNote}</p>
             <button class="snes-btn snes-btn-yellow" id="btn-lock-in"
                     style="width:100%${btnEnabled ? '' : ';opacity:0.4;cursor:not-allowed'}"

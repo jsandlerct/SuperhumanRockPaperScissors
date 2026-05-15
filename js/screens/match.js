@@ -1,4 +1,5 @@
 import { navigate, getNpcById, getAllNpcs } from '../main.js';
+import { runCountdown } from '../animations/countdown.js';
 import { resolveRound } from '../systems/round.js';
 import { initNpcMatchState, getNpcThrow, recordPlayerThrow } from '../systems/npc.js';
 import { calcNewElo } from '../systems/elo.js';
@@ -1170,7 +1171,7 @@ export function mount(container, options = {}) {
           <!-- Right panel: powerup tray + action area -->
           <div class="match-panel">
             ${renderTray(inventory, maxSlots)}
-            ${bodyHTML}
+            <div id="match-action-body">${bodyHTML}</div>
           </div>
 
         </div>
@@ -1800,6 +1801,25 @@ export function mount(container, options = {}) {
     streakAwardedFlags = {};
   }
 
+  // ── Countdown overlay ────────────────────────────────────────────────────────
+
+  function runCountdownOverlay(onComplete) {
+    const bodyEl = document.getElementById('match-action-body');
+    if (!bodyEl) { onComplete(); return; }
+    const rect = bodyEl.getBoundingClientRect();
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(rect.width);
+    canvas.height = Math.round(rect.height);
+    canvas.style.cssText = `position:fixed;top:${Math.round(rect.top)}px;left:${Math.round(rect.left)}px;z-index:9000;pointer-events:all`;
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    runCountdown(ctx, canvas.width, canvas.height, () => {
+      canvas.remove();
+      onComplete();
+    });
+  }
+
   // ── Phase 3: Resolution ──────────────────────────────────────────────────────
 
   function handleReady() {
@@ -1932,24 +1952,27 @@ export function mount(container, options = {}) {
       }
     }
 
-    skillPopup  = null;
-    screenState = 'revealing';
+    skillPopup = null;
 
-    // T-07: first ever round resolution — auto-dismisses ~3s, outcome-specific line
-    const _trophiesT07 = loadTrophies(charId);
-    if (!tutorialBeatShown(_trophiesT07, 'T-07')) {
-      const outcome = lastRoundResult === 'player' ? 'win'
-        : lastRoundResult === 'opponent' ? 'loss' : 'tie';
-      const { line, expression } = JESSIE_TUTORIAL_DIALOGUE['T-07'].variants[outcome];
-      const { autoDismissMs } = JESSIE_TUTORIAL_DIALOGUE['T-07'];
-      showJessieDialogue(container, [line], expression, () => {
-        markTutorialBeat(_trophiesT07, 'T-07');
-        saveTrophies(charId, _trophiesT07);
-        render();
-      }, { autoDismissMs });
-      return;
-    }
-    render();
+    runCountdownOverlay(() => {
+      screenState = 'revealing';
+
+      // T-07: first ever round resolution — auto-dismisses ~3s, outcome-specific line
+      const _trophiesT07 = loadTrophies(charId);
+      if (!tutorialBeatShown(_trophiesT07, 'T-07')) {
+        const outcome = lastRoundResult === 'player' ? 'win'
+          : lastRoundResult === 'opponent' ? 'loss' : 'tie';
+        const { line, expression } = JESSIE_TUTORIAL_DIALOGUE['T-07'].variants[outcome];
+        const { autoDismissMs } = JESSIE_TUTORIAL_DIALOGUE['T-07'];
+        showJessieDialogue(container, [line], expression, () => {
+          markTutorialBeat(_trophiesT07, 'T-07');
+          saveTrophies(charId, _trophiesT07);
+          render();
+        }, { autoDismissMs });
+        return;
+      }
+      render();
+    });
   }
 
   // ── After reveal: drop processing ────────────────────────────────────────────

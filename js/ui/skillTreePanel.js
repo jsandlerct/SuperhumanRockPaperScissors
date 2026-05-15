@@ -5,41 +5,48 @@ import {
 const TREES = ['MIND', 'MYSTIC', 'FORTUNE'];
 
 // ── Responsive geometry ───────────────────────────────────────────────────────
-// COL and CW are computed from the container width at mount time so the tree
-// always fills the available space (full-screen on desktop, scrolls on mobile).
+// All vertical and size values are computed here, keyed to mobile vs desktop.
+// Desktop values are unchanged from before this patch.
 
-const MIN_COL = 56;   // minimum column width — keeps L4 nodes legible on phones
+const MIN_COL = 56;
 
 function getGeo(container) {
-  const raw = container.clientWidth || window.innerWidth;
-  const COL = Math.max(MIN_COL, Math.floor(raw / 8));
-  const CW  = COL * 8;
-  return { COL, CW };
+  const raw    = container.clientWidth || window.innerWidth;
+  const mobile = window.innerWidth < 768;
+  const COL    = Math.max(MIN_COL, Math.floor(raw / 8));
+  const CW     = COL * 8;
+
+  // Desktop: LY unchanged. Mobile: tighter spacing to cut ~230px from canvas height.
+  const LY = mobile
+    ? [12, 100, 185, 262]
+    : [20, 170, 330, 450];
+
+  // Per-level node heights
+  function nh(level) {
+    if (mobile) return level <= 2 ? 68 : level === 3 ? 50 : 76;
+    return level <= 2 ? 88 : level === 3 ? 62 : 120;
+  }
+
+  // Desktop CH = 450 + 120 + 24 = 594 (unchanged). Mobile = 262 + 76 + 24 = 362.
+  const CH = LY[3] + nh(4) + 24;
+
+  return { COL, CW, mobile, LY, nh, CH };
 }
 
-// Level top-Y positions (fixed — enough breathing room for bezier connectors)
-const LY = [20, 170, 330, 450];
-
-// Per-level node heights
-function nh(level) { return level <= 2 ? 88 : level === 3 ? 62 : 120; }
-
-// Total canvas height
-const CH = LY[3] + 120 + 24;
-
-// Per-level node widths (relative to COL / CW)
-function nw(level, COL, CW) {
-  if (level === 1) return Math.round(CW * 0.50);   // root: half canvas
-  if (level === 2) return Math.round(COL * 3.7);   // L2: nearly 4 cols each
-  if (level === 3) return COL * 2 - 10;            // L3: 2 cols minus gap
-  return COL - 10;                                  // L4: 1 col minus gap
-}
-
-// Center-X of a node
+// Center-X of a node (geometry unchanged)
 function ncx(level, branch, COL, CW) {
   if (level === 1) return CW / 2;
   if (level === 2) return branch === 0 ? 2 * COL : 6 * COL;
   if (level === 3) return (branch * 2 + 1) * COL;
   return (branch + 0.5) * COL;
+}
+
+// Per-level node widths (geometry unchanged)
+function nw(level, COL, CW) {
+  if (level === 1) return Math.round(CW * 0.50);
+  if (level === 2) return Math.round(COL * 3.7);
+  if (level === 3) return COL * 2 - 10;
+  return COL - 10;
 }
 
 // All parent → child connections [parentLevel, parentBranch, childLevel, childBranch]
@@ -95,25 +102,22 @@ function nodeState(nodeId, tree, treeState, { isSeason1, primaryTree, secondaryT
 }
 
 // ── SVG connector paths ───────────────────────────────────────────────────────
-function buildSVGPaths(treeColor, COL, CW) {
+function buildSVGPaths(treeColor, geo) {
+  const { COL, CW, LY, nh } = geo;
   return CONNECTIONS.map(([pl, pb, cl, cb]) => {
     const px  = ncx(pl, pb, COL, CW);
     const py  = LY[pl - 1] + nh(pl);
     const chx = ncx(cl, cb, COL, CW);
     const chy = LY[cl - 1];
     const mid = (py + chy) / 2;
-
-    const opacity = 0.5;
-    const stroke  = treeColor;
-    const width   = 2;
-
     return `<path d="M${px},${py} C${px},${mid} ${chx},${mid} ${chx},${chy}"
-              stroke="${stroke}" stroke-width="${width}" fill="none" opacity="${opacity}"/>`;
+              stroke="${treeColor}" stroke-width="2" fill="none" opacity="0.5"/>`;
   }).join('');
 }
 
 // ── Node HTML ─────────────────────────────────────────────────────────────────
-function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, COL, CW) {
+function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, geo) {
+  const { COL, CW, LY, nh } = geo;
   const { level, branch } = node;
   const nodeW = nw(level, COL, CW);
   const nodeH = nh(level);
@@ -167,7 +171,9 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, C
 }
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
-function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) {
+// On mobile the panel is rendered as a fixed bottom sheet so it is always
+// reachable without scrolling past the full-height tree canvas.
+function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts, mobile) {
   if (!selectedId) return '';
   const { readOnly, canRefund } = opts;
   const treeInfo   = SKILL_TREE_INFO[treeName];
@@ -180,7 +186,7 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
   const kind       = info?.kind ?? 'passive';
   const affordable = unspentPoints >= cost;
 
-  const kindBadge   = kind === 'active' ? '⚡ ACTIVE' : '◉ PASSIVE';
+  const kindBadge = kind === 'active' ? '⚡ ACTIVE' : '◉ PASSIVE';
 
   let actionHTML = '';
   if (!readOnly) {
@@ -205,8 +211,13 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts) 
     }
   }
 
+  const mobileSheetStyle = mobile
+    ? `position:fixed;bottom:0;left:0;right:0;z-index:200;max-height:60vh;overflow-y:auto;`
+    : '';
+
   return `
-    <div class="st-detail" style="border-top:3px solid ${treeInfo.color}">
+    <div class="st-detail${mobile ? ' st-detail--mobile-sheet' : ''}"
+         style="border-top:3px solid ${treeInfo.color};${mobileSheetStyle}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
         <div style="flex:1;min-width:0">
           <p class="snes-label snes-highlight" style="font-size:11px;line-height:1.6">${name.toUpperCase()}</p>
@@ -240,8 +251,8 @@ export function mount(container, options = {}) {
     onRefund       = () => {},
   } = options;
 
-  // Compute responsive geometry from actual container width
-  const { COL, CW } = getGeo(container);
+  const geo       = getGeo(container);
+  const { COL, CW, mobile, LY, nh, CH } = geo;
 
   const treeName  = TREES[activeTreeIdx];
   const treeInfo  = SKILL_TREE_INFO[treeName];
@@ -256,13 +267,13 @@ export function mount(container, options = {}) {
   const purchasedCount = Object.values(treeState[treeName] ?? {}).filter(Boolean).length;
   const navBadge = purchasedCount > 0 ? ` (${purchasedCount})` : '';
 
-  const svgPaths  = buildSVGPaths(treeInfo.color, COL, CW);
+  const svgPaths  = buildSVGPaths(treeInfo.color, geo);
   const nodesHTML = nodes.map(n =>
     buildNode(n, treeName, treeState, selectedNodeId, unspentPoints,
-              { ...stateOpts, readOnly, canRefund }, COL, CW)
+              { ...stateOpts, readOnly, canRefund }, geo)
   ).join('');
   const detailHTML = buildDetailPanel(selectedNodeId, treeName, treeState, unspentPoints,
-    { readOnly, canRefund, ...stateOpts });
+    { readOnly, canRefund, ...stateOpts }, mobile);
 
   // Nav font scale
   const navNamePx = Math.max(9, Math.round(COL * 0.13));
@@ -276,6 +287,9 @@ export function mount(container, options = {}) {
     </div>
   `;
 
+  // On mobile: detail panel is a fixed bottom sheet rendered outside .st-panel so it
+  // overlays the tree canvas without being clipped by any ancestor overflow.
+  // On desktop: detail panel sits inline below the canvas as before.
   container.innerHTML = `
     <div class="st-panel">
 
@@ -293,7 +307,7 @@ export function mount(container, options = {}) {
 
       ${ptsBar}
 
-      <!-- Tree canvas — width always matches container; scrolls only on very narrow screens -->
+      <!-- Tree canvas -->
       <div class="st-canvas-wrap">
         <div style="position:relative;width:${CW}px;height:${CH}px">
           <svg width="${CW}" height="${CH}"
@@ -304,10 +318,10 @@ export function mount(container, options = {}) {
         </div>
       </div>
 
-      <!-- Detail panel (shows below canvas on node tap) -->
-      ${detailHTML}
+      ${!mobile ? detailHTML : ''}
 
     </div>
+    ${mobile && selectedNodeId ? `<div class="st-detail-scrim" id="btn-st-scrim"></div>${detailHTML}` : ''}
   `;
 
   // Listeners
@@ -321,6 +335,7 @@ export function mount(container, options = {}) {
     });
   });
   document.getElementById('btn-st-close')?.addEventListener('click', () => onNodeSelect(null));
+  document.getElementById('btn-st-scrim')?.addEventListener('click', () => onNodeSelect(null));
   container.querySelectorAll('[data-detail-buy]').forEach(btn => {
     btn.addEventListener('click', () => onBuy(btn.dataset.detailBuy));
   });

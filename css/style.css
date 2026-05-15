@@ -726,6 +726,35 @@ body::after {
   background: var(--snes-black);
   scrollbar-width: thin;
   scrollbar-color: var(--snes-border) var(--snes-panel-dark);
+  /* Allow vertical page-scroll through this element on touch devices.
+     Without this, iOS intercepts all touch gestures that start here. */
+  touch-action: pan-y;
+}
+
+/* Mobile: detail panel slides up as a fixed bottom sheet so Buy/Refund
+   is always visible without needing to scroll past the tree canvas. */
+.st-detail--mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Semi-transparent scrim behind the mobile detail sheet */
+.st-detail-scrim {
+  display: none;
+}
+@media (max-width: 767px) {
+  .st-detail-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.55);
+  }
 }
 
 /* Node boxes */
