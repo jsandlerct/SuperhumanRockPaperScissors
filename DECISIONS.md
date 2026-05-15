@@ -5,6 +5,13 @@
 
 ---
 
+## Off-Season Respec (v0.3 revision)
+
+**[v0.3 | 2026-05-15] Off-season respec preserves L1 root nodes; only L2+ nodes are refunded.**
+`computeRefund` and `clearTreeState` in `offSeason.js` skip level-1 nodes. The player keeps their committed trees but gets all other points back to reallocate. Rationale: makes it visually and mechanically clear that tree identity is permanent — the root stays purchased; only the build within the tree is resettable.
+
+---
+
 ## Complete Powerup Catalog (v0.3)
 
 **[v0.3 | 2026-05-09] Protein Shake (Basic | MIND | round) implemented: sets `roundCanChangeThrow = true`, records `roundProteinShakeOriginalThrow` at activation. In `handleAdvanceFromReveal`, if throw changed AND result was player win (before force overrides), awards 1 Basic drop via `generateBonusDrops`. Reset in `resetRoundScopeState`.**

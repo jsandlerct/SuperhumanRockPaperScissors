@@ -6,25 +6,26 @@ import {
 } from '../storage.js';
 import { showJessieDialogue, jessieInlinePanel, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
 
-// Returns total skill points locked up in purchased nodes across all trees.
+// Returns total skill points locked up in L2+ nodes (L1 roots are kept).
 function computeRefund(treeState) {
   let total = 0;
   for (const tree of Object.values(treeState ?? {})) {
     for (const [nodeId, purchased] of Object.entries(tree)) {
       if (purchased) {
         const level = nodeId.split('.').length - 1;
-        total += NODE_COST[`L${level}`] ?? 0;
+        if (level >= 2) total += NODE_COST[`L${level}`] ?? 0;
       }
     }
   }
   return total;
 }
 
-// Zeros every node in treeState in place.
+// Zeros all L2+ nodes in treeState in place; L1 root nodes are preserved.
 function clearTreeState(treeState) {
   for (const tree of Object.values(treeState ?? {})) {
     for (const nodeId of Object.keys(tree)) {
-      tree[nodeId] = false;
+      const level = nodeId.split('.').length - 1;
+      if (level >= 2) tree[nodeId] = false;
     }
   }
 }
@@ -122,7 +123,7 @@ export function mount(container, options = {}) {
               TREES: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'}
             </p>
             <p class="snes-small snes-muted" style="font-size:5px">
-              All nodes refunded. Reallocate freely before starting Season ${nextSeason}.
+              Root nodes kept. All other nodes refunded. Reallocate freely before starting Season ${nextSeason}.
             </p>
           </div>
 
