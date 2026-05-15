@@ -807,6 +807,9 @@ export const JESSIE_SEASON_CHECKIN = [
   { expression: 'determined', text: "Season 9. One more after this. Make this one count." },
 ];
 
+// ── Feedback ──────────────────────────────────────────────────────────────────
+export const FEEDBACK_URL = 'https://forms.gle/P73QR6txD1pZf7YL7';
+
 // ── localStorage Schema Version ───────────────────────────────────────────────
 export const SCHEMA_VERSION = 1;
 // Increment this when making any breaking localStorage schema change.

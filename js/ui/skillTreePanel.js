@@ -342,6 +342,12 @@ export function mount(container, options = {}) {
   container.querySelectorAll('[data-detail-refund]').forEach(btn => {
     btn.addEventListener('click', () => onRefund(btn.dataset.detailRefund));
   });
+
+  // On desktop the detail panel is inline — scroll it into view if it's off-screen
+  if (selectedNodeId && !mobile) {
+    const detailEl = container.querySelector('.st-detail');
+    if (detailEl) detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 // ── Full-screen read-only overlay (for HUD) ───────────────────────────────────

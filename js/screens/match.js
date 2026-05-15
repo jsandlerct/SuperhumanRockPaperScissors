@@ -1134,6 +1134,9 @@ export function mount(container, options = {}) {
 
         ${popupHTML ? `<div id="pu-popup-layer">${popupHTML}</div>` : ''}
 
+        <!-- Reserve space so the fixed HUD chip never overlaps the scoreboard on mobile -->
+        <div class="match-hud-spacer"></div>
+
         <div class="match-layout">
 
           <!-- Left panel: scoreboard + round history -->

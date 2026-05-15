@@ -1,4 +1,4 @@
-import { TOURNAMENT_CONFIG, TOTAL_PLAYERS, TROPHY_CONFIG } from '../constants.js';
+import { TOURNAMENT_CONFIG, TOTAL_PLAYERS, TROPHY_CONFIG, FEEDBACK_URL } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress,
   loadStats, loadTrophies, loadAccountSettings, saveAccountSettings,
@@ -297,6 +297,7 @@ export function update(screen) {
   const name       = identity?.name?.toUpperCase() ?? '???';
 
   hudEl.innerHTML = `
+    <button id="hud-feedback" title="Submit feedback">✉ FEEDBACK</button>
     <button id="hud-chip" title="View stats">
       <div class="portrait-frame" style="width:64px;height:64px;flex-shrink:0">
         <img src="assets/portraits/${portraitId}.png" alt="${name}"
@@ -306,5 +307,6 @@ export function update(screen) {
     </button>
   `;
 
+  document.getElementById('hud-feedback').addEventListener('click', () => window.open(FEEDBACK_URL, '_blank', 'noopener'));
   document.getElementById('hud-chip').addEventListener('click', () => openOverlay(charId, username));
 }
