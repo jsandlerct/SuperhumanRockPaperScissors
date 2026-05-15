@@ -785,18 +785,20 @@ body::after {
 }
 
 /* Mobile: detail panel slides up as a fixed bottom sheet so Buy/Refund
-   is always visible without needing to scroll past the tree canvas. */
+   is always visible without needing to scroll past the tree canvas.
+   bottom:96px keeps it above the ~90px sticky Lock In footer. */
 .st-detail--mobile-sheet {
   position: fixed;
-  bottom: 0;
+  bottom: 96px;
   left: 0;
   right: 0;
   z-index: 200;
-  max-height: 60vh;
+  max-height: calc(60vh - 96px);
   overflow-y: auto;
 }
 
-/* Semi-transparent scrim behind the mobile detail sheet */
+/* Semi-transparent scrim behind the mobile detail sheet.
+   Stops at bottom:96px so the Lock In footer remains visible and tappable. */
 .st-detail-scrim {
   display: none;
 }
@@ -804,7 +806,10 @@ body::after {
   .st-detail-scrim {
     display: block;
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 96px;
     z-index: 199;
     background: rgba(0, 0, 0, 0.55);
   }
@@ -893,6 +898,8 @@ body::after {
 .st-detail {
   padding: 12px;
   background: var(--snes-panel);
+  /* Ensure scrollIntoView leaves clearance for the sticky Lock In footer below */
+  scroll-margin-bottom: 100px;
 }
 
 /* Full-screen overlay (from HUD "VIEW SKILL TREES" button) */

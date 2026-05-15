@@ -211,8 +211,9 @@ function buildDetailPanel(selectedId, treeName, treeState, unspentPoints, opts, 
     }
   }
 
+  // bottom:96px keeps the sheet above the ~90px sticky Lock In footer on mobile
   const mobileSheetStyle = mobile
-    ? `position:fixed;bottom:0;left:0;right:0;z-index:200;max-height:60vh;overflow-y:auto;`
+    ? `position:fixed;bottom:96px;left:0;right:0;z-index:200;max-height:calc(60vh - 96px);overflow-y:auto;`
     : '';
 
   return `
