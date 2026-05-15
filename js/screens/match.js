@@ -1809,7 +1809,11 @@ export function mount(container, options = {}) {
   function runCountdownOverlay(onComplete) {
     const bodyEl = document.getElementById('match-action-body');
     if (!bodyEl) { onComplete(); return; }
-    const rect = bodyEl.getBoundingClientRect();
+    // Use the containing .match-panel so the canvas covers the full result pane.
+    // On desktop the panel is flex-stretched to its tallest sibling, giving a
+    // stable height that doesn't shrink when gut_check has less content than reveal.
+    const targetEl = bodyEl.closest('.match-panel') || bodyEl;
+    const rect = targetEl.getBoundingClientRect();
 
     const canvas = document.createElement('canvas');
     canvas.width  = Math.round(rect.width);
