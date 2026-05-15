@@ -45,7 +45,13 @@ export function mount(container, options = {}) {
   let secondaryTree = identity.secondaryTree ?? null;
 
   // Panel navigation/selection state (persists across renders)
-  let activeTreeIdx  = 0;
+  // Mid-season: default to the first tree that has purchased nodes so the
+  // player lands on their active build rather than an empty MIND column.
+  const TREES = ['MIND', 'MYSTIC', 'FORTUNE'];
+  const firstActiveIdx = midSeason
+    ? (TREES.findIndex(t => Object.values(progress.treeState?.[t] ?? {}).some(v => v === true)) ?? 0)
+    : 0;
+  let activeTreeIdx  = firstActiveIdx >= 0 ? firstActiveIdx : 0;
   let selectedNodeId = null;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
