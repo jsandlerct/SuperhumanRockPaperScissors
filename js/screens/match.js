@@ -191,6 +191,10 @@ export function mount(container, options = {}) {
   let popupPowerup = null;
   let skillPopup   = null; // nodeId of skill to inspect, or null
 
+  // UI state
+  let passivesPanelOpen = false;  // collapsible passive skills panel
+  let myolOptions       = null;   // { option1, option2 } when screenState === 'myol_choice'
+
   let npcMatchState = initNpcMatchState(npc);
 
   // ── Skill state helpers ──────────────────────────────────────────────────────
@@ -473,6 +477,13 @@ export function mount(container, options = {}) {
         const cdLabel     = ready ? 'READY' : `${matchesLeft}m ` + Array.from({ length: cooldown }, (_, i) => i < matchesLeft ? '■' : '□').join('');
         return { ready, cdLabel, btnLabel: '▶ SCAN', btnId: 'btn-neural-scan', cdRemaining: matchesLeft, cdTotal: cooldown };
       }
+      case 'MIND.1.1.1.1': {
+        const cooldown    = NEURAL_SCAN_2_COOLDOWN_MATCHES;
+        const ready       = neuralScanMatchesSinceLastUse >= cooldown && !roundActiveSkillUsed;
+        const matchesLeft = cooldown - neuralScanMatchesSinceLastUse;
+        const cdLabel     = ready ? 'READY' : `${matchesLeft}m ` + Array.from({ length: cooldown }, (_, i) => i < matchesLeft ? '■' : '□').join('');
+        return { ready, cdLabel, btnLabel: '▶ SCAN 2.0', btnId: 'btn-neural-scan', cdRemaining: matchesLeft, cdTotal: cooldown };
+      }
       case 'MIND.1.2.1': {
         const ready = !memoryWipeUsed && !roundActiveSkillUsed;
         return { ready, cdLabel: memoryWipeUsed ? 'USED' : 'READY', btnLabel: '▶ WIPE', btnId: 'btn-memory-wipe', cdRemaining: null, cdTotal: null };
@@ -732,7 +743,7 @@ export function mount(container, options = {}) {
         return { status: `${pct}% drop on round loss`, muted: false };
       }
       case 'FORTUNE.1.1.1.2': return { status: 'TML/ATML success: 95% (replaces Lucky Socks)', muted: false };
-      case 'FORTUNE.1.1.2.2': return { status: 'Choose 1 of 2 on every drop (awaiting implementation)', muted: true };
+      case 'FORTUNE.1.1.2.2': return { status: 'Choose 1 of 2 options on every drop', muted: false };
       case 'FORTUNE.1.2.1.2': {
         const pct = Math.round(LOOK_WHAT_I_FOUND_CHANCE * 100);
         return { status: `${pct}% extra drop chance on round loss`, muted: false };
@@ -765,6 +776,21 @@ export function mount(container, options = {}) {
 
     if (passiveNodes.length === 0) return '';
 
+    const count      = passiveNodes.length;
+    const toggleIcon = passivesPanelOpen ? '▲' : '▼';
+    const headerBtn  = `
+      <button id="btn-passives-toggle" style="
+        width:100%;display:flex;align-items:center;justify-content:space-between;
+        background:var(--snes-panel-dark);border:2px solid var(--snes-border);
+        border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left;
+      ">
+        <p class="snes-small snes-muted" style="font-size:6px">◉ PASSIVE SKILLS (${count})</p>
+        <span class="snes-small snes-muted" style="font-size:8px">${toggleIcon}</span>
+      </button>
+    `;
+
+    if (!passivesPanelOpen) return headerBtn;
+
     const cards = passiveNodes.map(([id, info]) => {
       const name = info.level === 1 ? (info.rootName ?? info.name) : info.name;
       const { status, muted } = getPassiveSkillStatus(id);
@@ -787,7 +813,7 @@ export function mount(container, options = {}) {
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px">
-        <p class="snes-small snes-muted" style="font-size:6px">PASSIVE SKILLS</p>
+        ${headerBtn}
         ${cards}
       </div>
     `;
@@ -1138,6 +1164,34 @@ export function mount(container, options = {}) {
           </button>
         </div>
       `;
+    } else if (screenState === 'myol_choice') {
+      const { option1, option2 } = myolOptions;
+      const renderMYOLOption = (drop, btnId) => {
+        const icon = POWERUP_ICONS[drop.name] ?? '';
+        const desc = POWERUP_DESCRIPTIONS[drop.name] ?? '';
+        return `
+          <button id="${btnId}" class="snes-btn" style="
+            width:100%;display:flex;align-items:flex-start;gap:10px;padding:10px;text-align:left;
+          ">
+            ${icon ? `<img src="${icon}" alt="" style="width:32px;height:32px;image-rendering:pixelated;object-fit:contain;flex-shrink:0;margin-top:2px">` : ''}
+            <div style="flex:1;min-width:0">
+              <p class="snes-small snes-highlight" style="font-size:6px">${drop.name.toUpperCase()}</p>
+              <p class="snes-small snes-muted" style="font-size:5px;margin-top:2px">${drop.tier.toUpperCase()} · ${drop.scope.toUpperCase()}</p>
+              <p style="font-family:var(--font-readable);font-size:11px;color:var(--snes-muted);margin-top:4px;line-height:1.4">${desc}</p>
+            </div>
+          </button>
+        `;
+      };
+      bodyHTML = `
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px;text-align:center">
+          <p class="snes-small snes-highlight">✦ MAKE YOUR OWN LUCK</p>
+          <p class="snes-small snes-muted" style="font-size:6px">CHOOSE 1 POWERUP TO KEEP</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${renderMYOLOption(option1, 'btn-myol-1')}
+          ${renderMYOLOption(option2, 'btn-myol-2')}
+        </div>
+      `;
     } else if (screenState === 'match_over') {
       const won = playerRoundsWon >= roundsToWin;
       bodyHTML = `
@@ -1282,6 +1336,12 @@ export function mount(container, options = {}) {
       render();
     });
 
+    // Passive skills toggle
+    document.getElementById('btn-passives-toggle')?.addEventListener('click', () => {
+      passivesPanelOpen = !passivesPanelOpen;
+      render();
+    });
+
     // Active skill buttons (visible in picking + gut_check phases)
     document.getElementById('btn-tml')?.addEventListener('click', handleTrustMyLuck);
     document.getElementById('btn-neural-scan')?.addEventListener('click', handleNeuralScan);
@@ -1339,6 +1399,9 @@ export function mount(container, options = {}) {
         btn.addEventListener('click', () => handleOverflowReplace(parseInt(btn.dataset.replace, 10)));
       });
       document.getElementById('btn-overflow-discard')?.addEventListener('click', handleOverflowDiscard);
+    } else if (screenState === 'myol_choice') {
+      document.getElementById('btn-myol-1')?.addEventListener('click', () => handleMYOLChoice(myolOptions.option1));
+      document.getElementById('btn-myol-2')?.addEventListener('click', () => handleMYOLChoice(myolOptions.option2));
     } else if (screenState === 'match_over') {
       document.getElementById('btn-continue')?.addEventListener('click', finishMatch);
     }
@@ -2156,7 +2219,23 @@ export function mount(container, options = {}) {
       return;
     }
 
-    const drop     = earnedDrops.shift();
+    const drop = earnedDrops.shift();
+
+    // Make Your Own Luck: offer a choice between 2 drops instead of giving the one directly
+    if (hasSkill('FORTUNE.1.1.2.2')) {
+      const [altDrop] = generateDrops(1, progress.treeState);
+      if (altDrop) {
+        myolOptions = { option1: drop, option2: altDrop };
+        screenState = 'myol_choice';
+        render();
+        return;
+      }
+    }
+
+    deliverDrop(drop);
+  }
+
+  function deliverDrop(drop) {
     const inv      = getInventory();
     const maxSlots = getMaxSlots(progress.treeState);
 
@@ -2187,6 +2266,11 @@ export function mount(container, options = {}) {
   function handleOverflowDiscard() {
     overflowDrop = null;
     processNextDrop();
+  }
+
+  function handleMYOLChoice(chosenDrop) {
+    myolOptions = null;
+    deliverDrop(chosenDrop);
   }
 
   // ── Advance to next round ─────────────────────────────────────────────────────
@@ -2341,7 +2425,7 @@ export function mount(container, options = {}) {
   // ── Active skill: Neural Scan (MIND.1.1.1) ───────────────────────────────────
 
   function handleNeuralScan() {
-    if (!hasSkill('MIND.1.1.1')) return;
+    if (!hasSkill('MIND.1.1.1') && !hasSkill('MIND.1.1.1.1')) return;
     const cooldown = hasSkill('MIND.1.1.1.1') ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
     if (neuralScanMatchesSinceLastUse < cooldown) return;
     if (roundActiveSkillUsed) return;
@@ -2610,8 +2694,8 @@ export function mount(container, options = {}) {
     progress.worldRank     = newRank;
     progress.peakWorldRank = Math.min(progress.peakWorldRank ?? (TOTAL_PLAYERS + 1), newRank);
 
-    // Neural Scan (MIND.1.1.1): increment cross-match cooldown counter after each match.
-    if (hasSkill('MIND.1.1.1')) {
+    // Neural Scan (MIND.1.1.1 / MIND.1.1.1.1): increment cross-match cooldown counter after each match.
+    if (hasSkill('MIND.1.1.1') || hasSkill('MIND.1.1.1.1')) {
       const cooldown = hasSkill('MIND.1.1.1.1') ? NEURAL_SCAN_2_COOLDOWN_MATCHES : NEURAL_SCAN_COOLDOWN_MATCHES;
       const prev = progress.crossMatchState?.neuralScanMatchesSinceLastUse ?? 0;
       progress.crossMatchState = {
