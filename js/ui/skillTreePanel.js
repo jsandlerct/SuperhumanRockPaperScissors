@@ -133,13 +133,14 @@ function buildNode(node, treeName, treeState, selectedId, unspentPoints, opts, g
   const cost       = node.id ? NODE_COST[`L${level}`] : null;
   const affordable = cost !== null && unspentPoints >= cost;
 
-  // Font sizes scale with column width; L4 uses smaller sizes to fit long names
+  // Font sizes scale with column width; L4 uses slightly smaller sizes to fit long names
+  // but never below 8px (name) / 7px (cost) for readability
   const namePx = level === 4
-    ? Math.max(5, Math.round(COL * 0.063))
-    : Math.max(7, Math.round(COL * 0.10));
+    ? Math.max(8, Math.round(COL * 0.063))
+    : Math.max(8, Math.round(COL * 0.10));
   const costPx = level === 4
-    ? Math.max(5, Math.round(COL * 0.063))
-    : Math.max(6, Math.round(COL * 0.085));
+    ? Math.max(7, Math.round(COL * 0.063))
+    : Math.max(7, Math.round(COL * 0.085));
 
   let labelHTML = '';
   if (node.id && (level === 1 || level === 2 || level === 3 || level === 4)) {

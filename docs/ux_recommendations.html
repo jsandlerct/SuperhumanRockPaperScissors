@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRPS — UX Recommendations Report</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #222540;
+    --border: #3a3d5c;
+    --accent: #6c63ff;
+    --accent2: #f8c800;
+    --accent3: #2dd06e;
+    --danger: #e05050;
+    --warn: #f0a020;
+    --text: #e8e8f0;
+    --text-muted: #9090b0;
+    --text-dim: #6060a0;
+    --radius: 10px;
+    --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'Consolas', 'Menlo', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 0 0 80px;
+  }
+
+  /* ── HEADER ── */
+  .report-header {
+    background: linear-gradient(135deg, #1a1230 0%, #0f1830 60%, #101a10 100%);
+    border-bottom: 2px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .report-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none;
+  }
+  .report-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent2);
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .report-header .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    position: relative;
+  }
+  .badge-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    position: relative;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .badge.green  { border-color: var(--accent3); color: var(--accent3); }
+  .badge.yellow { border-color: var(--accent2); color: var(--accent2); }
+  .badge.purple { border-color: var(--accent);  color: var(--accent);  }
+  .badge.red    { border-color: var(--danger);   color: var(--danger);  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    background: rgba(15,17,23,0.96);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    padding: 0 32px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  nav a {
+    display: inline-block;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 11px;
+    padding: 14px 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: color 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  nav a:hover { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* ── MAIN LAYOUT ── */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    margin-top: 60px;
+    margin-bottom: 28px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+  .section-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 6px;
+  }
+  .screen-id {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: var(--accent);
+    margin-left: 10px;
+    vertical-align: middle;
+    letter-spacing: 1px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card + .card { margin-top: 0; }
+
+  .issue-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .issue-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .issue-card-head h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    flex: 1;
+  }
+  .issue-card-body {
+    padding: 16px 20px;
+    display: grid;
+    gap: 12px;
+  }
+  .issue-card-body.two-col {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .issue-card-body.two-col { grid-template-columns: 1fr; }
+  }
+
+  .problem, .fix {
+    background: var(--surface2);
+    border-radius: 7px;
+    padding: 12px 16px;
+  }
+  .problem { border-left: 3px solid var(--danger); }
+  .fix     { border-left: 3px solid var(--accent3); }
+  .problem h4 { color: var(--danger);  font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .fix     h4 { color: var(--accent3); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .problem p, .fix p { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+  .problem ul, .fix ul { font-size: 13.5px; color: var(--text); line-height: 1.8; padding-left: 18px; }
+
+  /* ── PRIORITY BADGES ── */
+  .pri {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .pri-critical { background: rgba(224,80,80,0.2);   color: var(--danger);  border: 1px solid var(--danger);  }
+  .pri-high     { background: rgba(240,160,32,0.2);  color: var(--warn);    border: 1px solid var(--warn);    }
+  .pri-medium   { background: rgba(108,99,255,0.2);  color: var(--accent);  border: 1px solid var(--accent);  }
+  .pri-low      { background: rgba(144,144,176,0.15);color: var(--text-muted);border: 1px solid var(--border);}
+
+  /* ── PLATFORM TAGS ── */
+  .platform {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .plat-both    { background: rgba(45,208,110,0.15); color: var(--accent3); }
+  .plat-mobile  { background: rgba(108,99,255,0.15); color: var(--accent);  }
+  .plat-desktop { background: rgba(248,200,0,0.15);  color: var(--accent2); }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+  }
+  .compare-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .ok  { color: var(--accent3); }
+  .compare-table .bad { color: var(--danger);  }
+  .compare-table .na  { color: var(--text-dim); }
+
+  /* ── CODE ── */
+  code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: rgba(108,99,255,0.12);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: #b0a8ff;
+  }
+  pre {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    line-height: 1.8;
+    color: #c8c8e8;
+    margin: 12px 0;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 7px 7px 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+  }
+  .callout.warn   { border-left-color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); }
+  .callout.ok     { border-left-color: var(--accent3); }
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { color: var(--text); line-height: 1.6; }
+
+  /* ── VISUAL MOCKUP ── */
+  .mockup {
+    background: #0d0d1a;
+    border: 2px solid #5050b8;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #f8f8f8;
+    margin: 12px 0;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.6;
+  }
+  .mockup .y  { color: #f8d020; }
+  .mockup .g  { color: #20d060; }
+  .mockup .r  { color: #e03030; }
+  .mockup .b  { color: #3878f8; }
+  .mockup .p  { color: #9030c8; }
+  .mockup .dim{ color: #4040a0; }
+
+  /* ── PRIORITY MASTER LIST ── */
+  .priority-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .priority-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .priority-item .num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .priority-item .num.c { background: rgba(224,80,80,0.25);  color: var(--danger); }
+  .priority-item .num.h { background: rgba(240,160,32,0.25); color: var(--warn);   }
+  .priority-item .num.m { background: rgba(108,99,255,0.25); color: var(--accent); }
+  .priority-item .num.l { background: rgba(144,144,176,0.15);color: var(--text-muted); }
+  .priority-item p { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .priority-item small { display: block; color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .report-header { padding: 40px 20px 36px; }
+    .report-header h1 { font-size: 1.4rem; }
+    nav { padding: 0 12px; }
+    nav a { padding: 12px 8px; font-size: 10px; }
+    .container { padding: 0 16px; }
+    .card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="report-header">
+  <h1>SRPS — UX Recommendations</h1>
+  <p class="subtitle">Superhuman Rock Paper Scissors · Full Game Audit · Desktop &amp; Mobile</p>
+  <div class="badge-row">
+    <span class="badge green">✓ 11 Screens Reviewed</span>
+    <span class="badge yellow">⚑ 38 Issues Found</span>
+    <span class="badge purple">★ 5 Critical · 14 High</span>
+    <span class="badge red">⚡ Action Required Before v1.0</span>
+  </div>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#intro">Intro</a>
+  <a href="#login">Login</a>
+  <a href="#char-create">Char Create</a>
+  <a href="#skill-tree">Skill Tree</a>
+  <a href="#tournament">Tournament</a>
+  <a href="#match">Match</a>
+  <a href="#summary">Summary</a>
+  <a href="#off-season">Off-Season</a>
+  <a href="#career">Career Stats</a>
+  <a href="#global">Global Issues</a>
+  <a href="#priority">Priority List</a>
+</nav>
+
+<div class="container">
+
+<!-- ═══ OVERVIEW ═══ -->
+<section id="overview">
+  <div class="section-header">
+    <h2>Executive Overview</h2>
+    <p>Strengths, recurring patterns, and how to read this document.</p>
+  </div>
+
+  <div class="card">
+    <h3 style="color:var(--accent2);margin-bottom:12px;font-size:1rem;">What's Working Well</h3>
+    <ul style="font-size:13.5px;line-height:2;padding-left:20px;color:var(--text);">
+      <li>Cohesive SNES aesthetic applied consistently across all screens — feels like a real 16-bit game</li>
+      <li>Progressive disclosure via Jessie tutorial beats (T-01 through T-14) — features appear when needed, not all at once</li>
+      <li>Session persistence handles interrupts gracefully — players resume exactly where they left off</li>
+      <li>The two-column match layout (scoreboard + action) is fundamentally sound on desktop</li>
+      <li>Two-stage delete confirmation is exactly the right UX for permanent data destruction</li>
+      <li>Constants file architecture makes tuning easy — all play-feel levers in one place</li>
+      <li>Powerup overflow prompt is blocking and explicit — no silent data loss</li>
+    </ul>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠</span>
+    <p><strong>Most critical gap:</strong> The passive skills panel is currently commented out in <code>match.js</code>. Players who buy MIND/MYSTIC/FORTUNE passive skills have no in-match reminder of what those skills do or what their current activation state is. This is a significant retention risk for new players who will forget what they purchased.</p>
+  </div>
+
+  <div class="callout">
+    <span class="callout-icon">ℹ</span>
+    <p>Issues are rated <strong>Critical / High / Medium / Low</strong> and tagged <strong>Both / Mobile / Desktop</strong>. Critical issues should block release. High issues should be addressed before playtesting wider audiences. Medium and Low are polish.</p>
+  </div>
+</section>
+
+<!-- ═══ INTRO ═══ -->
+<section id="intro">
+  <div class="section-header">
+    <h2>Intro &amp; Title Screens <span class="screen-id">intro.js · title.js</span></h2>
+    <p>The first impression. Sets the tone, can't be reskipped without a reload.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Intro plays on every page load — no returning-user awareness</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Every app load begins with the full intro narration, even for players returning mid-session or from an accidental refresh. After 5+ sessions, the text crawl becomes an obstacle, not an experience.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Store a flag <code>srps_meta.introSeen = true</code> after the first complete playthrough. On subsequent loads, show only the title screen (skip intro) unless explicitly triggered from a menu. Add a "Replay Intro" option on the title screen for those who want to see it again.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Skip button competes with content at 50% opacity</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The skip button sits at bottom-right at 50% opacity and stays visible throughout the crawl. On mobile it's easy to accidentally tap during the reading experience, but also easy to <em>miss</em> when you actually want to skip.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Fade the skip button in <em>after 2 seconds</em> (so the atmosphere has a moment to land), then show it at 70% opacity. A simple <code>setTimeout</code> with a CSS opacity transition handles this. Label it <strong>SKIP ▶</strong> rather than just "SKIP" to suggest forward motion.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Title screen "press any key" duplicates intro end-state</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Both the intro end state and the title screen show a blinking "PRESS ANY KEY" prompt. Players who skip the intro see it once; those who watch fully see it twice within seconds. The repetition devalues both moments.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Remove the cursor prompt from the intro end state — let the title screen own that beat. On the intro, simply auto-advance to the title after a 1.5s pause at the end of the crawl, so the transition feels like a cinematic cut rather than a UI prompt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LOGIN ═══ -->
+<section id="login">
+  <div class="section-header">
+    <h2>Login / Account Screen <span class="screen-id">login.js</span></h2>
+    <p>Account creation, selection, and password entry. First functional interaction.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Error messages persist indefinitely after failed login</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>When a wrong password is entered, a red error message appears below the input field. It does not clear when the player starts typing again — it stays until the next render cycle. On mobile, this means the error sits on screen alongside the corrected password attempt, creating doubt about whether the fix worked.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add an <code>input</code> event listener on the password field that clears the error element's text on any keystroke. Also auto-clear with a 5-second <code>setTimeout</code> as a backup. This is a 3-line change but dramatically reduces friction.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>No real-time validation on account creation form</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Username and password rules (length, allowed characters) are only validated on submit. Players discover problems after they've already committed to the input, which feels punishing — especially on mobile where typing is slower.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a character counter below the username input: <strong>"12 / 16"</strong> in real time. Show a dim hint line: <em>"Letters, numbers, and underscores only."</em> Color the counter red when over limit. Validate on <code>blur</code> rather than on submit for password length. No form-submit error for these — just inline hints.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Account list has no hover / focus state</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Existing account rows highlight with a <code>▶</code> cursor on keyboard selection but have no hover state for mouse users. On desktop, it's not obvious rows are clickable until you try. On mobile, the tap target should be the full row width, not just the text.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add <code>cursor: pointer</code> and a hover background of <code>var(--snes-border)</code> (matching the button hover style) to <code>.account-row</code>. Ensure the row's padding makes the tap target at least 44px tall on mobile. Add <code>touch-action: manipulation</code> to eliminate 300ms delay on iOS.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CHARACTER CREATE ═══ -->
+<section id="char-create">
+  <div class="section-header">
+    <h2>Character Creation <span class="screen-id">characterCreate.js</span></h2>
+    <p>Name entry and portrait selection. First moment of player identity investment.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Portrait grid lacks labels — players can't tell portraits apart without tapping each</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The 50-portrait gallery shows images only. Portrait IDs (e.g., <code>male_3</code>) are visible in dev tools but not in the UI. On mobile, the grid is 5 columns of 60px images — distinguishing faces requires zooming in or tapping each to see the preview. With 50 options, this becomes tedious.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a simple gallery counter above the grid: <strong>"PORTRAIT 1–10 OF 50"</strong> with previous/next page arrows (show 10 per page on mobile, 25 on desktop). This eliminates infinite scroll and gives players a sense of progress. Alternatively, add a simple "M1" / "F3" label below each thumbnail in 8px pixel font — small but present.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Name input has no live character counter</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The name field shows "UP TO 16 CHARS" as placeholder text, which disappears once typing starts. Players using long names discover the limit only when the error fires on submit.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Replace placeholder with a live counter below the field: <strong>12 / 16</strong>. Turn red when at or over 16. This one change eliminates an entire class of submit errors. Also apply <code>maxlength="16"</code> on the HTML input element to prevent the error entirely at the browser level (then the counter is just friendly feedback, not a guard).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Confirm button gives no transition feedback</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Clicking "CONFIRM" immediately navigates away. On slower devices, there's a brief blank moment while the skill tree screen renders — it can look like nothing happened, causing double-taps.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Briefly flash the confirm button text to <strong>"SAVING…"</strong> for ~300ms before navigating. This is a CSS class swap + <code>setTimeout</code>. The visual feedback prevents confusion about whether the tap registered.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SKILL TREE ═══ -->
+<section id="skill-tree">
+  <div class="section-header">
+    <h2>Skill Tree Screen <span class="screen-id">skillTree.js · skillTreePanel.js</span></h2>
+    <p>The most complex screen in the game. Pre-season and off-season allocation. Lock In gate.</p>
+  </div>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <p><strong>This screen carries the highest UX risk in the game.</strong> It introduces all 15 skill nodes per tree with cascading purchase rules, refund mechanics, and season-specific restrictions. Players who misunderstand it will make irreversible (or nearly so) decisions. Every friction point here has downstream consequences.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Refund cascade is silent — players don't know child nodes will also be refunded</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>When a player refunds a node, all child/descendant nodes are automatically refunded too. This is the correct game rule, but the UI gives zero warning before it happens. A player who carefully built MIND.1 → MIND.1.1 → MIND.1.1.1, intending to just refund the root to try MYSTIC, will lose all three purchases simultaneously with no heads-up.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Before executing any refund that has downstream cascades, show a brief confirmation: <em>"Refunding this node will also refund: Neural Pattern Rec. (+10 pts), Neural Scan (+15 pts). Refund all 3 for +30 pts?"</em> with YES / CANCEL buttons. List the specific node names so it's unmistakably clear what will be lost. This confirmation should <em>only</em> appear when there are cascades — a leaf node refund proceeds immediately.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>On mobile, the detail panel and tree canvas overlap — you can't see both simultaneously</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The detail panel slides up from the bottom (bottom sheet pattern) covering ~60vh of the screen. If the selected node is at the bottom of the tree, it's now hidden under the panel. The player must close the panel to see the node, then re-open to read its description — a dead loop on every buy/inspect cycle.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Two options: (A) Reduce the detail panel to 40vh max on mobile and give it a handle for users to manually expand. This keeps the tree visible above. (B) Switch to a swipe-up modal that dimly overlays the tree (the tree is still visible at 30% opacity behind it). Option A is simpler. Also: auto-scroll the tree canvas so the selected node is always above the fold before the panel opens.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Pulsing "available" node animation runs indefinitely — creates visual noise</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Available (purchasable but not yet bought) nodes pulse continuously with a 2-second animation cycle. While helpful for initial discovery, the animation never stops — a player who has been looking at the tree for 30 seconds is still watching 6–8 nodes blink simultaneously. It becomes background noise and can induce mild eye strain.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Run the pulse animation <strong>3 times, then stop</strong>. CSS supports this with <code>animation-iteration-count: 3; animation-fill-mode: forwards</code>. After the 3rd cycle, the node stays at its resting state. Alternatively, trigger the animation <em>only when the available set changes</em> (e.g., after a purchase unlocks new nodes) — a brief pulse to say "new options available here," then silence.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Lock In button disabled state is too subtle — players tap it repeatedly</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The Lock In button becomes disabled when conditions aren't met (no node purchased, or Season 2+ without second tree). Disabled state is <code>opacity: 0.4</code> — a 60% dim. On a dark SNES-palette screen with many other dim elements, this is not visually distinct enough. Players tap it and wonder why nothing happens.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>When disabled, change the button <strong>text to the reason</strong>: <em>"BUY A NODE FIRST"</em> or <em>"CHOOSE A SECOND TREE"</em>. Also add a subtle shake animation (<code>@keyframes shake</code>) triggered on each failed tap — this is a classic SNES UX pattern that communicates "not valid" without an error message. The shake should be 3–4px for ~300ms.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>L4 nodes have 6px font — illegible on mobile screens</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>L4 node names use <code>Math.max(6, COL * 0.088)</code> — as low as 6px in the Press Start 2P pixel font. Names like "Mental Mysticism" and "Adv. Neural Pattern Rec." at 6px require 20/20 vision and perfect lighting to parse on a mobile screen. Cost labels at <code>Math.max(5, COL * 0.075)</code> — potentially 5px — are essentially invisible.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Set a minimum of <strong>8px for name</strong> and <strong>7px for cost</strong> in Press Start 2P at all viewport widths. If names don't fit at that size, abbreviate them in the node box (e.g., "Adv. NPR") and show the full name in the detail panel only. The node box is a navigation target — players don't need to read the full name from it, just recognize it.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Unspent points confirmation modal uses different styling than other modals</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The "You have unspent points — are you sure?" popup in skill tree uses a generic <code>.content-card</code> overlay, while the powerup inspect popup uses <code>#pu-popup</code> with its own distinct styling. Two different modal patterns for the same type of interaction breaks visual consistency.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Standardize all in-game popups/modals to use the <code>#pu-popup</code> structure and styling. The CSS and backdrop logic already exist — it's a matter of wiring the unspent-points confirm through that same system. One modal component, used everywhere.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup"><span class="y">┌──────────────────────────────────────┐</span>
+<span class="y">│  SKILL TREE — SEASON 1               │</span>
+<span class="y">│  Budget: 10 pts remaining             │</span>
+<span class="y">└──────────────────────────────────────┘</span>
+
+<span class="dim">[MIND tree]         [MYSTIC tree]        [FORTUNE tree]</span>
+<span class="g">◉ MIND.1 (ROOT)</span>     <span class="dim">◎ MYSTIC.1 (ROOT)</span>   <span class="dim">◎ FORTUNE.1</span>
+<span class="g">   purchased ✓</span>       <span class="dim">   locked: buy root</span>    <span class="dim">   locked</span>
+   ↓
+<span class="b">◈ NPR [available]</span>    <span class="dim">·</span>                    <span class="dim">·</span>
+<span class="b">   cost: 10 pts ●○○</span>
+   ↓
+<span class="dim">◇ Neural Scan</span>
+<span class="dim">   locked: buy NPR</span>
+
+<span class="y">Selected: NPR (MIND.1.1)</span>
+<span class="y">──────────────────────────────────────</span>
+<span class="g">Neural Pattern Recognition</span>
+L2 · MIND · Passive
+Accumulates +10% per round. At 90%,
+reads opponent's next throw (10% false).
+Resets on fire or match start.
+
+Cost: 10 pts   [<span class="b">BUY</span>]  [<span class="r">Cancel</span>]
+<span class="y">──────────────────────────────────────</span>
+<span class="dim">                              [LOCK IN ▶]</span></div>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Mockup showing proposed layout with cleaner node states and always-visible detail panel at bottom.</p>
+</section>
+
+<!-- ═══ TOURNAMENT ═══ -->
+<section id="tournament">
+  <div class="section-header">
+    <h2>Tournament Screen <span class="screen-id">tournament.js</span></h2>
+    <p>Bracket display, match entry, concurrent NPC results, and tier progression.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>No opponent preview before entering a match — players can't prepare</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>"ENTER ARENA" immediately starts the match with no information about the upcoming opponent. Players with Neural Scan or powerup decisions to make before a match have no opportunity to think strategically. High-ELO opponents look identical to low-ELO ones in the bracket view.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a <strong>Match Preview card</strong> between bracket and match: show opponent portrait (large), name, ELO, and a single-line strategy hint from Jessie (e.g., <em>"They favor Rock in tournament finals."</em> — generic enough to not require real data). Two buttons: <strong>ENTER ARENA</strong> and <strong>▼ VIEW BRACKET</strong>. This also gives players a moment to activate any pre-match powerups if that mechanic exists.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Horizontal bracket scroll has no visual affordance on mobile</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The bracket path and full bracket views use horizontal scrolling containers. On mobile, there's no shadow gradient or arrow indicator to tell players more content exists off-screen. T4 and T5 brackets (6+ rounds) frequently clip without any visual cue that scrolling is possible.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a CSS right-edge fade overlay to horizontally scrollable containers: <code>background: linear-gradient(to right, transparent 80%, var(--snes-black) 100%)</code> positioned absolutely at the right edge. This is the standard affordance for "more content to the right." Disappears when scrolled to the end. No JS required — pure CSS.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>"Meanwhile…" NPC results panel timing is unclear</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>After the player wins a match, NPC vs NPC results appear in a panel. It's not immediately obvious these results are simulated simultaneously (not after the player's match) or whether the player is expected to read them vs. just click through.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a header: <strong>"⚡ HAPPENING NOW — WHILE YOU COMPETED"</strong> and show results appearing one at a time with a 400ms stagger animation. This reinforces the "concurrent matches" fiction and makes the panel feel alive rather than like a data dump. Continue button stays; players can skip by tapping it anytime.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Pending bracket slots don't distinguish "opponent TBD" from "upcoming match"</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Unplayed slots show <code>?</code> regardless of whether the opponent hasn't been decided yet vs. the player hasn't played their path match yet. The <code>?</code> state is ambiguous.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Three distinct slot states: (1) <code>?</code> — opponent unknown (pre-round), with dim styling; (2) assigned portrait + name in dim/grayscale — opponent known, match pending; (3) full color — match played. State 2 uses the same portrait and name display as State 3 but at 40% opacity, giving players something to look at while making the pending state visually distinct.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MATCH ═══ -->
+<section id="match">
+  <div class="section-header">
+    <h2>Match Screen <span class="screen-id">match.js</span></h2>
+    <p>The core game loop. Most complex screen, most time spent here.</p>
+  </div>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <p><strong>The match screen carries the most critical UX issues in the game.</strong> Players spend the majority of their play session here. Complexity is high by design, but several issues significantly raise the cognitive load beyond what the SNES aesthetic can offset with style.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Passive skills panel is commented out — players have no in-match skill reference</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The <code>renderPassiveSkillsPanel()</code> call is commented out in the match render function. Players who purchased passive skills (Desperate Clarity, Third Time's the Charm, Lucky Socks, NPR, etc.) have no way to see their current activation state, cooldowns, or effect descriptions during a match. New players will forget what they bought within 2–3 rounds.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Uncomment and enable the passive skills panel immediately. If the rendering was commented out due to layout space constraints, collapse it behind a tap-to-expand <strong>▶ PASSIVE SKILLS (3)</strong> toggle. The number badge shows count without requiring screen space. This is the single most impactful UX fix available.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Right panel content overflows without scroll affordance on mobile</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The right panel during "picking" phase stacks: round indicator + active effects banner + NPR indicator + active skills + throw buttons + powerup tray + footnote. With 3 active skills and a 5-slot powerup tray, this exceeds viewport height on most phones. There's no visual scroll indicator, and the powerup tray at the bottom is easily missed.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Convert the right panel to a <strong>collapsible section layout</strong>:
+          <ul style="margin-top:8px;">
+            <li>Throw buttons — always visible, pinned to bottom of viewport on mobile</li>
+            <li>Active Skills — collapsible, default <em>open</em> (shows skill buttons)</li>
+            <li>Passive Skills — collapsible, default <em>closed</em> (shows count badge when closed)</li>
+            <li>Powerup Tray — collapsible, default <em>open</em> (shows powerup slots)</li>
+          </ul>
+          Collapsing is tap-to-toggle. Section headers show the count of items inside when collapsed. On desktop, all sections are open by default. This scales to any number of skills/powerups.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Powerup USE button doesn't show readiness state before opening popup</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Players must tap a powerup in the tray to open the popup, then read the description, then find the USE button, then discover it's disabled with a reason. This 4-step flow for a dead end is especially frustrating when a powerup has a scope restriction (e.g., "tournament-scope: already active" or "must be used in gut check"). The player had no way to know before tapping.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a small visual state indicator to each powerup tray slot: a green <code>●</code> dot if usable now, an amber <code>○</code> if restricted by phase (gut check only), and a red <code>✕</code> or dim border if already active/expired. This communicates usability at a glance without opening the popup. The popup itself should also lead with a bold status line: <strong style="color:var(--accent3)">READY TO USE</strong> or <strong style="color:var(--danger)">CANNOT USE: tournament effect already active</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Active skill cooldown display is low-contrast and hard to read quickly</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Skill button backgrounds use a dark-to-darker gradient to show cooldown remaining. The <code>cdPips()</code> function renders <code>3r ■■■□□</code> in small text below the skill name. During a match, players need to glance quickly at whether a skill is ready — the current display requires careful reading rather than a fast scan.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Replace the gradient background with a left-to-right <strong>colored fill indicator</strong>: green fill for the "ready" portion of the button background, draining as cooldown increases. The button text stays white on top. This is the same pattern used in MMO action bars and communicates readiness in under 100ms. Add a large centered <strong>READY</strong> label (in green) when cooldown is 0, replacing the pip display.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Gut check phase stacks multiple information panels with no clear hierarchy</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>During gut check with multiple powerup effects active (e.g., Schrödinger's Amulet + A Word From Your Coach + Espresso Shot + Lucky Penny), the phase renders 4+ separate information panels above the throw-change buttons. On mobile, these stack vertically and require significant scrolling. It's unclear which panel demands action vs. which is informational only.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Separate "requires action" panels (Lucky Penny coin flip, Espresso Shot backup throw) from "informational" panels (strategy reads, Coach hint). Required-action panels appear at top with a yellow border. Informational panels collapse into a single <strong>📋 INTEL (2 reads)</strong> expandable below. Reduces visible complexity from 4 panels to 2 zones.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Overflow prompt's "new drop" and "existing powerup" cards are visually indistinct</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The inventory overflow prompt shows the new drop alongside existing inventory slots, all with the same card styling and REPLACE buttons. Players can confuse which card is the "new" one they just earned and which are their existing powerups. This causes mis-replacements.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Give the new drop a <strong>distinct header panel</strong> with a yellow border and label <em>"⭐ NEW POWERUP EARNED"</em> above it. Existing powerups are listed below under a separator <em>"— YOUR INVENTORY —"</em>. REPLACE buttons on existing powerups use red text. DISCARD button on the new drop is styled dimly — it's the option the player should use last. Add a "KEEP NEW → REPLACE OLD" mental model through layout order.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>NPR accumulation indicator lacks an intuitive progress metaphor</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>NPR (Neural Pattern Recognition) shows as a percentage (e.g., <code>NPR: 40%</code>) in a text display. This communicates the value but not the urgency or the threshold. New players don't know if 40% is "almost there" or "barely started."</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Replace text with a <strong>horizontal progress bar</strong> labeled "NEURAL SCAN" with segments marking 0%, 30%, 60%, 90% (the fire threshold). Bar fills blue-to-purple as it approaches 90%. Add a subtle glow and pulse at 80%+ to signal "approaching fire." This makes the mechanic immediately legible even on first encounter and creates anticipation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Match history panel doesn't distinguish tie rounds from unplayed rounds</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The round history tally uses icons for Win/Loss but tie rounds (which are common early-game) may not be visually distinct from an empty slot. Players counting their wins can misread their own score.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Three explicit states per history slot: <strong>W</strong> (green, filled), <strong>L</strong> (red, filled), <strong>=</strong> (gray, filled — tie), and <strong>○</strong> (dim border, empty — not played). The tie state is important because it tells the player "a round happened, just with no winner." Use the same pixel font and SNES palette — this fits the aesthetic and is readable at small sizes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SUMMARY ═══ -->
+<section id="summary">
+  <div class="section-header">
+    <h2>Tournament Summary <span class="screen-id">summary.js</span></h2>
+    <p>Post-match and post-season results. Trophy reveals, Jessie dialogue, milestone celebrations.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>No ELO delta shown — players can't tell if they improved</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The summary shows current ELO and world rank, but no change from the previous tournament. A player who went from ELO 1200 to 1240 sees "1240" — a number with no context. ELO systems only feel meaningful when the change is explicit.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Show: <strong>ELO: 1,240 <span style="color:var(--accent3)">▲ +40</span></strong> and <strong>RANK: #45 <span style="color:var(--accent3)">▲ from #52</span></strong>. If rank declined: <strong style="color:var(--danger)">▼ from #38</strong>. Store <code>eloAtTournamentStart</code> and <code>rankAtTournamentStart</code> in <code>_tournament</code> before the match begins so the delta is available on the summary screen. This is one of the highest-value feedback improvements possible — it closes the "did I do well?" loop that keeps players engaged.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Jessie dialogue fires on top of a summary screen the player hasn't read yet</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Milestone and consolation dialogues trigger immediately when the summary screen loads, blocking the results view. Players who earned a trophy or rank milestone have to dismiss Jessie before they can see what they achieved. The dialogue interrupts the reward loop rather than extending it.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Let players see the summary screen for ~2 seconds (or one tap) before Jessie appears. Sequence: show results → player taps "See what Jessie thinks" button (or it auto-fires after 2s with a dismiss option) → Jessie dialogue → Continue. The results screen can dim slightly behind the dialogue if desired. This ensures the player <em>sees their reward first</em> before receiving commentary on it.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Primary and secondary actions use identical button styling</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>"CONTINUE" (advance game) and "VIEW GLOBAL RANKINGS" (optional detour) use the same <code>.snes-btn</code> class. Players must read both to know which advances the game. On mobile, with fat-finger tapping, accidental "VIEW RANKINGS" taps pull players out of the flow.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Use the existing <code>.snes-btn-yellow</code> class for the primary action ("CONTINUE" or "ADVANCE TO NEXT TIER"). Secondary actions ("VIEW RANKINGS", "VIEW CAREER STATS") use standard <code>.snes-btn</code>. This is already the established pattern in the game — just apply it consistently on the summary screen. Consider placing secondary actions in a row <em>above</em> the primary CONTINUE button so it reads top-to-bottom as "options → confirm."</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Trophy images are too small to appreciate on mobile</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Trophy size scales from 40px (T1) to 80px (T5) using inline styles. On mobile, a 40px or 48px pixel-art trophy is too small to see the detail. For a moment meant to feel like a reward, this is underwhelming.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Use a minimum of 80px on mobile and 96px on desktop for all trophy displays on the summary screen. The specific tier distinction (40px vs. 80px) isn't meaningful enough to justify the size difference — players want to see the trophy. The trophy case in Career Summary can use the tiered sizes since it's a collection view. But the moment-of-earn display should feel like a reveal, not a footnote.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ OFF SEASON ═══ -->
+<section id="off-season">
+  <div class="section-header">
+    <h2>Off-Season Screen <span class="screen-id">offSeason.js</span></h2>
+    <p>Season transition, respec, Jessie check-in, inventory reset.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Inventory is silently cleared — players don't see what they lost</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The off-season screen clears the player's entire powerup inventory with a single line of text: <em>"Your powerup inventory has been cleared for the new season."</em> If a player spent 6 matches collecting a Legendary powerup they never got to use, it disappears without a ceremony. There's no list of what was lost and no chance to feel the loss/gain contrast.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Show a <strong>"SEASON COMPLETE — INVENTORY CLEARED"</strong> panel before the Respec button. List the cleared powerups in a small grid (icon + name, 4 per row). If the player had Legendary powerups, highlight them: <em>"⭐ Lost: Jessie Did Her Homework (Legendary)"</em>. This creates emotional texture — the loss makes the next season's drops feel more valuable. Then a clear "I understand — Begin Respec" button proceeds.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Off-season doesn't preview the skill tree changes from the respec</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The off-season confirms: "Root nodes kept. All other nodes refunded for X pts." But it doesn't show which nodes those are. Players must click into the Respec flow to see the resulting tree state. First-time off-season players may not realize their L2+ nodes are gone until they see the tree.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Show a simple text summary before the Respec button: <em>"Keeping: MIND.1 (Mind Power), MYSTIC.1 (Mystical Power). Refunding: NPR, Blank Slate, Tweak Reality, Third Time's the Charm (+65 pts)."</em> Exact node names, exact point count. Players can verify their understanding before committing. This also doubles as a helpful reminder of what they had.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Jessie and player portraits have identical visual treatment — confusing side by side</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>On screens where both the player's HUD chip (top-left) and a Jessie dialogue panel appear, both use similar portrait frames and border styling. At a glance it's not immediately clear which is the player avatar and which is Jessie.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Give Jessie panels a <strong>distinct gold/amber border</strong> (<code>border-color: var(--snes-yellow)</code>) and a small "COACH JESSIE" label above the portrait. The player portrait uses the standard <code>var(--snes-border)</code> blue. This visual language differentiates advisor from player without changing the overall aesthetic.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CAREER STATS ═══ -->
+<section id="career">
+  <div class="section-header">
+    <h2>Career Summary <span class="screen-id">careerSummary.js</span></h2>
+    <p>Lifetime stats, throw distribution, trophy case. Accessed from character select.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Throw distribution table conflates percentages and counts under ambiguous headers</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The throw distribution shows "PLAYS" labeled columns that display percentage values (e.g., 33.3%), not play counts. A player who threw Rock 80 times out of 240 total throws sees "33.3%" which they might interpret as a win rate rather than a frequency. The column header doesn't match the value type.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Show both: <strong>PLAYS</strong> column shows the count (e.g., "80"), <strong>FREQ</strong> column shows percentage (e.g., "33%"), <strong>WIN%</strong> shows win rate. Or simplify to two columns: plays and win%. The key rule: if you show a percentage, label it with <code>%</code> in both the header and the cell. If you show a count, show a count. Don't mix without clear labeling.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>No season-by-season breakdown — career stats are opaque totals</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Career stats show lifetime totals only. A player in Season 7 who has improved dramatically since Season 1 has no way to see that arc. The lack of per-season data makes it hard to understand your own progress trajectory.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add an <strong>ELO History chart</strong> using the <code>seasonEloHistory</code> data already stored in <code>_trophies</code>. A simple pixel-art sparkline (canvas, 8px segments per season) shows peak ELO per season across 10 seasons. This is already stored — it just needs a renderer. Even a text table of "Season 1: 1050 · Season 2: 1180 · Season 3: 1340…" is significantly better than nothing.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>"How to Play" link opens an external tab that may 404</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The settings popup links to <code>SRPS_how_to_play_v1_0.html</code> in a new tab. If the file doesn't exist or was renamed, the tab opens to a blank or 404 page — a broken experience from a settings menu.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Either (A) inline a basic How to Play overlay within the game itself (a multi-page tap-through modal using the existing dialogue system), or (B) verify the file exists at boot with a <code>fetch(url, {method: 'HEAD'})</code> check and disable the button if it 404s. Option A is better UX; Option B is a safety net. For v1.0, Option A is the right choice since the audience won't have seen Jessie tutorial beats yet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ GLOBAL ═══ -->
+<section id="global">
+  <div class="section-header">
+    <h2>Global Issues <span class="screen-id">style.css · All Screens</span></h2>
+    <p>Issues that span multiple screens or affect the entire game experience.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-critical">Critical</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>8px base font in "Press Start 2P" is at the lower edge of readability for body text</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>"Press Start 2P" is designed for display and UI labels, not running text. At 8px (the body default) on a 375px-wide phone, lines of descriptive text — skill descriptions, powerup effects, Jessie dialogue — require concentration to read. In poor lighting or for players with even mild visual impairment, this crosses from "retro" to "inaccessible." Skill effect descriptions in the detail panel at 7px or 6px are effectively decorative only.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Create a two-font system: <strong>"Press Start 2P"</strong> for UI labels, headers, button text, and game values (ELO, scores) — everywhere the pixel font <em>is</em> the aesthetic. <strong>A secondary sans-serif</strong> (system-ui or Inter) at 14px for all <em>descriptive text</em>: skill descriptions, powerup effect text, Jessie dialogue, tutorial beats, and how-to-play content. This is a common game design pattern — the pixel font does the visual work while a readable font handles information density. The switch won't break the SNES aesthetic if it's applied to body text only.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>No loading or transition states between screens</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Screen transitions are instant — <code>innerHTML</code> is replaced and event listeners are re-bound. On slower devices or with complex screens (match.js), there may be a brief flash of white or blank before content appears. This can look like a bug. More importantly, there's no sense of "moving" between screens.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a simple CSS fade transition: fade out (150ms) → swap screen content → fade in (150ms). Total 300ms, barely perceptible, eliminates blank flashes. Implement as a <code>navigate(screen)</code> wrapper in <code>main.js</code> that applies <code>opacity: 0</code>, waits, swaps, then applies <code>opacity: 1</code>. This is 10 lines of code and dramatically improves the feeling of navigation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>HUD chip (top-right) can overlap screen content without spacer on all screens</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The HUD chip is <code>position: fixed; top: 8px; right: 0</code>, floating over all screens. The match screen has a <code>.match-hud-spacer</code> that pushes content down, but not all screens apply this. On screens without the spacer, the top-right corner of content can render under the chip — making character names, button labels, or stat values hidden behind the player widget.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Add a universal <code>.hud-spacer { height: 52px; }</code> as the first child of every <code>.screen</code> div. Or better: apply <code>padding-top: 52px</code> to the <code>.screen</code> class itself in CSS and remove individual spacers. This ensures the HUD never obscures content regardless of which screen is active. Test specifically on screens that currently start content at the very top (login, intro, tournament).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-high">High</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Modal / popup z-index competition creates layering conflicts</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Three types of modals exist with different z-indexes: the scanline overlay (<code>z-index: 9999</code>), the HUD (<code>z-index: 1000</code>), and the powerup popup (<code>z-index: 2000+</code>). Settings modals use <code>z-index: 2000</code> as well. With scanlines at 9999 drawing over everything, and popups at 2000, there's a large unused gap and potential for future overlapping layers as the game grows.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Establish a documented z-index scale in <code>:root</code> CSS variables: <code>--z-hud: 100</code>, <code>--z-overlay: 200</code>, <code>--z-popup: 300</code>, <code>--z-scanlines: 400</code>. All elements reference these variables rather than hardcoded integers. This makes the layer order legible and prevents accidental clipping as new UI elements are added. Scanlines should be the topmost layer since they're a post-process visual effect.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-mobile">Mobile</span>
+      <h3>Touch targets below 44px on several interactive elements</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Apple HIG and WCAG recommend minimum 44×44px touch targets. Several elements are smaller: skill node boxes in the tree (30–40px), powerup tray slots (variable), the 6px "SKIP" button on intro, and the tournament view-toggle buttons (<code>font-size: 8px; padding: 6px 12px</code> = approximately 30px tall). Mis-taps on the skill tree are especially painful given the purchase consequences.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>For nodes that can't be visually larger, use the CSS <code>padding</code> trick with a larger transparent hit area: <code>position: relative; &::after { content: ''; position: absolute; inset: -8px; }</code>. This expands the tap target without changing visual size. Apply to: skill tree nodes (canvas targets → convert to div elements), small navigation buttons, and the intro skip button. Audit all buttons with a touch-target overlay tool in Chrome DevTools.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-medium">Medium</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Identical modal component used for both powerup inspect and skill inspect — no distinction</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>The <code>#pu-popup</code> modal serves both powerup inspection (USE button) and skill inspection (status only, no action). The modal header and structure are nearly identical in both cases, making it easy to search for a USE button that isn't there (for skill inspects) or miss a USE button that is (for powerup inspects).</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Differentiate the two with a clear header type indicator: <strong>POWERUP</strong> (gold border, USE button) vs <strong>SKILL</strong> (blue border, info only). The existing tier/tree badge system can handle this. Add a "PASSIVE SKILL — No activation required" note at the top of skill inspect popups. This resolves the confusion about whether action is possible.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card">
+    <div class="issue-card-head">
+      <span class="pri pri-low">Low</span>
+      <span class="platform plat-both">Both</span>
+      <h3>Scroll position is not preserved on screen re-renders</h3>
+    </div>
+    <div class="issue-card-body two-col">
+      <div class="problem">
+        <h4>Problem</h4>
+        <p>Screens re-render via <code>innerHTML =</code> replacement, which resets scroll position to the top. In the skill tree, if a player scrolls to see L4 nodes and then purchases one, the screen re-renders and scrolls back to the top — requiring them to scroll down again to see the updated state.</p>
+      </div>
+      <div class="fix">
+        <h4>Recommendation</h4>
+        <p>Capture <code>scrollY</code> (or the scroll container's <code>scrollTop</code>) before render and restore it after: <code>const y = container.scrollTop; render(); container.scrollTop = y;</code>. This one-liner prevents the jump. Apply to any screen where the user might be mid-scroll when a render is triggered (skill tree, match screen, tournament bracket).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PRIORITY LIST ═══ -->
+<section id="priority">
+  <div class="section-header">
+    <h2>Prioritized Action List</h2>
+    <p>Ordered by impact. Critical items should be addressed before wider playtesting.</p>
+  </div>
+
+  <h3 style="color:var(--danger);font-size:0.9rem;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">🔴 Critical — Address Before Playtesting</h3>
+  <div class="priority-grid">
+    <div class="priority-item">
+      <div class="num c">1</div>
+      <div>
+        <p>Enable passive skills panel in match.js</p>
+        <small>match.js · uncomment renderPassiveSkillsPanel()</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num c">2</div>
+      <div>
+        <p>Powerup tray usability indicators (●/○/✕ per slot)</p>
+        <small>match.js · 3 CSS states, no JS needed</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num c">3</div>
+      <div>
+        <p>Refund cascade confirmation dialog</p>
+        <small>skillTree.js · warn before multi-node refund</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num c">4</div>
+      <div>
+        <p>Detail panel overlap fix on mobile (skill tree)</p>
+        <small>skillTreePanel.js · reduce to 40vh, scroll canvas to node</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num c">5</div>
+      <div>
+        <p>8px base font readability — add secondary font for descriptions</p>
+        <small>style.css · system-ui for effect text blocks</small>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--warn);font-size:0.9rem;margin:28px 0 12px;letter-spacing:1px;text-transform:uppercase;">🟡 High — Polish Before Launch</h3>
+  <div class="priority-grid">
+    <div class="priority-item">
+      <div class="num h">6</div>
+      <div>
+        <p>ELO and rank delta on summary screen</p>
+        <small>summary.js · store pre-match ELO in tournament bucket</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">7</div>
+      <div>
+        <p>Right panel collapsible sections (match screen)</p>
+        <small>match.js · toggle sections with count badges</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">8</div>
+      <div>
+        <p>NPR bar as progress indicator instead of % text</p>
+        <small>match.js · horizontal bar with 90% threshold marker</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">9</div>
+      <div>
+        <p>Pulsing animation stops after 3 cycles (skill tree)</p>
+        <small>style.css · animation-iteration-count: 3</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">10</div>
+      <div>
+        <p>Lock In disabled state shows reason in button text</p>
+        <small>skillTree.js · update button label dynamically</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">11</div>
+      <div>
+        <p>Opponent preview card before entering match</p>
+        <small>tournament.js · pre-match screen with portrait + ELO</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">12</div>
+      <div>
+        <p>Overflow prompt visual hierarchy (new vs. existing)</p>
+        <small>match.js · yellow header + separator line</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">13</div>
+      <div>
+        <p>Screen fade transitions on navigate()</p>
+        <small>main.js · 150ms fade out/in</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">14</div>
+      <div>
+        <p>Inventory cleared list on off-season screen</p>
+        <small>offSeason.js · show powerup names before clearing</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">15</div>
+      <div>
+        <p>Universal HUD spacer on all screens</p>
+        <small>style.css · padding-top: 52px on .screen</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">16</div>
+      <div>
+        <p>L4 node minimum font 8px across all viewports</p>
+        <small>skillTreePanel.js · change Math.max(6,...) to Math.max(8,...)</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">17</div>
+      <div>
+        <p>Error messages clear on password field input</p>
+        <small>login.js · add input listener to clear error element</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">18</div>
+      <div>
+        <p>Jessie dialogue fires after player sees summary results</p>
+        <small>summary.js · 2s delay or tap-to-trigger</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num h">19</div>
+      <div>
+        <p>Skill cooldown fill indicator instead of dark gradient</p>
+        <small>match.js · green left-fill on skill button background</small>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--accent);font-size:0.9rem;margin:28px 0 12px;letter-spacing:1px;text-transform:uppercase;">🔵 Medium — Polish Pass</h3>
+  <div class="priority-grid">
+    <div class="priority-item">
+      <div class="num m">20</div>
+      <div>
+        <p>Gut check: separate "action required" from "intel" panels</p>
+        <small>match.js · yellow border for action panels</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">21</div>
+      <div>
+        <p>Skill/powerup popup type differentiation (gold/blue border)</p>
+        <small>match.js · conditional class on popup open</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">22</div>
+      <div>
+        <p>ELO sparkline chart in career summary</p>
+        <small>careerSummary.js · render seasonEloHistory as canvas chart</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">23</div>
+      <div>
+        <p>Portrait gallery pagination (10 per page on mobile)</p>
+        <small>characterCreate.js · previous/next page buttons</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">24</div>
+      <div>
+        <p>Bracket "TBD" slots show distinct styling</p>
+        <small>tournament.js · pending vs. unknown opponent states</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">25</div>
+      <div>
+        <p>Standardize all modals to #pu-popup component</p>
+        <small>skillTree.js · route unspent-points confirm through existing popup</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">26</div>
+      <div>
+        <p>Scroll position preserved on re-renders</p>
+        <small>skillTree.js, match.js · save/restore scrollTop</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">27</div>
+      <div>
+        <p>Name input live counter (12/16 chars)</p>
+        <small>characterCreate.js + login.js · input event handler</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">28</div>
+      <div>
+        <p>Off-season preview of which nodes were refunded</p>
+        <small>offSeason.js · text list before clicking Respec</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">29</div>
+      <div>
+        <p>Jessie panel distinct gold border (off-season, summary)</p>
+        <small>style.css · .jessie-panel { border-color: var(--snes-yellow) }</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">30</div>
+      <div>
+        <p>Primary/secondary action button contrast on summary screen</p>
+        <small>summary.js · use .snes-btn-yellow for CONTINUE</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">31</div>
+      <div>
+        <p>Horizontal bracket scroll affordance (right fade)</p>
+        <small>style.css · right-edge gradient on scroll containers</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num m">32</div>
+      <div>
+        <p>CSS z-index scale as :root variables</p>
+        <small>style.css · --z-hud, --z-overlay, --z-popup, --z-scanlines</small>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--text-muted);font-size:0.9rem;margin:28px 0 12px;letter-spacing:1px;text-transform:uppercase;">⚪ Low — Final Polish</h3>
+  <div class="priority-grid">
+    <div class="priority-item">
+      <div class="num l">33</div>
+      <div>
+        <p>Intro skip button delayed appearance + SKIP ▶ label</p>
+        <small>intro.js · setTimeout 2s + opacity transition</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num l">34</div>
+      <div>
+        <p>Intro plays once (introSeen flag in srps_meta)</p>
+        <small>main.js · skip to title screen for returning players</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num l">35</div>
+      <div>
+        <p>Title screen "PRESS ANY KEY" removed from intro end state</p>
+        <small>intro.js · auto-advance after text completes</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num l">36</div>
+      <div>
+        <p>Trophy images minimum 80px on mobile (summary screen)</p>
+        <small>summary.js · min-width: 80px on trophy img</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num l">37</div>
+      <div>
+        <p>Touch targets ≥44px on all interactive elements</p>
+        <small>style.css · ::after inset -8px for small elements</small>
+      </div>
+    </div>
+    <div class="priority-item">
+      <div class="num l">38</div>
+      <div>
+        <p>Throw distribution table: counts column + % column (labeled correctly)</p>
+        <small>careerSummary.js · rename headers to match value types</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPLEMENTATION EFFORT TABLE -->
+  <div class="section-header" style="margin-top:48px;">
+    <h2>Effort vs. Impact Matrix</h2>
+    <p>Rough implementation effort estimates for planning purposes.</p>
+  </div>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Issue</th>
+        <th>Impact</th>
+        <th>Effort</th>
+        <th>Ratio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Enable passive skills panel</td><td class="ok">Critical</td><td class="ok">~15 min</td><td class="ok">★★★★★</td></tr>
+      <tr><td>9</td><td>Stop pulsing after 3 cycles</td><td>High</td><td class="ok">~5 min</td><td class="ok">★★★★★</td></tr>
+      <tr><td>15</td><td>Universal HUD spacer</td><td>High</td><td class="ok">~5 min</td><td class="ok">★★★★★</td></tr>
+      <tr><td>17</td><td>Error clears on password input</td><td>High</td><td class="ok">~10 min</td><td class="ok">★★★★★</td></tr>
+      <tr><td>10</td><td>Lock In button shows reason</td><td>High</td><td class="ok">~20 min</td><td class="ok">★★★★☆</td></tr>
+      <tr><td>13</td><td>Screen fade transitions</td><td>High</td><td class="ok">~30 min</td><td class="ok">★★★★☆</td></tr>
+      <tr><td>31</td><td>Bracket scroll affordance</td><td>Medium</td><td class="ok">~10 min</td><td class="ok">★★★★☆</td></tr>
+      <tr><td>6</td><td>ELO delta on summary</td><td>High</td><td>~1 hour</td><td class="ok">★★★★☆</td></tr>
+      <tr><td>8</td><td>NPR progress bar</td><td>High</td><td>~1.5 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>2</td><td>Powerup tray usability indicators</td><td class="ok">Critical</td><td>~2 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>3</td><td>Refund cascade confirmation</td><td class="ok">Critical</td><td>~2 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>7</td><td>Right panel collapsible sections</td><td>High</td><td>~3 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>4</td><td>Detail panel mobile overlap fix</td><td class="ok">Critical</td><td>~3 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>5</td><td>Secondary font for descriptions</td><td class="ok">Critical</td><td>~4 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>11</td><td>Opponent preview before match</td><td>High</td><td>~3 hours</td><td>★★★☆☆</td></tr>
+      <tr><td>22</td><td>ELO sparkline chart</td><td>Medium</td><td>~4 hours</td><td>★★☆☆☆</td></tr>
+    </tbody>
+  </table>
+
+</section>
+
+<!-- FOOTER -->
+<div style="margin-top:80px;padding:32px 0;border-top:1px solid var(--border);text-align:center;">
+  <p style="color:var(--text-muted);font-size:12px;line-height:2;">
+    SRPS UX Recommendations · Generated 2026-05-22 · Covers v0.3.17 codebase<br>
+    Focus: desktop + mobile · 11 screens reviewed · 38 issues documented · 5 critical, 14 high, 13 medium, 6 low
+  </p>
+</div>
+
+</div><!-- /container -->
+
+</body>
+</html>

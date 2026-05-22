@@ -50,8 +50,9 @@ export function mount(container, options = {}) {
     (trophyBySeason[e.season] ??= []).push(TROPHY_CONFIG.find(t => t.id === e.id));
   }
 
-  const career  = stats?.career ?? {};
-  const seasonsCompleted  = trophies?.seasonEloHistory?.length ?? 0;
+  const career            = stats?.career ?? {};
+  const eloHistory        = trophies?.seasonEloHistory ?? [];
+  const seasonsCompleted  = eloHistory.length;
   const tournamentsEntered = career.tournamentsEntered ?? 0;
   const tournamentsWon     = career.tournamentsWon ?? 0;
   const runnerUpFinishes   = career.runnerUpFinishes ?? 0;
@@ -115,6 +116,18 @@ export function mount(container, options = {}) {
           </div>
         </div>
 
+        <!-- ELO history sparkline -->
+        ${eloHistory.length >= 2 ? `
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
+          <p class="snes-small snes-muted">ELO HISTORY</p>
+          <canvas id="elo-sparkline" height="48" style="width:100%;image-rendering:pixelated;display:block"></canvas>
+          <div style="display:flex;justify-content:space-between">
+            <p class="snes-small snes-muted" style="font-size:5px">S1</p>
+            <p class="snes-small snes-muted" style="font-size:5px">S${eloHistory[eloHistory.length - 1].season}</p>
+          </div>
+        </div>
+        ` : ''}
+
         <!-- Throw distribution -->
         <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
           <p class="snes-small snes-muted">THROW DISTRIBUTION</p>
@@ -132,7 +145,7 @@ export function mount(container, options = {}) {
             </thead>
             <tbody>
               <tr>
-                <td class="snes-small snes-muted" style="padding:6px 0 2px">PLAYS</td>
+                <td class="snes-small snes-muted" style="padding:6px 0 2px">PLAY%</td>
                 <td class="snes-small snes-highlight" style="text-align:center;padding:6px 0 2px">${pct(rock, total)}</td>
                 <td class="snes-small snes-highlight" style="text-align:center;padding:6px 0 2px">${pct(paper, total)}</td>
                 <td class="snes-small snes-highlight" style="text-align:center;padding:6px 0 2px">${pct(scissors, total)}</td>
@@ -177,6 +190,72 @@ export function mount(container, options = {}) {
       </div>
     </div>
   `;
+
+  // Draw ELO sparkline if we have history
+  if (eloHistory.length >= 2) {
+    const canvas = document.getElementById('elo-sparkline');
+    if (canvas) {
+      canvas.width = canvas.offsetWidth || 280;
+      const ctx    = canvas.getContext('2d');
+      const W      = canvas.width;
+      const H      = canvas.height;
+      const elos   = eloHistory.map(e => e.endElo);
+      const minElo = Math.min(...elos);
+      const maxElo = Math.max(...elos);
+      const range  = maxElo - minElo || 1;
+      const padX   = 4;
+      const padY   = 6;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Baseline reference line at 1000 ELO
+      const baselineY = H - padY - ((1000 - minElo) / range) * (H - padY * 2);
+      if (minElo <= 1000 && maxElo >= 1000) {
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(padX, baselineY);
+        ctx.lineTo(W - padX, baselineY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Gradient fill under line
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgba(80,80,184,0.5)');
+      grad.addColorStop(1, 'rgba(80,80,184,0)');
+
+      const xStep = (W - padX * 2) / (elos.length - 1);
+      const toX   = i => padX + i * xStep;
+      const toY   = v => H - padY - ((v - minElo) / range) * (H - padY * 2);
+
+      ctx.beginPath();
+      ctx.moveTo(toX(0), toY(elos[0]));
+      for (let i = 1; i < elos.length; i++) ctx.lineTo(toX(i), toY(elos[i]));
+      ctx.lineTo(toX(elos.length - 1), H);
+      ctx.lineTo(toX(0), H);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(toX(0), toY(elos[0]));
+      for (let i = 1; i < elos.length; i++) ctx.lineTo(toX(i), toY(elos[i]));
+      ctx.strokeStyle = '#5050b8';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+
+      // Dot on last point
+      const lastX = toX(elos.length - 1);
+      const lastY = toY(elos[elos.length - 1]);
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8d020';
+      ctx.fill();
+    }
+  }
 
   document.getElementById('btn-back').addEventListener('click', () => {
     navigate('characterSelect', { username });

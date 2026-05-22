@@ -1,4 +1,5 @@
 import { navigate } from '../main.js';
+import { loadMeta, saveMeta } from '../storage.js';
 
 const INTRO_TEXT = [
   "THE YEAR IS 2050.",
@@ -58,9 +59,15 @@ const INTRO_TEXT = [
 const MS_PER_CHAR = 40;
 const START_DELAY_MS = 600;
 
+// How long to pause at the end before auto-advancing to title
+const POST_REVEAL_DELAY_MS = 1500;
+// How long after mount before the skip button fades in
+const SKIP_FADE_IN_MS = 2000;
+
 export function mount(container, options = {}) {
   let done = false;
   let timerId = null;
+  let autoAdvanceId = null;
 
   container.innerHTML = `
     <div class="screen fade-in" id="intro-wrap" style="
@@ -71,37 +78,47 @@ export function mount(container, options = {}) {
     ">
       <div class="content-card">
         <div id="intro-text"></div>
-        <div id="intro-prompt" style="display:none; text-align:center; margin-top:32px">
-          <span class="snes-highlight" style="font-size:10px">▶ PRESS ANY KEY</span>
-          <span class="cursor-blink snes-highlight"> ▌</span>
-        </div>
       </div>
 
       <button
         id="btn-skip"
         class="snes-btn snes-small"
-        style="position:absolute; bottom:24px; right:clamp(16px,4vw,64px); opacity:0.5; font-size:6px; padding:8px 10px"
-      >SKIP</button>
+        style="position:absolute; bottom:24px; right:clamp(16px,4vw,64px); opacity:0; font-size:6px; padding:8px 10px; transition: opacity 0.4s ease"
+      >SKIP ▶</button>
     </div>
   `;
 
-  const textEl   = document.getElementById('intro-text');
-  const promptEl = document.getElementById('intro-prompt');
-  const skipBtn  = document.getElementById('btn-skip');
+  const textEl  = document.getElementById('intro-text');
+  const skipBtn = document.getElementById('btn-skip');
 
-  function goToLogin() {
-    if (timerId) clearTimeout(timerId);
+  function markIntroSeen() {
+    const meta = loadMeta();
+    meta.introSeen = true;
+    saveMeta(meta);
+  }
+
+  function goToTitle() {
+    if (timerId)        clearTimeout(timerId);
+    if (autoAdvanceId)  clearTimeout(autoAdvanceId);
+    markIntroSeen();
     navigate('title');
   }
 
   function onRevealComplete() {
     done = true;
-    promptEl.style.display = 'block';
-    document.addEventListener('keydown', goToLogin, { once: true });
-    promptEl.addEventListener('click', goToLogin, { once: true });
+    document.addEventListener('keydown', goToTitle, { once: true });
+    document.getElementById('intro-wrap')?.addEventListener('click', goToTitle, { once: true });
+    // Auto-advance after a short pause — no "press any key" prompt needed
+    autoAdvanceId = setTimeout(goToTitle, POST_REVEAL_DELAY_MS);
   }
 
-  skipBtn.addEventListener('click', goToLogin);
+  skipBtn.addEventListener('click', goToTitle);
+
+  // Fade the skip button in after a delay so the opening atmosphere lands first
+  setTimeout(() => {
+    const btn = document.getElementById('btn-skip');
+    if (btn) btn.style.opacity = '0.7';
+  }, SKIP_FADE_IN_MS);
 
   // Typewriter reveal
   let charIndex = 0;

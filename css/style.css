@@ -13,6 +13,15 @@
   --snes-blue:         #3878f8;
   --snes-purple:       #9030c8;
   --snes-shadow:       #000000;
+
+  /* ── Z-index scale — all layers reference these variables ── */
+  --z-hud:       100;
+  --z-overlay:   200;
+  --z-popup:     300;
+  --z-scanlines: 400;
+
+  /* ── Readable font for long-form text (skill/powerup descriptions, Jessie) ── */
+  --font-readable: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -51,7 +60,16 @@ body::after {
     rgba(0, 0, 0, 0.07) 3px,
     rgba(0, 0, 0, 0.07) 4px
   );
-  z-index: 9999;
+  z-index: var(--z-scanlines);
+}
+
+/* ── Screen fade transition ── */
+#app {
+  transition: opacity 0.15s ease;
+}
+#app.fading {
+  opacity: 0;
+  pointer-events: none;
 }
 
 #app {
@@ -68,7 +86,7 @@ body::after {
   top: 8px;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: var(--z-hud);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -153,7 +171,7 @@ body::after {
 #hud-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1001;
+  z-index: calc(var(--z-hud) + 10);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
@@ -186,7 +204,8 @@ body::after {
 .screen {
   width: 100%;
   min-height: 100dvh;
-  padding: 16px clamp(16px, 4vw, 64px);
+  /* 52px top padding clears the fixed HUD chip on every screen */
+  padding: 52px clamp(16px, 4vw, 64px) 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -786,14 +805,15 @@ body::after {
 
 /* Mobile: detail panel slides up as a fixed bottom sheet so Buy/Refund
    is always visible without needing to scroll past the tree canvas.
-   bottom:96px keeps it above the ~90px sticky Lock In footer. */
+   bottom:96px keeps it above the ~90px sticky Lock In footer.
+   Max height capped at 40vh to keep the tree canvas visible above. */
 .st-detail--mobile-sheet {
   position: fixed;
   bottom: 96px;
   left: 0;
   right: 0;
-  z-index: 200;
-  max-height: calc(60vh - 96px);
+  z-index: var(--z-overlay);
+  max-height: calc(40vh - 96px);
   overflow-y: auto;
 }
 
@@ -810,7 +830,7 @@ body::after {
     left: 0;
     right: 0;
     bottom: 96px;
-    z-index: 199;
+    z-index: calc(var(--z-overlay) - 1);
     background: rgba(0, 0, 0, 0.55);
   }
 }
@@ -842,13 +862,14 @@ body::after {
   box-shadow: 0 0 6px var(--snes-yellow)66;
 }
 
-/* "available" pulse — draws eye to purchasable nodes */
+/* "available" pulse — fires 3 times then stops, drawing the eye without looping forever */
 @keyframes st-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--snes-yellow)00; }
   50%       { box-shadow: 0 0 0 3px var(--snes-yellow)44; }
 }
 .st-node--available {
-  animation: st-pulse 2s ease-in-out infinite;
+  animation: st-pulse 2s ease-in-out 3;
+  animation-fill-mode: forwards;
 }
 .st-node--available:hover {
   animation: none;
@@ -860,7 +881,7 @@ body::after {
 }
 
 .st-node--locked {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: pointer;
 }
 
@@ -1004,7 +1025,7 @@ body::after {
 #pu-popup-layer {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: var(--z-popup);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1033,6 +1054,297 @@ body::after {
 .portrait-frame--match {
   width: 96px;
   height: 96px;
+}
+
+/* ── Jessie dialogue panel — gold border distinguishes coach from player ── */
+
+.jessie-panel {
+  border-color: var(--snes-yellow) !important;
+  box-shadow:
+    inset 0 0 0 2px var(--snes-panel-dark),
+    inset 0 0 0 4px var(--snes-yellow),
+    4px 4px 0 var(--snes-shadow) !important;
+}
+
+/* ── Readable body text — system font for descriptions, effect text, Jessie ── */
+/* Applied to long-form descriptive text where pixel font would be too small. */
+
+.readable-text {
+  font-family: var(--font-readable);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: auto;
+  font-smooth: auto;
+}
+
+@media (min-width: 768px) {
+  .readable-text { font-size: 14px; }
+}
+
+/* ── Horizontal scroll container with right-edge fade affordance ── */
+
+.h-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--snes-border) var(--snes-panel-dark);
+}
+
+/* Pseudo-element fade on the wrapper requires a separate overlay approach;
+   use .h-scroll-wrap to apply the gradient as a sibling */
+.h-scroll-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.h-scroll-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 4px;
+  width: 40px;
+  background: linear-gradient(to right, transparent, var(--snes-black));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Collapsible section (match screen panels) ── */
+
+.collapsible-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: var(--snes-panel-dark);
+  border-bottom: 2px solid var(--snes-border);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 36px;
+}
+
+.collapsible-header:hover {
+  background: var(--snes-border);
+}
+
+.collapsible-header-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--snes-border-light);
+  letter-spacing: 1px;
+}
+
+.collapsible-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  background: var(--snes-border);
+  color: var(--snes-text);
+  border-radius: 2px;
+  padding: 2px 6px;
+  margin-right: 6px;
+}
+
+.collapsible-arrow {
+  font-size: 8px;
+  color: var(--snes-border-light);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.collapsible-arrow--open {
+  transform: rotate(90deg);
+}
+
+.collapsible-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Skill button cooldown fill (replaces dark gradient) ── */
+
+.skill-btn-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.skill-btn-cooldown-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: rgba(32, 208, 96, 0.15);
+  pointer-events: none;
+  transition: width 0.3s ease;
+}
+
+.skill-btn-ready-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-green);
+  letter-spacing: 1px;
+}
+
+/* ── NPR progress bar ── */
+
+.npr-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.npr-bar-track {
+  height: 8px;
+  background: var(--snes-panel-dark);
+  border: 1px solid var(--snes-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.npr-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: linear-gradient(to right, var(--snes-blue), var(--snes-purple));
+  transition: width 0.4s ease;
+}
+
+.npr-bar-fill--near {
+  background: linear-gradient(to right, var(--snes-purple), var(--snes-yellow));
+  animation: npr-glow 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes npr-glow {
+  from { box-shadow: none; }
+  to   { box-shadow: 0 0 6px var(--snes-yellow); }
+}
+
+.npr-bar-threshold {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--snes-yellow);
+  opacity: 0.7;
+}
+
+/* ── Overflow prompt — new drop vs existing inventory distinction ── */
+
+.overflow-new-drop {
+  border: 2px solid var(--snes-yellow);
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.overflow-new-drop-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-yellow);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.overflow-inventory-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-border-light);
+  letter-spacing: 1px;
+  padding: 4px 0;
+  border-top: 1px solid var(--snes-border);
+  margin: 6px 0;
+}
+
+/* ── Gut check intel section ── */
+
+.gutcheck-action-panel {
+  border: 2px solid var(--snes-yellow);
+  padding: 8px 10px;
+}
+
+.gutcheck-intel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--snes-border-light);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gutcheck-intel-toggle:hover { color: var(--snes-text); }
+
+/* ── Powerup popup type badge ── */
+
+.pu-popup-type-badge {
+  display: inline-block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.pu-popup-type-badge--powerup {
+  background: rgba(248, 208, 32, 0.15);
+  border: 1px solid var(--snes-yellow);
+  color: var(--snes-yellow);
+}
+
+.pu-popup-type-badge--skill {
+  background: rgba(56, 120, 248, 0.15);
+  border: 1px solid var(--snes-blue);
+  color: var(--snes-blue);
+}
+
+/* ── Powerup usability indicator dot ── */
+
+.pu-status-dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin: 0 auto 2px;
+  flex-shrink: 0;
+}
+
+.pu-status-dot--ready      { background: var(--snes-green); box-shadow: 0 0 4px var(--snes-green); }
+.pu-status-dot--gutcheck   { background: var(--snes-yellow); }
+.pu-status-dot--unavailable{ background: var(--snes-red); opacity: 0.7; }
+
+/* ── ELO delta display ── */
+
+.elo-delta-up   { color: var(--snes-green); font-size: 8px; }
+.elo-delta-down { color: var(--snes-red);   font-size: 8px; }
+.elo-delta-same { color: var(--snes-border-light); font-size: 8px; }
+
+/* ── Round history tie indicator ── */
+
+.round-tie { color: var(--snes-border-light); }
+
+/* ── Shake animation for disabled Lock In button taps ── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-4px); }
+  40%       { transform: translateX(4px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+.shake {
+  animation: shake 0.3s ease;
 }
 
 /* ── Responsive breakpoints ───────────────────────────────────────────────── */

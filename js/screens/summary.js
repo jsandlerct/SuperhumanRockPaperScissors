@@ -88,8 +88,10 @@ export function mount(container, options = {}) {
   };
   const cfg = outcomeConfig[outcome];
 
-  const currentElo = progress?.currentElo ?? 1000;
-  const worldRank  = progress?.worldRank ?? null;
+  const currentElo    = progress?.currentElo ?? 1000;
+  const eloAtStart    = data?.eloAtStart ?? null;
+  const eloDelta      = eloAtStart !== null ? currentElo - eloAtStart : null;
+  const worldRank     = progress?.worldRank ?? null;
 
   // ── Advance label ────────────────────────────────────────────────────────────
   let actionLabel = '';
@@ -128,6 +130,13 @@ export function mount(container, options = {}) {
               <span class="snes-highlight">${currentElo}</span>
               <span class="snes-small snes-muted"> ELO</span>
             </p>
+            ${eloDelta !== null
+              ? eloDelta > 0
+                ? `<p class="snes-small elo-delta-up">▲ +${eloDelta}</p>`
+                : eloDelta < 0
+                  ? `<p class="snes-small elo-delta-down">▼ ${eloDelta}</p>`
+                  : `<p class="snes-small elo-delta-same">─ No change</p>`
+              : ''}
           </div>
           <div class="snes-panel" style="flex:1;display:flex;flex-direction:column;gap:8px">
             <p class="snes-small snes-muted">WORLD RANK</p>
@@ -334,11 +343,11 @@ export function mount(container, options = {}) {
       rankDelta < 0      ? `<p class="snes-small snes-error"   style="margin-top:4px">▼ Down from #${prevRank}</p>` :
                            `<p class="snes-small snes-muted"   style="margin-top:4px">— Same as last season (#${prevRank})</p>`;
 
-    const trophyPx = newTrophy ? ([40,48,56,64,80][(newTrophy.tier ?? 1) - 1] ?? 48) : 48;
+    const trophyPx = newTrophy ? ([64,72,80,88,96][(newTrophy.tier ?? 1) - 1] ?? 64) : 64;
     const trophyHtml = newTrophy ? `
       <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
         <img src="${newTrophy.asset}" alt="${newTrophy.label}"
-             style="width:${trophyPx}px;height:${trophyPx}px;image-rendering:pixelated;flex-shrink:0">
+             style="width:${trophyPx}px;height:${trophyPx}px;min-width:64px;min-height:64px;image-rendering:pixelated;flex-shrink:0">
         <div style="display:flex;flex-direction:column;gap:6px">
           <p class="snes-small snes-muted">NEW TROPHY</p>
           <p class="snes-small snes-highlight">★ ${newTrophy.label}</p>

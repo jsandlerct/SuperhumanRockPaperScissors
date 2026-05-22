@@ -291,8 +291,23 @@ export function mount(container, options = {}) {
         const scopeLabel = pu.scope ? `(${pu.scope.toLowerCase()})` : '';
         const nameShort  = pu.name.length > 16 ? pu.name.slice(0, 15) + '…' : pu.name;
         const phaseClass = slotPhaseClass(pu);
+        const inRound    = screenState === 'picking' || screenState === 'gut_check';
+        let dotClass = '';
+        if (inRound) {
+          const usability = isUsableNow(pu);
+          if (usability.ok) {
+            const phase = POWERUP_BY_NAME[pu.name]?.activationPhase ?? 'either';
+            dotClass = (phase === 'gut_check' && screenState === 'picking')
+              ? 'pu-status-dot--gutcheck'
+              : 'pu-status-dot--ready';
+          } else {
+            dotClass = 'pu-status-dot--unavailable';
+          }
+        }
+        const dotHTML = dotClass ? `<div class="pu-status-dot ${dotClass}"></div>` : '';
         slots.push(`
           <div class="pu-slot pu-slot--filled ${phaseClass}" data-inspect="${pu.instanceId}" title="${pu.name}">
+            ${dotHTML}
             <div class="pu-slot-icon">
               ${iconSrc
                 ? `<img src="${iconSrc}" alt="${pu.name}" draggable="false">`
@@ -620,13 +635,27 @@ export function mount(container, options = {}) {
   function renderNPRIndicator() {
     if (!hasSkill('MIND.1.1')) return '';
     const pct    = Math.round(nprAccumulation * 100);
-    const dcNote = desperateClarityBonus > 0
-      ? ` <span class="snes-success" style="font-size:4px">[+${Math.round(desperateClarityBonus * 100)}% floor]</span>`
+    const fillPct  = Math.min(100, pct);
+    const dcBonus  = desperateClarityBonus > 0 ? Math.round(desperateClarityBonus * 100) : 0;
+    const nearFire = fillPct >= 70 && fillPct < 100;
+    const fillClass = nearFire ? 'npr-bar-fill npr-bar-fill--near' : 'npr-bar-fill';
+    const floorStyle = dcBonus > 0
+      ? `left:${dcBonus}%;width:${Math.max(0, fillPct - dcBonus)}%;`
+      : `left:0;width:${fillPct}%;`;
+    const floorBarHTML = dcBonus > 0
+      ? `<div class="npr-bar-fill" style="left:0;width:${Math.min(dcBonus, fillPct)}%;opacity:0.5;"></div>`
       : '';
+    const label = pct >= 100
+      ? `<span class="snes-success" style="font-size:5px">★ NPR READY!</span>`
+      : `<span class="snes-muted" style="font-size:5px">NPR: ${pct}%${dcBonus > 0 ? ` (+${dcBonus}% floor)` : ''}</span>`;
     return `
-      <p class="snes-small snes-muted" style="font-size:5px;text-align:center">
-        NPR: <span class="snes-highlight">${pct}%</span>${dcNote}
-      </p>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        ${label}
+        <div class="npr-bar-track">
+          ${floorBarHTML}
+          <div class="${fillClass}" style="${floorStyle}"></div>
+        </div>
+      </div>
     `;
   }
 
@@ -798,9 +827,14 @@ export function mount(container, options = {}) {
       <div id="pu-popup-backdrop"></div>
       <div id="pu-popup">
         <div style="margin-bottom:12px">
-          <p class="snes-label snes-highlight" style="font-size:8px;line-height:1.5">${name.toUpperCase()}</p>
-          <p class="snes-small snes-muted" style="font-size:5px;margin-top:4px">
-            L${info.level} · ${info.tree} · ${kindBadge}
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <p class="snes-label snes-highlight" style="font-size:8px;line-height:1.5;flex:1">${name.toUpperCase()}</p>
+            <span class="pu-popup-type-badge pu-popup-type-badge--skill" style="background:var(--snes-blue);flex-shrink:0">
+              ${kindBadge}
+            </span>
+          </div>
+          <p class="snes-small snes-muted" style="font-size:5px">
+            L${info.level} · ${info.tree}
           </p>
         </div>
         <p class="snes-small" style="font-size:6px;line-height:2;margin-bottom:10px;
@@ -835,7 +869,7 @@ export function mount(container, options = {}) {
         ${renderNPRIndicator()}
         ${pickingActivatedHTML}
         ${renderSkillsPanel()}
-        ${'' /* renderPassiveSkillsPanel() */}
+        ${renderPassiveSkillsPanel()}
         <p class="snes-small snes-muted" style="text-align:center">CHOOSE YOUR THROW</p>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
           <button class="throw-btn" data-throw="rock">
@@ -966,7 +1000,7 @@ export function mount(container, options = {}) {
         ${renderNPRIndicator()}
         ${roundTmlPending === null ? activatedHTML : ''}
         ${renderSkillsPanel()}
-        ${'' /* renderPassiveSkillsPanel() */}
+        ${renderPassiveSkillsPanel()}
         ${renderStrategyRead()}
         ${readHTML}
         ${schrodingerHTML}
@@ -1083,11 +1117,11 @@ export function mount(container, options = {}) {
 
       const overflowIcon = POWERUP_ICONS[overflowDrop.name] ?? '';
       bodyHTML = `
-        <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
-          <p class="snes-small snes-error">INVENTORY FULL</p>
-          <p class="snes-small snes-muted">NEW DROP:</p>
-          <div id="overflow-drop-inspect" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px;border:1px solid var(--snes-border);border-radius:2px" title="Tap to inspect">
-            ${overflowIcon ? `<img src="${overflowIcon}" alt="" style="width:32px;height:32px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
+        <p class="snes-small snes-error" style="text-align:center">⚠ INVENTORY FULL</p>
+        <div class="overflow-new-drop">
+          <p class="overflow-new-drop-header">NEW DROP</p>
+          <div id="overflow-drop-inspect" style="display:flex;align-items:center;gap:10px;cursor:pointer" title="Tap to inspect">
+            ${overflowIcon ? `<img src="${overflowIcon}" alt="" style="width:36px;height:36px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
             <div style="flex:1;min-width:0">
               <p class="snes-small snes-highlight">${overflowDrop.name.toUpperCase()}</p>
               <p class="snes-small snes-muted" style="font-size:5px">${overflowDrop.tier.toUpperCase()} · ${overflowDrop.scope.toUpperCase()}</p>
@@ -1095,10 +1129,10 @@ export function mount(container, options = {}) {
             </div>
           </div>
         </div>
-        <p class="snes-small snes-muted">REPLACE WHICH SLOT, OR DISCARD?</p>
+        <p class="snes-small overflow-inventory-header">REPLACE WHICH SLOT?</p>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${replaceButtonsHTML}
-          <button class="snes-btn" style="width:100%;font-size:6px;padding:8px 10px" id="btn-overflow-discard">
+          <button class="snes-btn" style="width:100%;font-size:6px;padding:8px 10px;opacity:0.7" id="btn-overflow-discard">
             ✗ DISCARD NEW DROP
           </button>
         </div>

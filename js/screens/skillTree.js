@@ -1,7 +1,7 @@
 import { navigate } from '../main.js';
 import {
   SKILL_TREE_INFO, SKILL_TREE_L2, NODE_COST, STARTING_SKILL_POINTS_SEASON_1,
-  TOURNAMENT_CONFIG, JESSIE_TUTORIAL_DIALOGUE,
+  TOURNAMENT_CONFIG, JESSIE_TUTORIAL_DIALOGUE, SKILL_NODE_INFO,
 } from '../constants.js';
 import { mount as mountTreePanel } from '../ui/skillTreePanel.js';
 import { getInitialTreeState } from '../systems/seasonEngine.js';
@@ -78,6 +78,10 @@ export function mount(container, options = {}) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   function render() {
+    // Preserve canvas scroll position across re-renders so purchasing a node
+    // doesn't snap the view back to the top of the tree.
+    const canvasWrap = container.querySelector('.st-canvas-wrap');
+    const savedScrollX = canvasWrap?.scrollLeft ?? 0;
     const unspent   = progress.unspentSkillPoints ?? 0;
     const hasPoints = unspent > 0;
 
@@ -97,9 +101,17 @@ export function mount(container, options = {}) {
       headerSub = `SEASON ${progress.currentSeason} · PRE-SEASON`;
     }
 
-    const continueBtnLabel = midSeason
-      ? '▶ CONTINUE TO NEXT TOURNAMENT'
-      : '▶ LOCK IN &amp; BEGIN SEASON';
+    // Lock In button label: show reason when disabled (clearer than a dim button)
+    let continueBtnLabel;
+    if (midSeason) {
+      continueBtnLabel = '▶ CONTINUE TO NEXT TOURNAMENT';
+    } else if (!locked) {
+      continueBtnLabel = 'BUY A NODE TO LOCK IN';
+    } else if (needsSecondaryPick()) {
+      continueBtnLabel = 'CHOOSE A SECOND TREE';
+    } else {
+      continueBtnLabel = '▶ LOCK IN &amp; BEGIN SEASON';
+    }
 
     let footerNote = '';
     if (midSeason) {
@@ -133,8 +145,8 @@ export function mount(container, options = {}) {
                       position:sticky;bottom:0;z-index:50">
             <p class="snes-small snes-muted" style="text-align:center;font-size:5px">${footerNote}</p>
             <button class="snes-btn snes-btn-yellow" id="btn-lock-in"
-                    style="width:100%${btnEnabled ? '' : ';opacity:0.4;cursor:not-allowed'}"
-                    ${btnEnabled ? '' : 'disabled'}>
+                    style="width:100%${btnEnabled ? '' : ';opacity:0.5'}"
+                    >
               ${continueBtnLabel}
             </button>
           </div>
@@ -159,7 +171,26 @@ export function mount(container, options = {}) {
       onRefund:      handleRefund,
     });
 
-    document.getElementById('btn-lock-in')?.addEventListener('click', handleLockIn);
+    // Restore canvas scroll position after re-render
+    if (savedScrollX > 0) {
+      const newCanvasWrap = container.querySelector('.st-canvas-wrap');
+      if (newCanvasWrap) newCanvasWrap.scrollLeft = savedScrollX;
+    }
+
+    const lockInBtn = document.getElementById('btn-lock-in');
+    if (lockInBtn) {
+      lockInBtn.addEventListener('click', () => {
+        if (!btnEnabled) {
+          // Shake to communicate "not valid" instead of silent disabled tap
+          lockInBtn.classList.remove('shake');
+          void lockInBtn.offsetWidth; // reflow to restart animation
+          lockInBtn.classList.add('shake');
+          lockInBtn.addEventListener('animationend', () => lockInBtn.classList.remove('shake'), { once: true });
+          return;
+        }
+        handleLockIn();
+      });
+    }
   }
 
   // ── Buy / refund ─────────────────────────────────────────────────────────────
@@ -214,9 +245,58 @@ export function mount(container, options = {}) {
     if (!canRefund || !isPurchased(nodeId)) return;
     const tree  = nodeId.split('.')[0];
     const level = nodeId.split('.').length - 1;
+
+    // Find all purchased descendants that would also be refunded
+    const cascadeNodes = Object.entries(progress.treeState[tree] ?? {})
+      .filter(([id, val]) => val === true && id.startsWith(nodeId + '.'));
+
+    if (cascadeNodes.length > 0) {
+      // Warn the player before silently removing their descendants
+      const cascadeNames = cascadeNodes.map(([id]) => {
+        return SKILL_NODE_INFO?.[id]?.name ?? id;
+      });
+      const totalPts = cascadeNodes.reduce((sum, [id]) => {
+        const cl = id.split('.').length - 1;
+        return sum + (NODE_COST[`L${cl}`] ?? 0);
+      }, NODE_COST[`L${level}`] ?? 0);
+
+      showRefundCascadeConfirm(nodeId, cascadeNames, totalPts, () => executeRefund(nodeId));
+      return;
+    }
+
+    executeRefund(nodeId);
+  }
+
+  function showRefundCascadeConfirm(nodeId, cascadeNames, totalPts, onConfirm) {
+    const layer = document.createElement('div');
+    layer.id = 'refund-confirm-layer';
+    layer.style.cssText = 'position:fixed;inset:0;background:rgba(13,13,26,0.92);z-index:var(--z-popup);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+    const listItems = cascadeNames.map(n => `<p class="snes-small snes-error" style="line-height:2">✕ ${n.toUpperCase()}</p>`).join('');
+    layer.innerHTML = `
+      <div style="max-width:360px;width:100%;display:flex;flex-direction:column;gap:14px">
+        <p class="snes-title" style="font-size:9px;text-align:center;color:var(--snes-red)">REFUND CASCADE</p>
+        <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
+          <p class="snes-small snes-muted" style="line-height:2">Refunding this node will also refund:</p>
+          ${listItems}
+          <p class="snes-small snes-success" style="margin-top:4px">Total refund: +${totalPts} pts</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="snes-btn snes-btn-yellow" id="btn-refund-yes" style="flex:1">▶ REFUND ALL</button>
+          <button class="snes-btn" id="btn-refund-no" style="flex:1">✕ CANCEL</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(layer);
+    document.getElementById('btn-refund-yes').addEventListener('click', () => { layer.remove(); onConfirm(); });
+    document.getElementById('btn-refund-no').addEventListener('click',  () => layer.remove());
+  }
+
+  function executeRefund(nodeId) {
+    const tree  = nodeId.split('.')[0];
+    const level = nodeId.split('.').length - 1;
     const cost  = NODE_COST[`L${level}`];
 
-    // Cascade refund: clear all purchased descendants (children, grandchildren, etc.)
+    // Cascade refund: clear all purchased descendants
     for (const [id, val] of Object.entries(progress.treeState[tree])) {
       if (val === true && id.startsWith(nodeId + '.')) {
         const cl = id.split('.').length - 1;

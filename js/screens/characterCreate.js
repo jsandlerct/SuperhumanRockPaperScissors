@@ -59,7 +59,10 @@ export function mount(container, options = {}) {
 
         <!-- Name input -->
         <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
-          <label class="snes-small snes-muted" for="inp-name">YOUR NAME</label>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <label class="snes-small snes-muted" for="inp-name">YOUR NAME</label>
+            <span class="snes-small snes-muted" id="name-counter" style="font-size:5px">0 / 16</span>
+          </div>
           <input
             class="snes-input"
             id="inp-name"
@@ -67,7 +70,7 @@ export function mount(container, options = {}) {
             maxlength="16"
             autocomplete="off"
             spellcheck="false"
-            placeholder="UP TO 16 CHARS"
+            placeholder="ENTER NAME"
             value=""
           >
         </div>
@@ -145,11 +148,20 @@ export function mount(container, options = {}) {
       });
     });
 
-    document.getElementById('inp-name').focus();
-    document.getElementById('btn-confirm').addEventListener('click', handleConfirm);
-    document.getElementById('inp-name').addEventListener('keydown', e => {
+    const nameInput = document.getElementById('inp-name');
+    const nameCounter = document.getElementById('name-counter');
+    nameInput.focus();
+    nameInput.addEventListener('input', () => {
+      const len = nameInput.value.length;
+      if (nameCounter) {
+        nameCounter.textContent = `${len} / 16`;
+        nameCounter.style.color = len >= 16 ? 'var(--snes-red)' : '';
+      }
+    });
+    nameInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') handleConfirm();
     });
+    document.getElementById('btn-confirm').addEventListener('click', handleConfirm);
   }
 
   // ── Confirm ──────────────────────────────────────────────────────────────────
@@ -229,6 +241,13 @@ export function mount(container, options = {}) {
 
     // Update session
     saveSession({ loggedInUsername: username, activeCharId: charId });
+
+    // Brief "SAVING…" feedback before navigating
+    const confirmBtn = document.getElementById('btn-confirm');
+    if (confirmBtn) {
+      confirmBtn.textContent = '⏳ SAVING…';
+      confirmBtn.disabled = true;
+    }
 
     // T-01: Meet Jessie — 14-box story sequence before skill tree selection
     const t01 = JESSIE_TUTORIAL_DIALOGUE['T-01'];

@@ -1,4 +1,4 @@
-import { migrateIfNeeded, loadSession, loadProgress, loadTournament } from './storage.js';
+import { migrateIfNeeded, loadSession, loadProgress, loadTournament, loadMeta, saveMeta } from './storage.js';
 import * as hud from './ui/hud.js';
 import { mount as mountIntro }           from './screens/intro.js';
 import { mount as mountTitle }           from './screens/title.js';
@@ -39,25 +39,33 @@ async function loadNpcRoster() {
 const app = document.getElementById('app');
 
 export function navigate(screen, options = {}) {
-  app.innerHTML = '';
-  hud.update(screen);
-  switch (screen) {
-    case 'intro':           mountIntro(app, options);           break;
-    case 'title':           mountTitle(app, options);           break;
-    case 'login':           mountLogin(app, options);           break;
-    case 'characterSelect': mountCharacterSelect(app, options); break;
-    case 'create':          mountCharacterCreate(app, options); break;
-    case 'skillTree':  mountSkillTree(app, options);       break;
-    case 'tournament': mountTournament(app, options);      break;
-    case 'match':      mountMatch(app, options);           break;
-    case 'summary':        mountSummary(app, options);        break;
-    case 'careerSummary':  mountCareerSummary(app, options);  break;
-    case 'offSeason':      mountOffSeason(app, options);      break;
-    default:
-      app.innerHTML = `<div class="screen" style="justify-content:center;align-items:center">
-        <p class="snes-label snes-error">Unknown screen: ${screen}</p>
-      </div>`;
-  }
+  // Fade out → swap content → fade in
+  app.classList.add('fading');
+  setTimeout(() => {
+    app.innerHTML = '';
+    hud.update(screen);
+    switch (screen) {
+      case 'intro':           mountIntro(app, options);           break;
+      case 'title':           mountTitle(app, options);           break;
+      case 'login':           mountLogin(app, options);           break;
+      case 'characterSelect': mountCharacterSelect(app, options); break;
+      case 'create':          mountCharacterCreate(app, options); break;
+      case 'skillTree':  mountSkillTree(app, options);       break;
+      case 'tournament': mountTournament(app, options);      break;
+      case 'match':      mountMatch(app, options);           break;
+      case 'summary':        mountSummary(app, options);        break;
+      case 'careerSummary':  mountCareerSummary(app, options);  break;
+      case 'offSeason':      mountOffSeason(app, options);      break;
+      default:
+        app.innerHTML = `<div class="screen" style="justify-content:center;align-items:center">
+          <p class="snes-label snes-error">Unknown screen: ${screen}</p>
+        </div>`;
+    }
+    // Tick to let the DOM paint before fading back in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => app.classList.remove('fading'));
+    });
+  }, 150);
 }
 
 // ── Phase Router ─────────────────────────────────────────────────────────────
@@ -106,8 +114,13 @@ async function init() {
     return;
   }
 
-  // Always play intro on every page load — it checks session on completion
-  navigate('intro');
+  // Show intro only on first-ever visit; returning players go straight to title.
+  const meta = loadMeta();
+  if (meta?.introSeen) {
+    navigate('title');
+  } else {
+    navigate('intro');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

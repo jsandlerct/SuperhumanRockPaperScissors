@@ -260,9 +260,11 @@ function renderBracketPath(data, playerName, playerPortraitId, currentStateInfo)
   }
 
   return `
-    <div style="overflow-x:auto;padding-bottom:4px">
-      <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:4px">
-        ${columns.join('')}
+    <div class="h-scroll-wrap">
+      <div class="h-scroll" style="padding-bottom:4px">
+        <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:4px">
+          ${columns.join('')}
+        </div>
       </div>
     </div>
   `;
@@ -336,9 +338,11 @@ function renderFullBracket(data, playerName) {
   }
 
   return `
-    <div style="overflow-x:auto;padding-bottom:4px">
-      <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:4px">
-        ${columns.join('')}
+    <div class="h-scroll-wrap">
+      <div class="h-scroll" style="padding-bottom:4px">
+        <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:4px">
+          ${columns.join('')}
+        </div>
       </div>
     </div>`;
 }
@@ -352,12 +356,14 @@ function renderConcurrentResults(rounds, roundIndex, playerName) {
 
   if (!npcMatches.length) return '';
 
-  const lines = npcMatches.map(m => {
+  // Results rendered with data-index for stagger animation
+  const lines = npcMatches.map((m, i) => {
     const winner = m.result === 'p1_won' ? m.p1 : m.p2;
     const loser  = m.result === 'p1_won' ? m.p2 : m.p1;
     const wName  = pName(winner, playerName);
     const lName  = pName(loser,  playerName);
-    return `<p class="snes-small" style="line-height:2">
+    return `<p class="snes-small meanwhile-result"
+               style="line-height:2;opacity:0;transition:opacity 0.3s ease ${i * 350}ms">
       <span class="snes-success">■</span> ${wName}
       <span class="snes-muted"> def. </span>${lName}
     </p>`;
@@ -365,10 +371,19 @@ function renderConcurrentResults(rounds, roundIndex, playerName) {
 
   return `
     <div class="snes-panel" style="display:flex;flex-direction:column;gap:4px">
-      <p class="snes-small snes-muted">MEANWHILE IN ${roundName}…</p>
+      <p class="snes-small snes-muted" style="letter-spacing:1px">⚡ HAPPENING NOW — WHILE YOU COMPETED</p>
       ${lines}
     </div>
   `;
+}
+
+// Trigger stagger animation on meanwhile results after they're in the DOM
+function animateConcurrentResults() {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.meanwhile-result').forEach(el => {
+      el.style.opacity = '1';
+    });
+  });
 }
 
 // ── Mount ─────────────────────────────────────────────────────────────────────
@@ -392,6 +407,7 @@ export function mount(container, options = {}) {
       tier, progress.currentElo, worldData, roster, progress.previousFinalists
     );
     data = generateTournamentData(tier, participants);
+    data.eloAtStart = progress.currentElo;
     saveTournament(charId, data);
   }
 
@@ -480,8 +496,56 @@ export function mount(container, options = {}) {
 
     document.getElementById('btn-view-path')?.addEventListener('click', () => { showFullBracket = false; renderScreen(info); });
     document.getElementById('btn-view-full')?.addEventListener('click', () => { showFullBracket = true;  renderScreen(info); });
-    document.getElementById('btn-fight')?.addEventListener('click', () => startMatch(info));
+    document.getElementById('btn-fight')?.addEventListener('click', () => showOpponentPreview(info));
     document.getElementById('btn-advance')?.addEventListener('click', handleAdvanceBracket);
+
+    // Trigger stagger on meanwhile results
+    if (info.state === 'show_concurrent') animateConcurrentResults();
+  }
+
+  // ── Opponent preview modal before entering match ────────────────────────────
+
+  function showOpponentPreview(info) {
+    const opponentId  = info.playerMatch.p1 === 'player' ? info.playerMatch.p2 : info.playerMatch.p1;
+    const npc         = opponentId ? getNpcById(opponentId) : null;
+    const oppName     = npc ? npc.name.toUpperCase() : 'UNKNOWN';
+    const oppPortrait = npc?.portraitId ?? null;
+    const oppElo      = npc ? (worldData?.npcs?.[npc.id]?.currentElo ?? npc.startingElo) : '???';
+    const roundName   = data.bracket.rounds[data.currentRoundIndex].roundName.toUpperCase();
+    const matchLabel  = info.isLastRound ? '★ THE FINAL' : roundName;
+
+    const modal = document.createElement('div');
+    modal.id    = 'opponent-preview-modal';
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(13,13,26,0.92);z-index:var(--z-popup);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box`;
+    modal.innerHTML = `
+      <div style="max-width:360px;width:100%;display:flex;flex-direction:column;gap:16px">
+        <p class="snes-title" style="font-size:9px;text-align:center;color:var(--snes-yellow)">${matchLabel}</p>
+        <div class="snes-panel" style="display:flex;align-items:center;gap:16px">
+          ${oppPortrait
+            ? `<div class="portrait-frame portrait-frame--lg">
+                 <img src="assets/portraits/${oppPortrait}.png" alt="">
+               </div>`
+            : `<div class="portrait-frame portrait-frame--lg" style="background:var(--snes-panel-dark)"></div>`
+          }
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <p class="snes-label snes-highlight">${oppName}</p>
+            <p class="snes-small snes-muted">ELO <span class="snes-highlight">${oppElo}</span></p>
+            <p class="snes-small snes-muted">TIER ${npc?.tournamentLevel ?? '?'} COMPETITOR</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="snes-btn snes-btn-yellow" id="btn-preview-enter" style="flex:2">
+            ▶ ENTER ARENA
+          </button>
+          <button class="snes-btn" id="btn-preview-back" style="flex:1;opacity:0.7">
+            ← BACK
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('btn-preview-enter').addEventListener('click', () => { modal.remove(); startMatch(info); });
+    document.getElementById('btn-preview-back').addEventListener('click',  () => modal.remove());
   }
 
   // ── Advance bracket after concurrent results ───────────────────────────────

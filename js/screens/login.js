@@ -29,11 +29,14 @@ export function mount(container, options = {}) {
         <div class="account-row ${sel ? 'account-row--selected' : ''}"
              data-user="${u}"
              style="
-               padding: 8px 4px;
+               padding: 10px 8px;
                cursor: pointer;
                display: flex;
                align-items: center;
                gap: 4px;
+               min-height: 44px;
+               transition: background 0s;
+               ${sel ? 'background: var(--snes-border);' : ''}
              ">
           <span class="snes-highlight" style="width:12px;display:inline-block">
             ${sel ? '▶' : ''}
@@ -89,7 +92,10 @@ export function mount(container, options = {}) {
           <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
             <p class="snes-small snes-highlight" style="margin-bottom:2px">CREATE ACCOUNT</p>
 
-            <label class="snes-small snes-muted" for="inp-username">USERNAME</label>
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <label class="snes-small snes-muted" for="inp-username">USERNAME</label>
+              <span class="snes-small snes-muted" id="username-counter" style="font-size:5px">0 / 16</span>
+            </div>
             <input
               class="snes-input"
               id="inp-username"
@@ -144,9 +150,23 @@ export function mount(container, options = {}) {
           render();
           document.getElementById('inp-password')?.focus();
         });
+        // Hover highlight for mouse users
+        el.addEventListener('mouseenter', () => {
+          if (el.dataset.user !== selectedAccount)
+            el.style.background = 'rgba(80,80,184,0.3)';
+        });
+        el.addEventListener('mouseleave', () => {
+          if (el.dataset.user !== selectedAccount)
+            el.style.background = '';
+        });
       });
 
       const pwInput = document.getElementById('inp-password');
+      // Clear error as soon as the player starts typing a new password
+      pwInput?.addEventListener('input', () => {
+        const errorEl = document.getElementById('login-error');
+        if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+      });
       pwInput?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
       pwInput?.focus();
 
@@ -156,10 +176,23 @@ export function mount(container, options = {}) {
         render();
       });
     } else {
+      const usernameInput = document.getElementById('inp-username');
+      const counter = document.getElementById('username-counter');
+      usernameInput?.addEventListener('input', () => {
+        const len = usernameInput.value.length;
+        if (counter) {
+          counter.textContent = `${len} / 16`;
+          counter.style.color = len >= 16 ? 'var(--snes-red)' : '';
+        }
+        // Clear error on any input change
+        const errorEl = document.getElementById('create-error');
+        if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+      });
+
       document.getElementById('inp-pass2')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') handleCreate();
       });
-      document.getElementById('inp-username')?.focus();
+      usernameInput?.focus();
 
       document.getElementById('btn-create')?.addEventListener('click', handleCreate);
       document.getElementById('btn-back')?.addEventListener('click', () => {

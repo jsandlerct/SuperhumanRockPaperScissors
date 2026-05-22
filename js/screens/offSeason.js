@@ -1,10 +1,27 @@
 import { navigate } from '../main.js';
-import { TOTAL_PLAYERS, NODE_COST, JESSIE_TUTORIAL_DIALOGUE, JESSIE_SEASON_CHECKIN } from '../constants.js';
+import { TOTAL_PLAYERS, NODE_COST, JESSIE_TUTORIAL_DIALOGUE, JESSIE_SEASON_CHECKIN, SKILL_NODE_INFO, POWERUP_ICONS } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
   loadTrophies, saveTrophies,
 } from '../storage.js';
 import { showJessieDialogue, jessieInlinePanel, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
+
+// Returns names of all L2+ nodes currently purchased (these will be refunded).
+function getRefundedNodeNames(treeState) {
+  const names = [];
+  for (const tree of Object.values(treeState ?? {})) {
+    for (const [nodeId, purchased] of Object.entries(tree)) {
+      if (purchased) {
+        const level = nodeId.split('.').length - 1;
+        if (level >= 2) {
+          const info = SKILL_NODE_INFO[nodeId];
+          if (info) names.push(info.name);
+        }
+      }
+    }
+  }
+  return names;
+}
 
 // Returns total skill points locked up in L2+ nodes (L1 roots are kept).
 function computeRefund(treeState) {
@@ -36,9 +53,11 @@ export function mount(container, options = {}) {
   const identity = loadIdentity(charId);
   let   progress = loadProgress(charId);
 
-  // ── Apply full respec refund on mount ────────────────────────────────────────
+  // ── Capture pre-respec state for display, then apply refund ─────────────────
   // Idempotent: after clearing, all nodes are false so refund = 0 on re-entry.
-  const refundAmount = computeRefund(progress.treeState);
+  const clearedInventory  = [...(progress.powerupInventory ?? [])];
+  const refundedNodeNames = getRefundedNodeNames(progress.treeState);
+  const refundAmount      = computeRefund(progress.treeState);
   if (refundAmount > 0) {
     clearTreeState(progress.treeState);
     progress.unspentSkillPoints = (progress.unspentSkillPoints ?? 0) + refundAmount;
@@ -127,19 +146,32 @@ export function mount(container, options = {}) {
             </p>
           </div>
 
-          <!-- Powerup inventory -->
+          <!-- Powerup inventory cleared -->
           <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
-            <p class="snes-small snes-muted">POWERUP INVENTORY</p>
-            ${inventory.length > 0
-              ? `<p class="snes-small snes-muted">
-                   ${inventory.length} powerup${inventory.length > 1 ? 's' : ''} cleared for the new season.
-                 </p>`
-              : `<p class="snes-small snes-muted">No powerups to clear.</p>`
+            <p class="snes-small snes-muted">POWERUP INVENTORY CLEARED</p>
+            ${clearedInventory.length > 0
+              ? clearedInventory.map(pu => {
+                  const icon = POWERUP_ICONS[pu.name] ?? '';
+                  return `<div style="display:flex;align-items:center;gap:8px">
+                    ${icon ? `<img src="${icon}" alt="" style="width:20px;height:20px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
+                    <p class="snes-small snes-muted" style="font-size:5px">${pu.name.toUpperCase()}</p>
+                  </div>`;
+                }).join('')
+              : `<p class="snes-small snes-muted" style="font-size:5px">No powerups held.</p>`
             }
             <p class="snes-small snes-muted" style="font-size:5px">
               A fresh starting loadout will be drawn from your skill trees.
             </p>
           </div>
+
+          <!-- Respec preview -->
+          ${refundedNodeNames.length > 0 ? `
+          <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
+            <p class="snes-small snes-muted">NODES REFUNDED (${refundedNodeNames.length})</p>
+            ${refundedNodeNames.map(n => `<p class="snes-small snes-muted" style="font-size:5px">◉ ${n.toUpperCase()}</p>`).join('')}
+            <p class="snes-small snes-success" style="font-size:5px">Root nodes kept. Reallocate freely.</p>
+          </div>
+          ` : ''}
 
           <button class="snes-btn snes-btn-yellow" id="btn-begin" style="width:100%">
             ▶ RESPEC SKILL TREE FOR SEASON ${nextSeason}
