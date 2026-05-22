@@ -625,7 +625,7 @@ export function mount(container, options = {}) {
 
     return `
       <div style="display:flex;flex-direction:column;gap:6px">
-        <p class="snes-small snes-muted" style="font-size:5px">ACTIVE SKILLS</p>
+        <p class="snes-small snes-muted" style="font-size:6px">ACTIVE SKILLS</p>
         ${cards}
       </div>
     `;
@@ -775,7 +775,7 @@ export function mount(container, options = {}) {
              data-skill-inspect="${id}">
           <div style="flex:1;min-width:0">
             <p class="snes-small" style="font-size:6px">${name.toUpperCase()}</p>
-            <p class="snes-small" style="font-size:5px;margin-top:2px;
+            <p style="font-family:var(--font-readable);font-size:11px;margin-top:2px;
                color:${muted ? 'var(--snes-muted)' : 'var(--snes-text)'}">
               ◉ PASSIVE · ${status}
             </p>
@@ -787,7 +787,7 @@ export function mount(container, options = {}) {
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px">
-        <p class="snes-small snes-muted" style="font-size:5px">PASSIVE SKILLS</p>
+        <p class="snes-small snes-muted" style="font-size:6px">PASSIVE SKILLS</p>
         ${cards}
       </div>
     `;
@@ -1125,8 +1125,8 @@ export function mount(container, options = {}) {
             ${overflowIcon ? `<img src="${overflowIcon}" alt="" style="width:36px;height:36px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
             <div style="flex:1;min-width:0">
               <p class="snes-small snes-highlight">${overflowDrop.name.toUpperCase()}</p>
-              <p class="snes-small snes-muted" style="font-size:5px">${overflowDrop.tier.toUpperCase()} · ${overflowDrop.scope.toUpperCase()}</p>
-              <p class="snes-small snes-muted" style="font-size:4px;margin-top:2px">▶ TAP TO INSPECT</p>
+              <p style="font-family:var(--font-readable);font-size:11px;color:var(--snes-muted)">${overflowDrop.tier.toUpperCase()} · ${overflowDrop.scope.toUpperCase()}</p>
+              <p style="font-family:var(--font-readable);font-size:11px;color:var(--snes-border-light);margin-top:2px">▶ Tap to inspect</p>
             </div>
           </div>
         </div>
@@ -1156,16 +1156,18 @@ export function mount(container, options = {}) {
       `;
     }
 
-    // Round history log
+    // Round history log — emoji throws for instant readability
+    const THROW_EMOJI = { rock: '✊', paper: '✋', scissors: '✌' };
     const historyHTML = tournamentData.currentMatch.roundHistory.length > 0
       ? tournamentData.currentMatch.roundHistory.map(r => {
           const won = r.winner === 'player';
           const tie = r.winner === 'tie';
+          const pe  = THROW_EMOJI[r.playerThrow]   ?? r.playerThrow[0].toUpperCase();
+          const oe  = THROW_EMOJI[r.opponentThrow] ?? r.opponentThrow[0].toUpperCase();
           return `<span class="snes-small ${won ? 'snes-success' : tie ? 'snes-highlight' : 'snes-error'}">
-            R${r.round}: ${r.playerThrow[0].toUpperCase()} vs ${r.opponentThrow[0].toUpperCase()}
-            ${won ? '▲' : tie ? '─' : '▼'}
+            ${pe}${won ? '▲' : tie ? '─' : '▼'}${oe}
           </span>`;
-        }).join('  ')
+        }).join(' ')
       : '';
 
     const greetingHTML = screenState === 'picking' && roundNumber === 1

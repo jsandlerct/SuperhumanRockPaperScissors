@@ -131,47 +131,46 @@ export function mount(container, options = {}) {
             </div>
           </div>
 
-          <!-- Skill points / respec summary -->
-          <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
-            <p class="snes-small snes-muted">SKILL POINT RESPEC</p>
+          <!-- Respec summary — single merged panel -->
+          <div class="snes-panel" style="display:flex;flex-direction:column;gap:12px">
+            <p class="snes-small snes-muted">RESPEC SUMMARY</p>
+
+            <!-- Points -->
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+              <p class="snes-small snes-muted">AVAILABLE</p>
+              <p class="snes-label snes-highlight">${unspent} PTS</p>
+            </div>
             ${refundAmount > 0
-              ? `<p class="snes-small snes-success">▲ ${refundAmount} PTS REFUNDED FROM LAST SEASON</p>`
+              ? `<p class="snes-small snes-success" style="font-size:6px">▲ ${refundAmount} pts refunded from last season's build</p>`
               : ''}
-            <p class="snes-label snes-highlight">${unspent} PTS AVAILABLE</p>
-            <p class="snes-small snes-muted">
-              TREES: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'}
-            </p>
             <p class="snes-small snes-muted" style="font-size:6px">
-              Root nodes kept. All other nodes refunded. Reallocate freely before starting Season ${nextSeason}.
+              Trees: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'} · Root nodes kept · Reallocate freely
             </p>
-          </div>
 
-          <!-- Powerup inventory cleared -->
-          <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
-            <p class="snes-small snes-muted">POWERUP INVENTORY CLEARED</p>
-            ${clearedInventory.length > 0
-              ? clearedInventory.map(pu => {
-                  const icon = POWERUP_ICONS[pu.name] ?? '';
-                  return `<div style="display:flex;align-items:center;gap:8px">
-                    ${icon ? `<img src="${icon}" alt="" style="width:20px;height:20px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
-                    <p class="snes-small snes-muted" style="font-size:6px">${pu.name.toUpperCase()}</p>
-                  </div>`;
-                }).join('')
-              : `<p class="snes-small snes-muted" style="font-size:6px">No powerups held.</p>`
-            }
-            <p class="snes-small snes-muted" style="font-size:6px">
-              A fresh starting loadout will be drawn from your skill trees.
-            </p>
-          </div>
+            <!-- Refunded nodes -->
+            ${refundedNodeNames.length > 0 ? `
+            <div style="border-top:1px solid var(--snes-border);padding-top:8px;display:flex;flex-direction:column;gap:4px">
+              <p class="snes-small snes-muted" style="font-size:6px">NODES REFUNDED</p>
+              ${refundedNodeNames.map(n => `<p class="snes-small snes-muted" style="font-size:6px">◉ ${n.toUpperCase()}</p>`).join('')}
+            </div>
+            ` : ''}
 
-          <!-- Respec preview -->
-          ${refundedNodeNames.length > 0 ? `
-          <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
-            <p class="snes-small snes-muted">NODES REFUNDED (${refundedNodeNames.length})</p>
-            ${refundedNodeNames.map(n => `<p class="snes-small snes-muted" style="font-size:6px">◉ ${n.toUpperCase()}</p>`).join('')}
-            <p class="snes-small snes-success" style="font-size:6px">Root nodes kept. Reallocate freely.</p>
+            <!-- Cleared inventory -->
+            <div style="border-top:1px solid var(--snes-border);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+              <p class="snes-small snes-muted" style="font-size:6px">POWERUPS CLEARED</p>
+              ${clearedInventory.length > 0
+                ? clearedInventory.map(pu => {
+                    const icon = POWERUP_ICONS[pu.name] ?? '';
+                    return `<div style="display:flex;align-items:center;gap:8px">
+                      ${icon ? `<img src="${icon}" alt="" style="width:20px;height:20px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
+                      <p style="font-family:var(--font-readable);font-size:11px;color:var(--snes-muted)">${pu.name}</p>
+                    </div>`;
+                  }).join('')
+                : `<p class="snes-small snes-muted" style="font-size:6px">No powerups held.</p>`
+              }
+              <p class="snes-small snes-muted" style="font-size:6px">Fresh loadout drawn at Lock In.</p>
+            </div>
           </div>
-          ` : ''}
 
           <button class="snes-btn snes-btn-yellow" id="btn-begin" style="width:100%">
             ▶ RESPEC SKILL TREE FOR SEASON ${nextSeason}

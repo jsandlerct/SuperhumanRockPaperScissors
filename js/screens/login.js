@@ -23,11 +23,14 @@ export function mount(container, options = {}) {
   }
 
   function buildLoginHTML() {
-    const items = accounts.map(u => {
+    const items = accounts.map((u, i) => {
       const sel = u === selectedAccount;
       return `
         <div class="account-row ${sel ? 'account-row--selected' : ''}"
              data-user="${u}"
+             tabindex="0"
+             role="option"
+             aria-selected="${sel}"
              style="
                padding: 10px 8px;
                cursor: pointer;
@@ -36,6 +39,7 @@ export function mount(container, options = {}) {
                gap: 4px;
                min-height: 44px;
                transition: background 0s;
+               outline: none;
                ${sel ? 'background: var(--snes-border);' : ''}
              ">
           <span class="snes-highlight" style="width:12px;display:inline-block">
@@ -144,11 +148,35 @@ export function mount(container, options = {}) {
 
   function attachListeners() {
     if (mode === 'login') {
-      document.querySelectorAll('.account-row').forEach(el => {
+      const rows = Array.from(document.querySelectorAll('.account-row'));
+      rows.forEach((el, idx) => {
         el.addEventListener('click', () => {
           selectedAccount = el.dataset.user;
           render();
           document.getElementById('inp-password')?.focus();
+        });
+        // Keyboard: Enter/Space to select, arrows to navigate
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectedAccount = el.dataset.user;
+            render();
+            document.getElementById('inp-password')?.focus();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            rows[(idx + 1) % rows.length]?.focus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            rows[(idx - 1 + rows.length) % rows.length]?.focus();
+          }
+        });
+        // Focus ring via outline for keyboard users
+        el.addEventListener('focus', () => {
+          if (el.dataset.user !== selectedAccount)
+            el.style.outline = '2px solid var(--snes-yellow)';
+        });
+        el.addEventListener('blur', () => {
+          el.style.outline = '';
         });
         // Hover highlight for mouse users
         el.addEventListener('mouseenter', () => {
