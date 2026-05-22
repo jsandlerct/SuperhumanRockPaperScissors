@@ -654,6 +654,7 @@ export function mount(container, options = {}) {
         <div class="npr-bar-track">
           ${floorBarHTML}
           <div class="${fillClass}" style="${floorStyle}"></div>
+          <div class="npr-bar-threshold" style="left:90%"></div>
         </div>
       </div>
     `;

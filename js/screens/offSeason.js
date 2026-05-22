@@ -141,7 +141,7 @@ export function mount(container, options = {}) {
             <p class="snes-small snes-muted">
               TREES: ${availableTrees.length > 0 ? availableTrees.join(' + ') : '—'}
             </p>
-            <p class="snes-small snes-muted" style="font-size:5px">
+            <p class="snes-small snes-muted" style="font-size:6px">
               Root nodes kept. All other nodes refunded. Reallocate freely before starting Season ${nextSeason}.
             </p>
           </div>
@@ -154,12 +154,12 @@ export function mount(container, options = {}) {
                   const icon = POWERUP_ICONS[pu.name] ?? '';
                   return `<div style="display:flex;align-items:center;gap:8px">
                     ${icon ? `<img src="${icon}" alt="" style="width:20px;height:20px;image-rendering:pixelated;object-fit:contain;flex-shrink:0">` : ''}
-                    <p class="snes-small snes-muted" style="font-size:5px">${pu.name.toUpperCase()}</p>
+                    <p class="snes-small snes-muted" style="font-size:6px">${pu.name.toUpperCase()}</p>
                   </div>`;
                 }).join('')
-              : `<p class="snes-small snes-muted" style="font-size:5px">No powerups held.</p>`
+              : `<p class="snes-small snes-muted" style="font-size:6px">No powerups held.</p>`
             }
-            <p class="snes-small snes-muted" style="font-size:5px">
+            <p class="snes-small snes-muted" style="font-size:6px">
               A fresh starting loadout will be drawn from your skill trees.
             </p>
           </div>
@@ -168,8 +168,8 @@ export function mount(container, options = {}) {
           ${refundedNodeNames.length > 0 ? `
           <div class="snes-panel" style="display:flex;flex-direction:column;gap:8px">
             <p class="snes-small snes-muted">NODES REFUNDED (${refundedNodeNames.length})</p>
-            ${refundedNodeNames.map(n => `<p class="snes-small snes-muted" style="font-size:5px">◉ ${n.toUpperCase()}</p>`).join('')}
-            <p class="snes-small snes-success" style="font-size:5px">Root nodes kept. Reallocate freely.</p>
+            ${refundedNodeNames.map(n => `<p class="snes-small snes-muted" style="font-size:6px">◉ ${n.toUpperCase()}</p>`).join('')}
+            <p class="snes-small snes-success" style="font-size:6px">Root nodes kept. Reallocate freely.</p>
           </div>
           ` : ''}
 

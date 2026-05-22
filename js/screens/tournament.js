@@ -377,11 +377,14 @@ function renderConcurrentResults(rounds, roundIndex, playerName) {
   `;
 }
 
-// Trigger stagger animation on meanwhile results after they're in the DOM
+// Trigger stagger animation on meanwhile results after they're in the DOM.
+// Double-rAF ensures the initial opacity:0 is committed before we flip to 1.
 function animateConcurrentResults() {
   requestAnimationFrame(() => {
-    document.querySelectorAll('.meanwhile-result').forEach(el => {
-      el.style.opacity = '1';
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.meanwhile-result').forEach(el => {
+        el.style.opacity = '1';
+      });
     });
   });
 }

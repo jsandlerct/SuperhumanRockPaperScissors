@@ -155,7 +155,9 @@ export function mount(container, options = {}) {
             ${outcome === 'eliminated' ? 'CONSOLATION BONUS' : 'SKILL POINTS EARNED'}
           </p>
           <p class="snes-label snes-highlight">+${pointsEarned} PTS</p>
-          <p class="snes-small snes-muted">[SKILL TREE UNLOCKS V0.3]</p>
+          <p class="snes-small snes-muted" style="font-size:5px">
+            ${cfg.advanceable ? 'SPEND BEFORE NEXT TOURNAMENT' : 'SPEND DURING OFF-SEASON RESPEC'}
+          </p>
         </div>
         ` : ''}
 
@@ -199,7 +201,11 @@ export function mount(container, options = {}) {
       // Award 1st-place trophy for this tier (champion only reaches here)
       const advTrophies = loadTrophies(charId) ?? { trophies: [] };
       if (!advTrophies.trophies) advTrophies.trophies = [];
-      const advTrophyId = `t${tier}_1st`;
+      const advTrophyId  = `t${tier}_1st`;
+      const advTrophyDef = TROPHY_CONFIG.find(t => t.id === advTrophyId) ?? null;
+      const isFirstEarnAdv = !advTrophies.trophies.some(e =>
+        (typeof e === 'string' ? e : e.id) === advTrophyId
+      );
       advTrophies.trophies.push({ id: advTrophyId, season: progress.currentSeason });
       saveTrophies(charId, advTrophies);
 
@@ -212,10 +218,41 @@ export function mount(container, options = {}) {
       }
       saveProgress(charId, updatedProgress);
       saveTournament(charId, null);
-      navigate('skillTree', { charId, midSeason: true, nextTier: tier + 1 });
+
+      // Show trophy fanfare before advancing, then navigate
+      if (advTrophyDef && isFirstEarnAdv) {
+        renderTrophyFanfare(advTrophyDef, () =>
+          navigate('skillTree', { charId, midSeason: true, nextTier: tier + 1 })
+        );
+      } else {
+        navigate('skillTree', { charId, midSeason: true, nextTier: tier + 1 });
+      }
     } else {
       runSeasonEnd(updatedProgress);
     }
+  }
+
+  // ── Trophy fanfare panel (shown when advancing between tiers) ───────────────
+
+  function renderTrophyFanfare(trophyDef, onContinue) {
+    const trophyPx = ([64, 72, 80, 88, 96][(trophyDef.tier ?? 1) - 1] ?? 64);
+    container.innerHTML = `
+      <div class="screen fade-in" style="justify-content:center">
+        <div class="content-card" style="gap:20px;text-align:center">
+          <p class="snes-title">★ NEW TROPHY!</p>
+          <div class="snes-panel" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px 16px">
+            <img src="${trophyDef.asset}" alt="${trophyDef.label}"
+                 style="width:${trophyPx}px;height:${trophyPx}px;min-width:64px;min-height:64px;image-rendering:pixelated">
+            <p class="snes-label snes-highlight">${trophyDef.label}</p>
+            <p class="snes-small snes-success">ADDED TO YOUR TROPHY CASE</p>
+          </div>
+          <button class="snes-btn snes-btn-yellow" id="btn-trophy-continue" style="width:100%">
+            ▶ ADVANCE TO NEXT ROUND
+          </button>
+        </div>
+      </div>
+    `;
+    document.getElementById('btn-trophy-continue').addEventListener('click', onContinue);
   }
 
   // ── Season-end flow ──────────────────────────────────────────────────────────

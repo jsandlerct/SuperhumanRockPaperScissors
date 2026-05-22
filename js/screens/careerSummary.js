@@ -195,7 +195,8 @@ export function mount(container, options = {}) {
   if (eloHistory.length >= 2) {
     const canvas = document.getElementById('elo-sparkline');
     if (canvas) {
-      canvas.width = canvas.offsetWidth || 280;
+      requestAnimationFrame(() => {
+      canvas.width = canvas.parentElement?.clientWidth || canvas.offsetWidth || 280;
       const ctx    = canvas.getContext('2d');
       const W      = canvas.width;
       const H      = canvas.height;
@@ -254,6 +255,7 @@ export function mount(container, options = {}) {
       ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
       ctx.fillStyle = '#f8d020';
       ctx.fill();
+      }); // end requestAnimationFrame
     }
   }
 
