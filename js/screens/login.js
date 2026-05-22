@@ -1,5 +1,5 @@
 import { navigate } from '../main.js';
-import { loadMeta, saveMeta, loadAccount, saveAccount } from '../storage.js';
+import { loadMeta, saveMeta, loadAccount, saveAccount, loadSession, saveSession, clearSession, loadIdentity } from '../storage.js';
 
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -11,6 +11,13 @@ async function sha256(text) {
 export function mount(container, options = {}) {
   const meta     = loadMeta();
   const accounts = meta.accountUsernames || [];
+  const session  = loadSession();
+
+  // If a session exists with a valid account, show "resume" screen instead of login
+  if (session?.loggedInUsername && accounts.includes(session.loggedInUsername)) {
+    mountResumeScreen(session.loggedInUsername);
+    return;
+  }
 
   let mode            = accounts.length === 0 ? 'create' : 'login';
   let selectedAccount = accounts[0] ?? null;
@@ -20,6 +27,49 @@ export function mount(container, options = {}) {
   function render() {
     container.innerHTML = mode === 'login' ? buildLoginHTML() : buildCreateHTML();
     attachListeners();
+  }
+
+  // ── Resume screen (session already exists) ───────────────────────────────────
+
+  function mountResumeScreen(username) {
+    const account  = loadAccount(username);
+    const charIds  = account?.characterIds ?? [];
+    // Show active character name if available, otherwise just the account name
+    const activeId = session?.activeCharId;
+    const identity = activeId ? loadIdentity(activeId) : null;
+    const charName = identity?.name?.toUpperCase() ?? null;
+
+    container.innerHTML = `
+      <div class="screen fade-in" style="justify-content:center">
+        <div class="content-card" style="gap:20px">
+          <p class="snes-title" style="text-align:center">SRPS</p>
+          <p class="snes-small snes-muted" style="text-align:center">SUPERHUMAN ROCK PAPER SCISSORS</p>
+
+          <div class="snes-panel" style="display:flex;flex-direction:column;gap:12px;text-align:center">
+            <p class="snes-small snes-muted">LOGGED IN AS</p>
+            <p class="snes-label snes-highlight">${username.toUpperCase()}</p>
+            ${charName ? `<p class="snes-small snes-muted">Playing as <span class="snes-highlight">${charName}</span></p>` : ''}
+          </div>
+
+          <button class="snes-btn snes-btn-yellow" id="btn-resume" style="width:100%">
+            ▶ CONTINUE
+          </button>
+          <button class="snes-btn" id="btn-switch-account" style="width:100%;opacity:0.7">
+            ↩ SWITCH ACCOUNT
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btn-resume').addEventListener('click', () => {
+      navigate('characterSelect', { username });
+    });
+    document.getElementById('btn-switch-account').addEventListener('click', () => {
+      clearSession();
+      // Re-mount with no session
+      mount(container, options);
+    });
+    return;
   }
 
   function buildLoginHTML() {
@@ -259,6 +309,8 @@ export function mount(container, options = {}) {
       return;
     }
 
+    // Persist the logged-in username so next visit skips the password prompt
+    saveSession({ loggedInUsername: selectedAccount, activeCharId: null });
     navigate('characterSelect', { username: selectedAccount });
   }
 

@@ -1164,9 +1164,9 @@ export function mount(container, options = {}) {
           const tie = r.winner === 'tie';
           const pe  = THROW_EMOJI[r.playerThrow]   ?? r.playerThrow[0].toUpperCase();
           const oe  = THROW_EMOJI[r.opponentThrow] ?? r.opponentThrow[0].toUpperCase();
-          return `<span class="snes-small ${won ? 'snes-success' : tie ? 'snes-highlight' : 'snes-error'}">
-            ${pe}${won ? '▲' : tie ? '─' : '▼'}${oe}
-          </span>`;
+          const resultChar = won ? '▲' : tie ? '─' : '▼';
+          const color = won ? 'var(--snes-green)' : tie ? 'var(--snes-yellow)' : 'var(--snes-red)';
+          return `<span style="font-size:18px;line-height:1;color:${color}" title="${r.playerThrow} vs ${r.opponentThrow}">${pe}<span style="font-size:10px">${resultChar}</span>${oe}</span>`;
         }).join(' ')
       : '';
 
