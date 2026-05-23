@@ -1,5 +1,5 @@
 import { navigate } from '../main.js';
-import { ELO_BASELINE, STARTING_SKILL_POINTS_SEASON_1, JESSIE_TUTORIAL_DIALOGUE } from '../constants.js';
+import { ELO_BASELINE, STARTING_SKILL_POINTS_SEASON_1, JESSIE_TUTORIAL_DIALOGUE, NEURAL_SCAN_COOLDOWN_MATCHES } from '../constants.js';
 import {
   loadSession, saveSession,
   loadAccount, saveAccount,
@@ -204,7 +204,7 @@ export function mount(container, options = {}) {
       unspentSkillPoints:     0,
       totalSkillPointsEarned: 0,
       treeState:              {},
-      crossMatchState:        { neuralScanMatchesSinceLastUse: 0 },
+      crossMatchState:        { neuralScanMatchesSinceLastUse: NEURAL_SCAN_COOLDOWN_MATCHES },
       powerupInventory:       [],
       activePowerupEffects:   { tournament: [], season: [] },
     });
