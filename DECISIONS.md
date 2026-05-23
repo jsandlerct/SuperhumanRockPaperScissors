@@ -5,6 +5,28 @@
 
 ---
 
+## NPC Skill & Behavior System (v1.0)
+
+**[v1.0 | 2026-05-23] NPC treeState is now consulted every match via `npcHasSkill(nodeId)`. treeState is loaded from `_world` bucket at match mount; NPC in-memory skill state (`initNpcSkillState`) is reset at match start and by Cosmic Insurance Policy.**
+
+**[v1.0 | 2026-05-23] NPC active skill decision engine (`npcDecideActiveSkill`) runs inside `computeNpcThrow()` before `getNpcThrow()`. Decision is stored in `npcActiveSkillThisRound` for resolution in `handleReady()`. Priority: TML/ATML > Force Your Hand/Twist Your Arm > Refuse to Lose.**
+
+**[v1.0 | 2026-05-23] TML conflict rule: if both player TML and NPC TML fire the same round, both cancel — natural result stands. Implemented by checking both `roundForceWin` and `roundForceLoss` simultaneously before applying.**
+
+**[v1.0 | 2026-05-23] NPC MIND behavioral accuracy model (passive): accumulates 10%/round (cap 90%), fires independently with counter-of-most-frequent-throw override, blocked by Mind Shield (50%) / Mind Fortress (90%). Resets to 0 on fire (same as player NPR). Implemented in `computeNpcThrow()`.**
+
+**[v1.0 | 2026-05-23] NPC passive tie conversion runs after player tie block, mirrors player MYSTIC.1.1 / MYSTIC.1.1.1.2. Blocked by Oblivious (50%) / Totes Oblivious (90%), reversed by Lucky Charm active (90% chance converts NPC win back to player win). Third Time's the Charm and Alter Reality apply from npcSkillState.**
+
+**[v1.0 | 2026-05-23] NPC powerup activation: `tryNpcActivatePowerup()` called in `computeNpcThrow()`. Strategy field determines policy ('chance' = 25%, 'asap', 'on_win', 'on_loss'). Padlock blocks for `powerupBlockedRounds` rounds. Molasses nets cooldown to 0 (increment cancels decrement in `advanceRound`).**
+
+**[v1.0 | 2026-05-23] NPC throw history persisted cumulatively in `_world` bucket after each match. `finishedRoundHistory` captured before `currentMatch` is nulled in `finishMatch()`. Research Notes reads cumulative history (minimum 5 throws required for display).**
+
+**[v1.0 | 2026-05-23] Padlock and Molasses removed from `POWERUP_NO_OP` — both fully implemented. Research Notes added to `POWERUP_IMPLEMENTED`.**
+
+**[v1.0 | 2026-05-23] THE_FREEZER_CHANCE (0.75) and NOT_TODAY_CHANCE (0.95) added to constants.js. NPC_POWERUP_CHANCE_RATE (0.25), NPC_LUCKY_CHARM_BLOCK_CHANCE (0.90), NPC_RESEARCH_NOTES_MIN_THROWS (5) also added.**
+
+---
+
 ## Off-Season Respec (v0.3 revision)
 
 **[v0.3 | 2026-05-15] Off-season respec preserves L1 root nodes; only L2+ nodes are refunded.**

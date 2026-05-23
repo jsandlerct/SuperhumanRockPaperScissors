@@ -1,4 +1,8 @@
 import { roll } from '../utils/rng.js';
+import {
+  TML_COOLDOWN_ROUNDS, ATML_COOLDOWN_ROUNDS,
+  FORCE_YOUR_HAND_COOLDOWN_ROUNDS, TWIST_YOUR_ARM_COOLDOWN_ROUNDS,
+} from '../constants.js';
 
 const THROWS = ['rock', 'paper', 'scissors'];
 
@@ -17,35 +21,72 @@ function mostFrequent(throwHistory) {
   return Object.entries(counts).reduce((a, b) => b[1] > a[1] ? b : a)[0];
 }
 
+// Returns per-match NPC skill state object (in-memory, not persisted).
+export function initNpcSkillState() {
+  return {
+    tmlCooldown:           0,   // FORTUNE.1.1 / ATML (FORTUNE.1.1.1.1)
+    forceYourHandCooldown: 0,   // MYSTIC.1.1.1 / Twist Your Arm (MYSTIC.1.1.1.1)
+    refuseToLoseCooldown:  0,   // MYSTIC.1.1.2.1 equivalent
+    thirdTimesCharmFails:  0,   // MYSTIC.1.1.2 consecutive failed tie conversions
+    thirdTimesCharmUsed:   false,
+    dueForAWinFails:       0,   // FORTUNE.1.1.2 consecutive TML failures
+    dueForAWinUsed:        false,
+    nprAccumulation:       0.0, // MIND.1.1 behavioral accuracy model (accumulates per round)
+    powerupBlockedRounds:  0,   // Padlock: number of rounds NPC powerup is blocked
+  };
+}
+
 // Call once at match start. Returns a matchState object passed to getNpcThrow each round.
 export function initNpcMatchState(npc) {
   const strategy = npc.primaryStrategy;
   return {
     strategy,
+    secondaryStrategy: npc.secondaryStrategy ?? null,
+    switchTrigger:     npc.switchTrigger     ?? null,
+    strategySwapped:   false,
     // puristRandom
-    lockedThrow:      strategy === 'puristRandom' ? randomThrow() : null,
+    lockedThrow:       strategy === 'puristRandom' ? randomThrow() : null,
     // mirror / counter / tilted
-    lastPlayerThrow:  null,
+    lastPlayerThrow:   null,
     // momentum
-    lastNpcThrow:     null,
+    lastNpcThrow:      null,
     // cycler
-    cycleIndex:       0,
+    cycleIndex:        0,
     // tilted: track round win differential from NPC perspective
-    npcRoundsWon:     0,
-    playerRoundsWon:  0,
-    tilted:           false,
+    npcRoundsWon:      0,
+    playerRoundsWon:   0,
+    tilted:            false,
     // streaker / mimic / historian: full player throw history
-    // maskedThrows param (v0.3: Blank Slate masks last N throws from these strategies)
     playerThrowHistory: [],
   };
 }
 
 // Returns 'rock' | 'paper' | 'scissors'.
-// maskedThrows: number of recent throws to hide from history-reading strategies (v0.3 Blank Slate).
-export function getNpcThrow(matchState, lastRoundResult = null, maskedThrows = 0) {
+// maskedThrows: number of recent throws to hide from history-reading strategies (Blank Slate).
+// roundCtx: { roundNumber, playerRoundsWon, npcRoundsWon } — used for secondary strategy switch.
+export function getNpcThrow(matchState, lastRoundResult = null, maskedThrows = 0, roundCtx = null) {
   // Update round win tracking for tilted
   if (lastRoundResult === 'opponent') matchState.npcRoundsWon++;
   if (lastRoundResult === 'player')   matchState.playerRoundsWon++;
+
+  // Secondary strategy switching
+  if (matchState.secondaryStrategy && !matchState.strategySwapped && roundCtx) {
+    const t = matchState.switchTrigger;
+    if (t) {
+      const triggered =
+        (t.condition === 'reach_round' && roundCtx.roundNumber >= t.value) ||
+        (t.condition === 'losing_by'   && roundCtx.playerRoundsWon - roundCtx.npcRoundsWon >= t.value) ||
+        (t.condition === 'winning_by'  && roundCtx.npcRoundsWon - roundCtx.playerRoundsWon >= t.value);
+      if (triggered) {
+        matchState.strategy = matchState.secondaryStrategy;
+        matchState.strategySwapped = true;
+        // puristRandom re-rolls at strategy switch
+        if (matchState.strategy === 'puristRandom') {
+          matchState.lockedThrow = randomThrow();
+        }
+      }
+    }
+  }
 
   // Check tilt trigger (NPC losing by 2+ rounds)
   if (!matchState.tilted &&
@@ -146,6 +187,55 @@ export function getNpcThrow(matchState, lastRoundResult = null, maskedThrows = 0
   matchState.lastNpcThrow = throw_;
 
   return throw_;
+}
+
+// Decides which NPC active skill to use this round, if any.
+// Returns 'TML' | 'ATML' | 'forceYourHand' | 'twistYourArm' | null.
+// npcHasSkill: function(nodeId) => boolean (reads NPC's treeState from world bucket)
+// ctx: { roundNumber, playerRoundsWon, npcRoundsWon }
+export function npcDecideActiveSkill(matchState, npcHasSkill, ctx, skillState) {
+  const { playerRoundsWon, npcRoundsWon } = ctx;
+
+  // TML / ATML: use when behind (player has more rounds) or in a dire situation
+  if (skillState.tmlCooldown === 0) {
+    const hasTML  = npcHasSkill('FORTUNE.1.1');
+    const hasATML = npcHasSkill('FORTUNE.1.1.1.1');
+    if (hasTML || hasATML) {
+      // Use TML when losing, or when tied and strategy suggests risk
+      if (playerRoundsWon > npcRoundsWon || (playerRoundsWon === npcRoundsWon && roll() < 0.3)) {
+        return hasATML ? 'ATML' : 'TML';
+      }
+    }
+  }
+
+  // Force Your Hand / Twist Your Arm: use when tied with a random/purist strategy (tie-prone)
+  if (skillState.forceYourHandCooldown === 0) {
+    const hasTYA = npcHasSkill('MYSTIC.1.1.1.1');
+    const hasFYH = npcHasSkill('MYSTIC.1.1.1');
+    if (hasTYA || hasFYH) {
+      // Use when likely to tie (purist strategies, or randomly 20% of the time)
+      const tieProne = ['puristRock', 'puristPaper', 'puristScissors', 'puristRandom']
+        .includes(matchState.strategy);
+      if (tieProne || roll() < 0.20) {
+        return hasTYA ? 'twistYourArm' : 'forceYourHand';
+      }
+    }
+  }
+
+  // Refuse to Lose (MYSTIC.1.1.2.1 equivalent): use when losing a round seems likely
+  if (skillState.refuseToLoseCooldown === 0 && npcHasSkill('MYSTIC.1.1.2.1')) {
+    // Use when behind or randomly 15% of the time as a defensive hedge
+    if (playerRoundsWon > npcRoundsWon || roll() < 0.15) {
+      return 'refuseToLose';
+    }
+  }
+
+  return null;
+}
+
+// Returns the most frequent throw, exported for use in match.js MIND behavioral model.
+export function mostFrequentThrow(history) {
+  return mostFrequent(history);
 }
 
 // Call after the player's throw is known each round, before getNpcThrow for the next round.

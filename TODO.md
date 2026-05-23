@@ -162,18 +162,19 @@
 - [x] Coach Jessie: complete tutorial + all milestone dialogues
 - [x] Complete powerup catalog: Basic, Advanced, Legendary.  Ensure working correctly and test cases.
 - [x] All cross-tree synergy pairs and counter-skill classifications. Ensure working correctly and test cases.
-- [ ] Audio: 8-bit chiptune music and SFX
+
 
 ---
 
 ## v1.0 Tasks (do not start until v0.3 ships)
 
 
-- [ ] NPC tree configs active: NPCs spend points per random-from-legal-nodes
-- [ ] NPC powerup activation system (unblocks Padlock real effect)
-- [ ] NPC throw history tracking (unblocks full Research Notes display)
+- [x] NPC tree configs active: NPCs spend points per random-from-legal-nodes
+- [x] NPC powerup activation system (unblocks Padlock real effect)
+- [x] NPC throw history tracking (unblocks full Research Notes display)
+- [x] Full NPC behaviors: strategy + skill tree + powerup
 - [ ] Hall of Fame: 10-season evaluation, induction screen
-- [ ] Full NPC behaviors: strategy + skill tree + powerup
+- [ ] Audio: 8-bit chiptune music and SFX
 
 
 ---

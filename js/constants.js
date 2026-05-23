@@ -269,15 +269,16 @@ export const POWERUP_IMPLEMENTED = new Set([
   'Fait Accompli', 'Dizzy Spell', 'Hiccup Potion', 'Tabula Rasa',
   'Mystic Pizza', 'Cosmic Insurance Policy', "Schrödinger's Amulet",
   'Clockwork Orange', 'Cuckoo Clock', 'Jonesing to Help',
-  // MYSTIC — no-op until later systems land (NPC powerup activation)
+  // MYSTIC — NPC active skill system implemented in v1.0
   'Molasses', 'Padlock',
+  // MYSTIC — pending NPC throw history tracking
+  'Research Notes',
 ]);
 
 // Powerups marked implemented but currently no-op (waiting on dependent systems).
 // Useful for the popup to show "Effect activated, but waits on …" rather than a blanket lock.
 export const POWERUP_NO_OP = new Set([
-  'Molasses',  // bumps opponent active-skill cooldowns — NPCs don't have active skills yet
-  'Padlock',   // blocks NPC powerup activation — NPCs don't yet activate powerups
+  // All former no-ops have been implemented in v1.0 NPC system.
 ]);
 
 // ── Skill Trees — L1 metadata (Section 6.7 / 6.8 / 6.9) ──────────────────────
@@ -334,7 +335,9 @@ export const BRAIN_FART_COOLDOWN_ROUNDS      = 3;
 export const MIND_SHIELD_CHANCE              = 0.50;  // 50% block opponent strategy reads (no-op until NPC NPR)
 
 // MIND.1.2.2 — The Cooler (passive, 50% block TML/ATML)
-export const THE_COOLER_CHANCE               = 0.50;  // 50% block opponent TML/ATML (no-op until NPC TML)
+export const THE_COOLER_CHANCE               = 0.50;  // 50% block opponent TML/ATML
+// MIND.1.2.2.2 — The Freezer (upgrades Cooler 50%→75%)
+export const THE_FREEZER_CHANCE              = 0.75;  // 75% block opponent TML/ATML
 
 // FORTUNE.1.1.1 — Lucky Socks (passive, TML 75%→85%)
 export const LUCKY_SOCKS_TML_CHANCE          = 0.85;  // 85% TML success (replaces 75%)
@@ -531,7 +534,8 @@ export const MASSIVE_BRAIN_FART_COOLDOWN_ROUNDS = 3;  // no-op until NPC active 
 export const BAMBOOZLE_CHANCE                = 0.25;  // 25% chance opp powerup fires for player; no-op until NPC powerups
 
 // MIND.1.2.2.1 — Not Today!
-export const NOT_TODAY_COOLDOWN_ROUNDS       = 3;     // no-op until NPC uses TML
+export const NOT_TODAY_COOLDOWN_ROUNDS       = 3;
+export const NOT_TODAY_CHANCE                = 0.95;  // 95% chance NPC TML auto-fails (opponent loses round)
 
 // MYSTIC.1.2.2.1 — Phantom Memory
 export const PHANTOM_MEMORY_COOLDOWN_ROUNDS  = 1;     // 1-round cooldown
@@ -560,7 +564,12 @@ export const LOOK_WHAT_I_FOUND_CHANCE        = 0.25;  // 25% on loss, independen
 export const LUCKY_CHARM_COOLDOWN_ROUNDS     = 3;
 
 // FORTUNE.1.2.2.2 — Totes Oblivious
-export const TOTES_OBLIVIOUS_CHANCE          = 0.90;  // upgrades Oblivious 50%→90%; no-op until NPC tie-altering
+export const TOTES_OBLIVIOUS_CHANCE          = 0.90;  // upgrades Oblivious 50%→90%
+
+// ── NPC Skill System ──────────────────────────────────────────────────────────
+export const NPC_POWERUP_CHANCE_RATE         = 0.25;  // probability NPC activates powerup when powerupStrategy==='chance'
+export const NPC_LUCKY_CHARM_BLOCK_CHANCE    = 0.90;  // Lucky Charm: chance NPC tie-conversion fires for player instead
+export const NPC_RESEARCH_NOTES_MIN_THROWS   = 5;     // minimum NPC throw history before Research Notes shows data
 
 // MIND.1.1.2.2 — Uncanny Mind (stacks with MYSTIC.1)
 export const UNCANNY_MIND_UPGRADE_BONUS      = 0.10;  // +10% tier upgrade chance on drops

@@ -1,7 +1,7 @@
 import { navigate, getNpcById, getAllNpcs } from '../main.js';
 import { runCountdown } from '../animations/countdown.js';
 import { resolveRound } from '../systems/round.js';
-import { initNpcMatchState, getNpcThrow, recordPlayerThrow } from '../systems/npc.js';
+import { initNpcMatchState, getNpcThrow, recordPlayerThrow, initNpcSkillState, npcDecideActiveSkill, mostFrequentThrow } from '../systems/npc.js';
 import { calcNewElo } from '../systems/elo.js';
 import {
   calcDropCount, generateDrops, getMaxSlots,
@@ -35,6 +35,12 @@ import {
   READING_GLASSES_CHANCE, SMART_GLASSES_CHANCE, COURTSIDE_CHANCE,
   SKILL_NODE_INFO, SKILL_TREE_INFO, JESSIE_TUTORIAL_DIALOGUE,
   NPC_STRATEGY_DESCRIPTION,
+  THE_COOLER_CHANCE, THE_FREEZER_CHANCE,
+  MIND_SHIELD_CHANCE, MIND_FORTRESS_CHANCE,
+  OBLIVIOUS_CHANCE, TOTES_OBLIVIOUS_CHANCE,
+  NOT_TODAY_CHANCE,
+  NPC_POWERUP_CHANCE_RATE, NPC_LUCKY_CHARM_BLOCK_CHANCE, NPC_RESEARCH_NOTES_MIN_THROWS,
+  BAMBOOZLE_CHANCE,
 } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
@@ -112,6 +118,11 @@ export function mount(container, options = {}) {
   let roundSchrodingerOriginalThrow = null; // throw at Schrödinger's Amulet activation
   let roundProteinShakeOriginalThrow = null; // throw at Protein Shake activation (null = not used)
   let proteinShakeBonus = false;             // set in handleReady, read in handleAdvanceFromReveal
+  // NPC counter-skill round flags
+  let roundNotTodayActive      = false;  // MIND.1.2.2.1: 95% NPC TML auto-fail this round
+  let roundBrainFartActive     = false;  // MYSTIC.1.2.1/1.1: block NPC active skill this round
+  let roundLuckyCharmActive    = false;  // FORTUNE.1.2.2.1: redirect NPC tie-conversion to player
+  let roundPhantomMemoryActive = false;  // MYSTIC.1.2.2.1: falsify NPC MIND behavioral read this round
 
   // Per-match state (in-memory)
   let matchHotSauce          = false;
@@ -154,7 +165,7 @@ export function mount(container, options = {}) {
   let forceYourHandCooldown   = 0;      // MYSTIC.1.1.1 (Force Your Hand) / MYSTIC.1.1.1.1 (Twist Your Arm)
   let roundForceHandActive    = false;  // per-round: Force Your Hand / Twist Your Arm armed
   let changeMyLuckCooldown    = 0;      // FORTUNE.1.2.1 (Change My Luck)
-  let brainFartCooldown       = 0;      // MYSTIC.1.2.1 (no-op until NPC active skills)
+  let brainFartCooldown       = 0;      // MYSTIC.1.2.1 — blocks NPC active skill this round
   let roundChangeMyLuckActive = false;  // FORTUNE.1.2.1 — armed; 2 drops if round lost
 
   // L4 skill state
@@ -165,10 +176,10 @@ export function mount(container, options = {}) {
   let igahCooldown            = 0;      // FORTUNE.1.1.2.1
   let reversalOfFortuneCooldown = 0;    // FORTUNE.1.2.1.1
   let roundReversalActive     = false;  // armed this round
-  let luckyCharmCooldown      = 0;      // FORTUNE.1.2.2.1 (no-op until NPC MYSTIC skills)
-  let notTodayCooldown        = 0;      // MIND.1.2.2.1 (no-op until NPC TML)
-  let massiveBrainFartCooldown = 0;     // MYSTIC.1.2.1.1 (no-op)
-  let phantomMemoryCooldown   = 0;      // MYSTIC.1.2.2.1 (no-op)
+  let luckyCharmCooldown      = 0;      // FORTUNE.1.2.2.1 — reverses NPC tie-conversion
+  let notTodayCooldown        = 0;      // MIND.1.2.2.1 — 95% NPC TML auto-fail this round
+  let massiveBrainFartCooldown = 0;     // MYSTIC.1.2.1.1 — block + extend NPC cooldowns
+  let phantomMemoryCooldown   = 0;      // MYSTIC.1.2.2.1 — falsifies NPC MIND behavioral read this round
   let totalRecallUsed         = false;  // MIND.1.2.1.1 — once per match (extends Memory Wipe)
   let playerWinStreak        = computeStreak(tournamentData.currentMatch.roundHistory ?? []);
   // Tracks per-effect "already-awarded-at" thresholds for the current streak run.
@@ -197,11 +208,31 @@ export function mount(container, options = {}) {
 
   let npcMatchState = initNpcMatchState(npc);
 
+  // ── NPC world state (treeState + powerupInventory + throw history) ────────────
+  const worldData     = loadWorld(charId);
+  const npcWorld      = (worldData?.npcs?.[npc.id] ?? {});
+  const npcTreeState  = npcWorld.treeState ?? {};
+  // NPC powerup inventory is a mutable copy — FIFO, modified as NPCs activate powerups
+  let   npcPowerupInventory = Array.isArray(npcWorld.powerupInventory)
+    ? npcWorld.powerupInventory.map(p => ({ ...p }))
+    : [];
+
+  let npcSkillState = initNpcSkillState();
+  // Per-round: which NPC active skill was decided at throw-pick time
+  let npcActiveSkillThisRound = null;
+  // Per-match: Molasses flag — player's Molasses powerup penalises NPC active-skill cooldowns
+  let npcMolassesActive = false;
+
   // ── Skill state helpers ──────────────────────────────────────────────────────
 
   function hasSkill(nodeId) {
     const tree = nodeId.split('.')[0];
     return Boolean(progress.treeState?.[tree]?.[nodeId]);
+  }
+
+  function npcHasSkill(nodeId) {
+    const tree = nodeId.split('.')[0];
+    return npcTreeState[tree]?.[nodeId] === true;
   }
 
   // ── Inventory helpers ────────────────────────────────────────────────────────
@@ -700,17 +731,17 @@ export function mount(container, options = {}) {
           return { status: `NPR floor: +${pct}% applied this match`, muted: false };
         return { status: `${consecutiveLosses}/2 consecutive losses · triggers at 2`, muted: consecutiveLosses === 0 };
       }
-      case 'MIND.1.2.2':   return { status: '50% block vs NPC TML/ATML (awaiting NPC)', muted: true };
+      case 'MIND.1.2.2':   return { status: '50% block vs NPC TML/ATML', muted: false };
       case 'MIND.1.1.1.2': return { status: 'NPR: +15%/round instead of +10%', muted: false };
       case 'MIND.1.1.2.2': return { status: '+10% Adv · +5% Leg upgrade chance on drops', muted: false };
-      case 'MIND.1.2.1.2': return { status: 'NPC strategy locked 3 rounds after purge (awaiting NPC patterns)', muted: true };
-      case 'MIND.1.2.2.2': return { status: 'Upgrades Cooler: 50% → 75% block vs NPC TML (awaiting NPC)', muted: true };
+      case 'MIND.1.2.1.2': return { status: 'NPC strategy locked 3 rounds after purge', muted: false };
+      case 'MIND.1.2.2.2': return { status: 'Upgrades Cooler: 50% → 75% block vs NPC TML', muted: false };
       case 'MYSTIC.1':     return { status: '+15% tier upgrade · +5% Legendary on round-win drops', muted: false };
       case 'MYSTIC.1.1': {
         const pct = Math.round(TWEAK_REALITY_CHANCE * 100);
         return { status: `Ties: ${pct}% → player win`, muted: false };
       }
-      case 'MYSTIC.1.2':   return { status: 'Counters NPC active skills (awaiting NPC)', muted: true };
+      case 'MYSTIC.1.2':   return { status: 'Counters NPC active skills (Brain Fart, Bamboozle)', muted: false };
       case 'MYSTIC.1.1.2': {
         if (thirdTimesCharmUsed)
           return { status: '95% boost used this match', muted: false };
@@ -723,9 +754,9 @@ export function mount(container, options = {}) {
         return { status: `Ties: ${pct}% → player win (upgrades Tweak Reality)`, muted: false };
       }
       case 'MYSTIC.1.1.2.2': return { status: '50% chance: non-Basic drop yields 2 copies', muted: false };
-      case 'MYSTIC.1.2.2':   return { status: '50% block vs NPC NPR/Neural Scan (awaiting NPC)', muted: true };
-      case 'MYSTIC.1.2.1.2': return { status: '25% chance NPC powerup activates for you (awaiting NPC)', muted: true };
-      case 'MYSTIC.1.2.2.2': return { status: '90% block vs NPC NPR/Neural Scan (awaiting NPC)', muted: true };
+      case 'MYSTIC.1.2.2':   return { status: '50% block vs NPC accuracy reads', muted: false };
+      case 'MYSTIC.1.2.1.2': return { status: '25% chance NPC powerup activates for you instead', muted: false };
+      case 'MYSTIC.1.2.2.2': return { status: '90% block vs NPC accuracy reads', muted: false };
       case 'FORTUNE.1':      return { status: '2× powerup drop rate per round', muted: false };
       case 'FORTUNE.1.1.1': {
         const pct = Math.round(LUCKY_SOCKS_TML_CHANCE * 100);
@@ -748,8 +779,8 @@ export function mount(container, options = {}) {
         const pct = Math.round(LOOK_WHAT_I_FOUND_CHANCE * 100);
         return { status: `${pct}% extra drop chance on round loss`, muted: false };
       }
-      case 'FORTUNE.1.2.2':   return { status: '50% block vs NPC MYSTIC tie-altering (awaiting NPC)', muted: true };
-      case 'FORTUNE.1.2.2.2': return { status: '90% block vs NPC MYSTIC tie-altering (awaiting NPC)', muted: true };
+      case 'FORTUNE.1.2.2':   return { status: '50% block vs NPC tie-altering skills', muted: false };
+      case 'FORTUNE.1.2.2.2': return { status: '90% block vs NPC tie-altering skills', muted: false };
       default:
         return { status: SKILL_NODE_INFO[nodeId]?.effect ?? '', muted: false };
     }
@@ -1420,6 +1451,7 @@ export function mount(container, options = {}) {
   }
 
   // Decides the NPC's throw, applying any active randomization effects.
+  // Also resolves NPC active skill decision and MIND behavioral accuracy model.
   function computeNpcThrow() {
     // Round-scope: Dizzy Spell forces random NPC throw just this round.
     if (roundDizzySpell) return randomThrow();
@@ -1427,12 +1459,118 @@ export function mount(container, options = {}) {
     if (matchTabulaRasa) return randomThrow();
     // Hiccup Potion: every 3rd round (rounds 3, 6, 9...) the NPC throws random.
     if (matchHiccupPotion && roundNumber % 3 === 0) return randomThrow();
+
+    // NPC active skill decision (TML, Force Your Hand, etc.) — stored for handleReady
+    const roundCtx = { roundNumber, playerRoundsWon, npcRoundsWon: opponentRoundsWon };
+    npcActiveSkillThisRound = npcDecideActiveSkill(npcMatchState, npcHasSkill, roundCtx, npcSkillState);
+
+    // NPC powerup activation — happens at the same time as throw decision
+    tryNpcActivatePowerup();
+
     // Blank Slate (MIND.1.2): mask last 2 throws from history-reading strategies.
     const masked = hasSkill('MIND.1.2') ? 2 : 0;
-    return getNpcThrow(npcMatchState, lastRoundResult, masked);
+    let npcThrow = getNpcThrow(npcMatchState, lastRoundResult, masked, roundCtx);
+
+    // NPC MIND.1.1 behavioral equivalent: growing per-round accuracy override.
+    // Accumulates 10%/round (15% with Advanced NPR MIND.1.1.1.2), capped at 90%.
+    if (npcHasSkill('MIND.1.1')) {
+      const acc  = npcSkillState.nprAccumulation;
+      const rate = npcHasSkill('MIND.1.1.1.2') ? NPR_ADVANCED_ACCUMULATION : NPR_ACCUMULATION_PER_ROUND;
+      npcSkillState.nprAccumulation = Math.min(acc + rate, NPR_MAX);
+      if (acc > 0 && roll() < acc) {
+        // NPC NPR fires — reset accumulation (same rule as player NPR)
+        npcSkillState.nprAccumulation = 0.0;
+        // Player's Mind Shield / Mind Fortress may block the NPC's read
+        const shieldChance = hasSkill('MYSTIC.1.2.2.2') ? MIND_FORTRESS_CHANCE
+                           : hasSkill('MYSTIC.1.2.2')   ? MIND_SHIELD_CHANCE : 0;
+        if (shieldChance === 0 || roll() >= shieldChance) {
+          if (roundPhantomMemoryActive) {
+            // Phantom Memory (MYSTIC.1.2.2.1): NPC gets a read but it's false — random throw
+            npcThrow = randomThrow();
+          } else {
+            const best = mostFrequentThrow(npcMatchState.playerThrowHistory);
+            if (best) {
+              const COUNTER_MAP = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
+              npcThrow = COUNTER_MAP[best];
+            }
+          }
+        }
+      }
+    }
+
+    return npcThrow;
   }
 
   // NPR (MIND.1.1) — accumulate, roll for fire each round, populate roundStrategyRead.
+  // NPC powerup activation — FIFO, respects powerupStrategy and Padlock block.
+  function tryNpcActivatePowerup() {
+    if (!npcPowerupInventory.length) return;
+    if (npcSkillState.powerupBlockedRounds > 0) return;
+
+    const strategy = npc.powerupStrategy;
+    const npcWinning = opponentRoundsWon > playerRoundsWon;
+    const npcLosing  = playerRoundsWon > opponentRoundsWon;
+    const shouldActivate =
+      strategy === 'asap'    ? true :
+      strategy === 'chance'  ? roll() < NPC_POWERUP_CHANCE_RATE :
+      strategy === 'on_win'  ? npcWinning :
+      strategy === 'on_loss' ? npcLosing : false;
+
+    if (!shouldActivate) return;
+
+    const pu = npcPowerupInventory.shift(); // FIFO
+
+    // Bamboozle (MYSTIC.1.2.1.2): 25% chance NPC powerup activates for player instead
+    if (hasSkill('MYSTIC.1.2.1.2') && roll() < BAMBOOZLE_CHANCE) {
+      applyNpcPowerupForPlayer(pu);
+      return;
+    }
+
+    applyNpcPowerup(pu);
+  }
+
+  function applyNpcPowerup(pu) {
+    const name = pu.name;
+    switch (name) {
+      case 'Wish Upon a Star':
+      case "The Jessie Special":
+      case 'Fait Accompli':
+        roundForceLoss = true;
+        roundActivated.push(`Opponent used ${name}!`);
+        break;
+      case 'Fortune Cookie':
+      case 'Giant Fortune Cookie':
+      case 'Comically Large Fortune Cookie':
+        roundLockThrow = true;
+        pendingOpponentThrow = randomThrow();
+        roundActivated.push(`Opponent used ${name} — random throw!`);
+        break;
+      case 'Dizzy Spell':
+        // Dizzy Spell on NPC = NPC's own throw goes random — already randomised above;
+        // here treat it as NPC forcing player's throw random too? No — design is NPC throws random.
+        // This powerup in the player's hands forces NPC random. NPC using it doesn't have a clear effect
+        // on the player. We skip or treat as no-op (NPC uses their own version).
+        roundActivated.push(`Opponent used ${name}!`);
+        break;
+      default:
+        roundActivated.push(`Opponent used ${name}!`);
+    }
+  }
+
+  function applyNpcPowerupForPlayer(pu) {
+    roundActivated.push(`Bamboozle! ${pu.name} backfired — activating for you instead!`);
+    // Apply positive effect for player (mirror the NPC-facing logic but for player benefit)
+    switch (pu.name) {
+      case 'Wish Upon a Star':
+      case "The Jessie Special":
+      case 'Fait Accompli':
+        roundForceWin = true;
+        break;
+      default:
+        break;
+    }
+  }
+
   function processNPR() {
     if (!hasSkill('MIND.1.1')) return;
     const accRate = hasSkill('MIND.1.1.1.2') ? NPR_ADVANCED_ACCUMULATION : NPR_ACCUMULATION_PER_ROUND;
@@ -1703,11 +1841,18 @@ export function mount(container, options = {}) {
       }
 
       // ── MIND — research notes (info popup; full distribution stat tracking deferred) ─
-      case 'Research Notes':
+      case 'Research Notes': {
         consumePowerupByInstance(instanceId);
-        // Best-effort summary from current match's NPC throws.
-        roundActivated.push('Research Notes (consult inventory in v0.3+ for full data)');
+        const hist  = npcWorld.throwHistory ?? { rock: 0, paper: 0, scissors: 0 };
+        const total = hist.rock + hist.paper + hist.scissors;
+        const pct   = (n) => total > 0 ? Math.round(n / total * 100) : 0;
+        if (total < NPC_RESEARCH_NOTES_MIN_THROWS) {
+          roundActivated.push(`Research Notes: not enough data yet (${total} throws recorded)`);
+        } else {
+          roundActivated.push(`Research Notes: ROCK ${pct(hist.rock)}% · PAPER ${pct(hist.paper)}% · SCISSORS ${pct(hist.scissors)}%`);
+        }
         break;
+      }
 
       // ── MYSTIC — force-win ──────────────────────────────────────────────────
       case 'Fait Accompli':
@@ -1785,11 +1930,18 @@ export function mount(container, options = {}) {
         roundActivated.push('Cuckoo Clock');
         break;
 
-      // ── MYSTIC — no-op until later systems land ─────────────────────────────
-      case 'Molasses':           // +1 round on opponent active-skill cooldowns
-      case 'Padlock':            // blocks NPC powerup activation
+      // ── MYSTIC — Molasses: NPC active-skill cooldowns penalised each round ─────
+      case 'Molasses':
         consumePowerupByInstance(instanceId);
-        roundActivated.push(`${pu.name} (no-op until later systems)`);
+        npcMolassesActive = true;
+        roundActivated.push('Molasses: opponent skill cooldowns +1 per round for rest of match!');
+        break;
+
+      // ── MYSTIC — Padlock: block NPC powerup activation for 3 rounds ──────────
+      case 'Padlock':
+        consumePowerupByInstance(instanceId);
+        npcSkillState.powerupBlockedRounds = 3;
+        roundActivated.push('Padlock: opponent powerup activation blocked for 3 rounds!');
         break;
     }
 
@@ -1865,8 +2017,10 @@ export function mount(container, options = {}) {
     tournamentData.currentMatch.roundHistory      = [];
     saveTournament(charId, tournamentData);
 
-    // "Opponent remembers nothing" — reset NPC strategy state.
-    npcMatchState = initNpcMatchState(npc);
+    // "Opponent remembers nothing" — reset NPC strategy state and skill state.
+    npcMatchState     = initNpcMatchState(npc);
+    npcSkillState     = initNpcSkillState();
+    npcMolassesActive = false;
 
     // Drop any in-progress round selection, return to picking.
     resetRoundScopeState();
@@ -1978,8 +2132,68 @@ export function mount(container, options = {}) {
       currentThrow !== roundProteinShakeOriginalThrow &&
       result === 'player';
 
-    if (roundForceWin)       result = 'player';
-    else if (roundForceLoss) result = 'opponent';
+    // ── NPC TML / ATML resolution ────────────────────────────────────────────────
+    // Resolved before player force-overrides; player TML takes final precedence in conflict.
+    let npcForceWinFromTml  = false;
+    let npcForceLossFromTml = false;
+
+    if (npcActiveSkillThisRound === 'TML' || npcActiveSkillThisRound === 'ATML') {
+      const brainFartBlocked = roundBrainFartActive;
+      const notTodayBlocked  = roundNotTodayActive && roll() < NOT_TODAY_CHANCE;
+      const coolerChance     = hasSkill('MIND.1.2.2.2') ? THE_FREEZER_CHANCE
+                             : hasSkill('MIND.1.2.2')   ? THE_COOLER_CHANCE : 0;
+      const coolerBlocked    = coolerChance > 0 && roll() < coolerChance;
+
+      if (brainFartBlocked || notTodayBlocked || coolerBlocked) {
+        // NPC TML blocked — NPC loses the round
+        npcForceWinFromTml = true;
+        const blocker = brainFartBlocked ? 'Brain Fart'
+          : notTodayBlocked ? 'Not Today!'
+          : hasSkill('MIND.1.2.2.2') ? 'The Freezer' : 'The Cooler';
+        roundActivated.push(`${blocker} blocked opponent TML — opponent loses!`);
+      } else {
+        const tmlChance = npcHasSkill('FORTUNE.1.1.1.2') ? FINGERS_CROSSED_TML_CHANCE
+                        : npcHasSkill('FORTUNE.1.1.1')   ? LUCKY_SOCKS_TML_CHANCE
+                        : TML_SUCCESS_CHANCE;
+        const dueBoost  = npcHasSkill('FORTUNE.1.1.2') && !npcSkillState.dueForAWinUsed
+                          && npcSkillState.dueForAWinFails >= 2;
+        const chance    = dueBoost ? DUE_FOR_A_WIN_BOOST : tmlChance;
+        if (roll() < chance) {
+          npcForceLossFromTml = true; // NPC wins
+          if (dueBoost) npcSkillState.dueForAWinUsed = true;
+          npcSkillState.dueForAWinFails = 0;
+          roundActivated.push(`Opponent Trust My Luck: succeeded!`);
+        } else {
+          npcForceWinFromTml = true; // NPC TML fail → player wins
+          npcSkillState.dueForAWinFails++;
+          roundActivated.push(`Opponent Trust My Luck: failed!`);
+        }
+      }
+      npcSkillState.tmlCooldown = npcHasSkill('FORTUNE.1.1.1.1')
+        ? ATML_COOLDOWN_ROUNDS : TML_COOLDOWN_ROUNDS;
+    }
+
+    // ── Force override application with TML conflict resolution ─────────────────
+    // If both player TML and NPC TML fire for a "win" simultaneously, they cancel.
+    if (roundForceWin && npcForceLossFromTml) {
+      // Both claim a win — TML clash, natural result stands
+      roundActivated.push('TML clash — both cancelled!');
+    } else if (roundForceWin || npcForceWinFromTml) {
+      result = 'player';
+    } else if (roundForceLoss || npcForceLossFromTml) {
+      result = 'opponent';
+    }
+
+    // ── NPC Refuse to Lose equivalent (MYSTIC.1.1.2.1) ──────────────────────────
+    // When NPC is about to lose, 90% chance converts to immune tie.
+    if (result === 'player' && npcActiveSkillThisRound === 'refuseToLose') {
+      if (roll() < REFUSE_TO_LOSE_CHANCE) {
+        result      = 'tie';
+        tieIsImmune = true; // immune — player's tie-altering skills cannot convert it
+        roundActivated.push("Opponent: Refuse to Lose!");
+      }
+      npcSkillState.refuseToLoseCooldown = REFUSE_TO_LOSE_COOLDOWN_ROUNDS;
+    }
 
     // Refuse to Lose (MYSTIC.1.1.2.1): active — convert loss → immune tie (90%).
     if (result === 'opponent' && roundRefuseToLoseActive) {
@@ -1987,6 +2201,34 @@ export function mount(container, options = {}) {
         result      = 'tie';
         tieIsImmune = true; // immune tie: no tie-altering skills can touch it
         roundActivated.push('Refuse to Lose!');
+      }
+    }
+
+    if (result === 'tie' && !tieIsImmune) {
+      // ── NPC Force Your Hand resolution ────────────────────────────────────────
+      // NPC Force Your Hand / Twist Your Arm: 90% tie → NPC win.
+      // Blocked by Oblivious (50%) / Totes Oblivious (90%) and Brain Fart.
+      if (npcActiveSkillThisRound === 'forceYourHand' || npcActiveSkillThisRound === 'twistYourArm') {
+        const obliviousChance = hasSkill('FORTUNE.1.2.2.2') ? TOTES_OBLIVIOUS_CHANCE
+                              : hasSkill('FORTUNE.1.2.2')   ? OBLIVIOUS_CHANCE : 0;
+        const obliviousBlocked = obliviousChance > 0 && roll() < obliviousChance;
+        const brainFartBlocked = roundBrainFartActive;
+        if (obliviousBlocked || brainFartBlocked) {
+          const blocker = brainFartBlocked ? 'Brain Fart' : hasSkill('FORTUNE.1.2.2.2') ? 'Totes Oblivious' : 'Oblivious';
+          roundActivated.push(`${blocker} blocked opponent Force Your Hand!`);
+          npcSkillState.forceYourHandCooldown = npcHasSkill('MYSTIC.1.1.1.1')
+            ? TWIST_YOUR_ARM_COOLDOWN_ROUNDS : FORCE_YOUR_HAND_COOLDOWN_ROUNDS;
+        } else if (roll() < FORCE_YOUR_HAND_CHANCE) {
+          result = 'opponent'; // NPC converts tie to NPC win
+          roundActivated.push(`Opponent Force Your Hand!`);
+          npcSkillState.forceYourHandCooldown = npcHasSkill('MYSTIC.1.1.1.1')
+            ? TWIST_YOUR_ARM_COOLDOWN_ROUNDS : FORCE_YOUR_HAND_COOLDOWN_ROUNDS;
+          // NPC used active tie-conversion — passives do not roll for this tie
+        } else {
+          npcSkillState.forceYourHandCooldown = npcHasSkill('MYSTIC.1.1.1.1')
+            ? TWIST_YOUR_ARM_COOLDOWN_ROUNDS : FORCE_YOUR_HAND_COOLDOWN_ROUNDS;
+          roundActivated.push(`Opponent Force Your Hand: missed!`);
+        }
       }
     }
 
@@ -2026,6 +2268,44 @@ export function mount(container, options = {}) {
         } else {
           thirdTimesCharmFails++;
         }
+      }
+    }
+
+    // ── NPC passive tie conversion (Tweak Reality / Alter Reality equivalent) ───
+    // Only fires if the tie was not converted by the player above.
+    if (result === 'tie' && !tieIsImmune
+        && (npcHasSkill('MYSTIC.1.1') || npcHasSkill('MYSTIC.1.1.1.2'))
+        && npcActiveSkillThisRound !== 'forceYourHand' && npcActiveSkillThisRound !== 'twistYourArm') {
+      const npcBaseChance  = npcHasSkill('MYSTIC.1.1.1.2') ? ALTER_REALITY_CHANCE : TWEAK_REALITY_CHANCE;
+      let npcConvertChance = npcBaseChance;
+      if (npcHasSkill('MYSTIC.1.1.2') && !npcSkillState.thirdTimesCharmUsed
+          && npcSkillState.thirdTimesCharmFails >= 2) {
+        npcConvertChance = THIRD_TIMES_CHARM_BOOST;
+        npcSkillState.thirdTimesCharmUsed = true;
+      }
+      // Oblivious (FORTUNE.1.2.2) / Totes Oblivious (FORTUNE.1.2.2.2) blocks NPC tie-altering
+      const obliviousChance   = hasSkill('FORTUNE.1.2.2.2') ? TOTES_OBLIVIOUS_CHANCE
+                              : hasSkill('FORTUNE.1.2.2')   ? OBLIVIOUS_CHANCE : 0;
+      const obliviousBlocked  = obliviousChance > 0 && roll() < obliviousChance;
+      if (obliviousBlocked) {
+        roundActivated.push(`${hasSkill('FORTUNE.1.2.2.2') ? 'Totes Oblivious' : 'Oblivious'} blocked opponent tie-conversion!`);
+        npcSkillState.thirdTimesCharmFails++;
+      } else if (roll() < npcConvertChance) {
+        // Lucky Charm (FORTUNE.1.2.2.1): if armed and NPC tie-conversion fires, redirect to player win
+        if (roundLuckyCharmActive && roll() < NPC_LUCKY_CHARM_BLOCK_CHANCE) {
+          result = 'player';
+          roundActivated.push("Lucky Charm! Opponent reality-tweak reversed to your favor!");
+        } else {
+          result = 'opponent';
+          if (npcConvertChance === THIRD_TIMES_CHARM_BOOST) {
+            roundActivated.push("Opponent Third Time's the Charm!");
+          } else {
+            roundActivated.push(npcHasSkill('MYSTIC.1.1.1.2') ? 'Opponent altered reality!' : 'Opponent tweaked reality!');
+          }
+        }
+        npcSkillState.thirdTimesCharmFails = 0;
+      } else {
+        npcSkillState.thirdTimesCharmFails++;
       }
     }
 
@@ -2302,6 +2582,17 @@ export function mount(container, options = {}) {
     if (notTodayCooldown          > 0) notTodayCooldown--;
     if (massiveBrainFartCooldown  > 0) massiveBrainFartCooldown--;
     if (phantomMemoryCooldown     > 0) phantomMemoryCooldown--;
+    // NPC active-skill cooldown decrements
+    if (npcSkillState.tmlCooldown           > 0) npcSkillState.tmlCooldown--;
+    if (npcSkillState.forceYourHandCooldown > 0) npcSkillState.forceYourHandCooldown--;
+    if (npcSkillState.refuseToLoseCooldown  > 0) npcSkillState.refuseToLoseCooldown--;
+    if (npcSkillState.powerupBlockedRounds  > 0) npcSkillState.powerupBlockedRounds--;
+    // Molasses: +1 round penalty on all NPC active-skill cooldowns
+    if (npcMolassesActive) {
+      npcSkillState.tmlCooldown++;
+      npcSkillState.forceYourHandCooldown++;
+      npcSkillState.refuseToLoseCooldown++;
+    }
     resetRoundScopeState();
     screenState = 'picking';
     checkT08ThenRender();
@@ -2348,6 +2639,11 @@ export function mount(container, options = {}) {
     roundSchrodingerOriginalThrow  = null;
     roundProteinShakeOriginalThrow = null;
     proteinShakeBonus              = false;
+    roundNotTodayActive            = false;
+    roundBrainFartActive           = false;
+    roundLuckyCharmActive          = false;
+    roundPhantomMemoryActive       = false;
+    npcActiveSkillThisRound        = null;
   }
 
   // ── Active skill: Trust My Luck (FORTUNE.1.1) ────────────────────────────────
@@ -2477,7 +2773,7 @@ export function mount(container, options = {}) {
     render();
   }
 
-  // ── Active skill: Brain Fart (MYSTIC.1.2.1) — no-op until NPC active skills ────
+  // ── Active skill: Brain Fart (MYSTIC.1.2.1) ──────────────────────────────────
 
   function handleBrainFart() {
     if (!hasSkill('MYSTIC.1.2.1')) return;
@@ -2487,11 +2783,12 @@ export function mount(container, options = {}) {
 
     brainFartCooldown    = BRAIN_FART_COOLDOWN_ROUNDS;
     roundActiveSkillUsed = true;
-    roundActivated.push('Brain Fart (no-op until NPC uses active skills)');
+    roundBrainFartActive = true;
+    roundActivated.push('Brain Fart — opponent active skill blocked this round!');
     render();
   }
 
-  // ── Active skill: Massive Brain Fart (MYSTIC.1.2.1.1) — no-op ───────────────
+  // ── Active skill: Massive Brain Fart (MYSTIC.1.2.1.1) ───────────────────────
 
   function handleMassiveBrainFart() {
     if (!hasSkill('MYSTIC.1.2.1.1')) return;
@@ -2501,7 +2798,12 @@ export function mount(container, options = {}) {
 
     massiveBrainFartCooldown = MASSIVE_BRAIN_FART_COOLDOWN_ROUNDS;
     roundActiveSkillUsed     = true;
-    roundActivated.push('Massive Brain Fart (no-op until NPC uses active skills)');
+    roundBrainFartActive     = true;
+    // Nullify NPC active skill + extend all NPC active-skill cooldowns +3
+    npcSkillState.tmlCooldown           += 3;
+    npcSkillState.forceYourHandCooldown += 3;
+    npcSkillState.refuseToLoseCooldown  += 3;
+    roundActivated.push('Massive Brain Fart — opponent active skill blocked + cooldowns extended!');
     render();
   }
 
@@ -2584,7 +2886,7 @@ export function mount(container, options = {}) {
     render();
   }
 
-  // ── Active skill: Lucky Charm (FORTUNE.1.2.2.1) — no-op until NPC MYSTIC ────
+  // ── Active skill: Lucky Charm (FORTUNE.1.2.2.1) ──────────────────────────────
 
   function handleLuckyCharm() {
     if (!hasSkill('FORTUNE.1.2.2.1')) return;
@@ -2592,13 +2894,14 @@ export function mount(container, options = {}) {
     if (roundActiveSkillUsed)         return;
     if (screenState !== 'picking' && screenState !== 'gut_check') return;
 
-    luckyCharmCooldown   = LUCKY_CHARM_COOLDOWN_ROUNDS;
-    roundActiveSkillUsed = true;
-    roundActivated.push('Lucky Charm (no-op until NPC uses MYSTIC tie-altering)');
+    luckyCharmCooldown    = LUCKY_CHARM_COOLDOWN_ROUNDS;
+    roundActiveSkillUsed  = true;
+    roundLuckyCharmActive = true;
+    roundActivated.push('Lucky Charm armed — opponent tie-conversion will backfire!');
     render();
   }
 
-  // ── Active skill: Not Today! (MIND.1.2.2.1) — no-op until NPC TML ───────────
+  // ── Active skill: Not Today! (MIND.1.2.2.1) ──────────────────────────────────
 
   function handleNotToday() {
     if (!hasSkill('MIND.1.2.2.1')) return;
@@ -2608,11 +2911,12 @@ export function mount(container, options = {}) {
 
     notTodayCooldown     = NOT_TODAY_COOLDOWN_ROUNDS;
     roundActiveSkillUsed = true;
-    roundActivated.push('Not Today! (no-op until NPC uses TML)');
+    roundNotTodayActive  = true;
+    roundActivated.push('Not Today! — 95% chance opponent TML fails this round!');
     render();
   }
 
-  // ── Active skill: Phantom Memory (MYSTIC.1.2.2.1) — no-op ───────────────────
+  // ── Active skill: Phantom Memory (MYSTIC.1.2.2.1) ───────────────────────────
 
   function handlePhantomMemory() {
     if (!hasSkill('MYSTIC.1.2.2.1')) return;
@@ -2620,9 +2924,10 @@ export function mount(container, options = {}) {
     if (roundActiveSkillUsed)        return;
     if (screenState !== 'picking' && screenState !== 'gut_check') return;
 
-    phantomMemoryCooldown = PHANTOM_MEMORY_COOLDOWN_ROUNDS;
-    roundActiveSkillUsed  = true;
-    roundActivated.push('Phantom Memory (no-op until NPC uses Neural Scan)');
+    phantomMemoryCooldown    = PHANTOM_MEMORY_COOLDOWN_ROUNDS;
+    roundActiveSkillUsed     = true;
+    roundPhantomMemoryActive = true;
+    roundActivated.push('Phantom Memory — opponent read falsified this round');
     render();
   }
 
@@ -2680,6 +2985,8 @@ export function mount(container, options = {}) {
       }
     }
 
+    // Capture round history before clearing currentMatch
+    const finishedRoundHistory = tournamentData.currentMatch?.roundHistory ?? [];
     tournamentData.currentMatch = null;
     saveTournament(charId, tournamentData);
 
@@ -2689,10 +2996,22 @@ export function mount(container, options = {}) {
     progress.peakElo    = Math.max(progress.peakElo, newElo);
 
     // Refresh world rank after every match using current stored NPC ELOs
-    const worldData   = loadWorld(charId);
-    const newRank     = computeMidSeasonRank(newElo, worldData, getAllNpcs());
+    const freshWorldData = loadWorld(charId);
+    const newRank        = computeMidSeasonRank(newElo, freshWorldData, getAllNpcs());
     progress.worldRank     = newRank;
     progress.peakWorldRank = Math.min(progress.peakWorldRank ?? (TOTAL_PLAYERS + 1), newRank);
+
+    // Persist NPC throw history for Research Notes
+    if (freshWorldData?.npcs?.[npc.id]) {
+      const npcEntry = freshWorldData.npcs[npc.id];
+      if (!npcEntry.throwHistory) npcEntry.throwHistory = { rock: 0, paper: 0, scissors: 0 };
+      for (const r of finishedRoundHistory) {
+        if (r.opponentThrow && npcEntry.throwHistory[r.opponentThrow] !== undefined) {
+          npcEntry.throwHistory[r.opponentThrow]++;
+        }
+      }
+      saveWorld(charId, freshWorldData);
+    }
 
     // Neural Scan (MIND.1.1.1 / MIND.1.1.1.1): increment cross-match cooldown counter after each match.
     if (hasSkill('MIND.1.1.1') || hasSkill('MIND.1.1.1.1')) {
