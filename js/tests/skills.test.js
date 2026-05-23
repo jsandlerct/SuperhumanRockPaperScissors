@@ -629,17 +629,30 @@ describe("Pandora's Box (FORTUNE powerup — cooldown reset)", () => {
 
 // ── Consolation Prize (FORTUNE.1.2) ──────────────────────────────────────────
 
+// Mirror of match.js: on a player loss, roll() < CONSOLATION_PRIZE_CHANCE → drop awarded.
+function consolationPrizeFires() {
+  return roll() < CONSOLATION_PRIZE_CHANCE;
+}
+
 describe('Consolation Prize (FORTUNE.1.2)', () => {
   test('drop chance is 30%', () => {
     assertEqual(CONSOLATION_PRIZE_CHANCE, 0.30);
   });
 
   test('fires when roll < 0.30', () => {
-    assert(0.29 < CONSOLATION_PRIZE_CHANCE, 'roll 0.29 triggers drop');
+    assert(withRoll(0.29, consolationPrizeFires), 'roll 0.29 < 0.30 → drop fires');
   });
 
-  test('does not fire when roll >= 0.30', () => {
-    assert(!(0.30 < CONSOLATION_PRIZE_CHANCE), 'roll 0.30 does not trigger drop');
+  test('does not fire at boundary (roll >= 0.30)', () => {
+    assert(!withRoll(0.30, consolationPrizeFires), 'roll 0.30 >= 0.30 → no drop');
+  });
+
+  test('always fires on roll 0.00', () => {
+    assert(withRoll(0, consolationPrizeFires), 'roll 0.00 → always fires');
+  });
+
+  test('never fires on roll 0.99', () => {
+    assert(!withRoll(0.99, consolationPrizeFires), 'roll 0.99 → never fires');
   });
 });
 

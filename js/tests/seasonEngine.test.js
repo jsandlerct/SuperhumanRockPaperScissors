@@ -6,8 +6,6 @@ import {
 } from '../systems/seasonEngine.js';
 import {
   MILESTONE_PERSONAL_BEST_MSG,
-  MILESTONE_FIRST_CHAMP_MSG,
-  MILESTONE_THREE_TIME_CHAMP_MSG,
 } from '../constants.js';
 
 // ── nodeLevel ─────────────────────────────────────────────────────────────────
@@ -244,6 +242,8 @@ describe('initNpcWorldState', () => {
         assert(tree[parent] === true, `parent ${parent} of ${nodeId} must be purchased`);
       }
     }
+    // Verify that spending actually happened — T3 budget (35) must have been partially spent
+    assert(npc3.unspentSkillPoints < 35, 'T3 NPC must have spent at least some of its 35-pt budget');
   });
 
   test('each NPC has an empty powerupInventory', () => {
@@ -320,5 +320,40 @@ describe('detectRankingMilestones', () => {
     const { newAchieved } = detectRankingMilestones(10, 50, original);
     assertEqual(original.length, 1, 'original array must not be mutated');
     assert(newAchieved.length > 1, 'newAchieved must contain new entries');
+  });
+});
+
+// ── Championship milestone constants ──────────────────────────────────────────
+// Championship milestones (first_champ, three_time_champ) are detected in
+// summary.js (DOM-coupled) and cannot be unit-tested here. These sanity checks
+// ensure the constants exist, are non-empty strings, and are distinct — catching
+// accidental deletion or collision during refactors.
+
+describe('championship milestone constants', () => {
+  // Import here so a missing export is a test failure, not a dead import at file top.
+  let FIRST_CHAMP, THREE_TIME_CHAMP;
+
+  test('MILESTONE_FIRST_CHAMP_MSG is a non-empty string', async () => {
+    const m = await import('../constants.js');
+    FIRST_CHAMP = m.MILESTONE_FIRST_CHAMP_MSG;
+    assert(typeof FIRST_CHAMP === 'string' && FIRST_CHAMP.length > 0,
+      'MILESTONE_FIRST_CHAMP_MSG must be a non-empty string');
+  });
+
+  test('MILESTONE_THREE_TIME_CHAMP_MSG is a non-empty string', async () => {
+    const m = await import('../constants.js');
+    THREE_TIME_CHAMP = m.MILESTONE_THREE_TIME_CHAMP_MSG;
+    assert(typeof THREE_TIME_CHAMP === 'string' && THREE_TIME_CHAMP.length > 0,
+      'MILESTONE_THREE_TIME_CHAMP_MSG must be a non-empty string');
+  });
+
+  test('championship messages are distinct from each other and from personal best', async () => {
+    const m = await import('../constants.js');
+    const first     = m.MILESTONE_FIRST_CHAMP_MSG;
+    const thrice    = m.MILESTONE_THREE_TIME_CHAMP_MSG;
+    const personal  = m.MILESTONE_PERSONAL_BEST_MSG;
+    assert(first !== thrice,   'first_champ and three_time_champ messages must differ');
+    assert(first !== personal, 'first_champ must differ from personal best message');
+    assert(thrice !== personal,'three_time_champ must differ from personal best message');
   });
 });

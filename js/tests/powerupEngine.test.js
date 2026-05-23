@@ -695,11 +695,11 @@ describe('POWERUP_CATALOG completeness', () => {
     assert(POWERUP_IMPLEMENTED.has('Jonesing to Help'), 'Jonesing to Help must be implemented');
   });
 
-  test('POWERUP_NO_OP contains only Molasses and Padlock', () => {
-    assertEqual(POWERUP_NO_OP.size, 2, 'exactly 2 no-op powerups');
-    assert(POWERUP_NO_OP.has('Molasses'), 'Molasses must be no-op');
-    assert(POWERUP_NO_OP.has('Padlock'),  'Padlock must be no-op');
-    assert(!POWERUP_NO_OP.has('Clockwork Orange'), 'Clockwork Orange must NOT be no-op');
+  test('POWERUP_NO_OP is empty — all powerups fully implemented as of v1.0', () => {
+    assertEqual(POWERUP_NO_OP.size, 0, 'all former no-ops were implemented in v1.0 NPC system');
+    assert(!POWERUP_NO_OP.has('Molasses'),        'Molasses is now fully implemented');
+    assert(!POWERUP_NO_OP.has('Padlock'),         'Padlock is now fully implemented');
+    assert(!POWERUP_NO_OP.has('Clockwork Orange'),'Clockwork Orange is now fully implemented');
   });
 
   test('POWERUP_NO_OP is a subset of POWERUP_IMPLEMENTED', () => {
