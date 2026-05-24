@@ -35,7 +35,7 @@ export function mount(container, options = {}) {
         class="snes-small snes-muted"
         style="margin-top:14px;text-align:center;font-size:6px;line-height:1.8;letter-spacing:1px;max-width:560px"
       >
-        GAME DESIGN BY JEFF SANDLER&nbsp;&nbsp;·&nbsp;&nbsp;MUSIC &amp; SFX BY RAYAN RAMESH&nbsp;&nbsp;·&nbsp;&nbsp;CODING BY CLAUDE
+        GAME DESIGN BY JEFF SANDLER&nbsp;&nbsp;·&nbsp;&nbsp;MUSIC BY RAYAN RAMESH&nbsp;&nbsp;·&nbsp;&nbsp;CODING BY CLAUDE
       </p>
 
       <p

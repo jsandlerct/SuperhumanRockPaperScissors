@@ -5,6 +5,7 @@ import {
   loadTrophies, saveTrophies,
 } from '../storage.js';
 import { showJessieDialogue, jessieInlinePanel, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
+import { stopBattleTheme } from '../ui/audio.js';
 
 // Returns names of all L2+ nodes currently purchased (these will be refunded).
 function getRefundedNodeNames(treeState) {
@@ -48,6 +49,8 @@ function clearTreeState(treeState) {
 }
 
 export function mount(container, options = {}) {
+  stopBattleTheme();
+
   const session  = loadSession();
   const charId   = options.charId ?? session?.activeCharId;
   const identity = loadIdentity(charId);

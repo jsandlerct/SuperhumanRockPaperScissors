@@ -44,10 +44,11 @@ import {
 } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
-  loadStats, saveStats, loadTournament, saveTournament, loadWorld,
+  loadStats, saveStats, loadTournament, saveTournament, loadWorld, saveWorld,
   loadTrophies, saveTrophies,
 } from '../storage.js';
 import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
+import { playBattleTheme, playWin, playLose, playThrowWin } from '../ui/audio.js';
 
 const THROW_NAME = { rock: 'ROCK', paper: 'PAPER', scissors: 'SCISSORS' };
 
@@ -73,6 +74,8 @@ function computeStreak(history) {
 }
 
 export function mount(container, options = {}) {
+  playBattleTheme();
+
   const session  = loadSession();
   const charId   = options.charId ?? session?.activeCharId;
   const identity = loadIdentity(charId);
@@ -2357,6 +2360,7 @@ export function mount(container, options = {}) {
 
     runCountdownOverlay(() => {
       screenState = 'revealing';
+      if (lastRoundResult === 'player') playThrowWin(lastPlayerThrow);
 
       // T-07: first ever round resolution — auto-dismisses ~3s, outcome-specific line
       const _trophiesT07 = loadTrophies(charId);
@@ -2398,6 +2402,7 @@ export function mount(container, options = {}) {
       tournamentData.currentMatch.playerRoundsWon = playerRoundsWon;
       saveTournament(charId, tournamentData);
       screenState = 'match_over';
+      playWin();
       render();
       return;
     }
@@ -2560,6 +2565,7 @@ export function mount(container, options = {}) {
     if (pendingMatchOver) {
       pendingMatchOver = false;
       screenState = 'match_over';
+      if (playerRoundsWon >= roundsToWin) playWin(); else playLose();
       render();
       return;
     }

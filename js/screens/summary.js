@@ -16,6 +16,7 @@ import {
 } from '../storage.js';
 import { runSeasonSimulation, detectRankingMilestones } from '../systems/seasonEngine.js';
 import { showJessieDialogue } from '../ui/jessieDialogue.js';
+import { stopBattleTheme } from '../ui/audio.js';
 
 // ── Outcome detection ─────────────────────────────────────────────────────────
 
@@ -60,6 +61,8 @@ function getOtherFinalistId(data) {
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 export function mount(container, options = {}) {
+  stopBattleTheme();
+
   const session        = loadSession();
   const charId         = options.charId ?? session?.activeCharId;
   const identity       = loadIdentity(charId);

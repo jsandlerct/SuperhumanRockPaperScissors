@@ -9,6 +9,7 @@ import {
   loadTrophies, saveTrophies,
 } from '../storage.js';
 import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
+import { playBattleTheme } from '../ui/audio.js';
 
 // ── NPC helpers ───────────────────────────────────────────────────────────────
 
@@ -392,6 +393,8 @@ function animateConcurrentResults() {
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 export function mount(container, options = {}) {
+  playBattleTheme();
+
   const session         = loadSession();
   const charId          = options.charId ?? session?.activeCharId;
   const identity        = loadIdentity(charId);

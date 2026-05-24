@@ -4,6 +4,7 @@ import {
   loadStats, loadTrophies, loadAccountSettings, saveAccountSettings,
 } from '../storage.js';
 import { openFullScreenTree } from './skillTreePanel.js';
+import { setMusicEnabled, setSfxEnabled } from './audio.js';
 
 // ── Screens where the HUD should never appear ─────────────────────────────────
 const HIDDEN_ON = new Set(['intro', 'title', 'login', 'characterSelect', 'create']);
@@ -257,12 +258,14 @@ function openSettingsPopup(username) {
     settings.music = !settings.music;
     updateToggle(e.currentTarget, settings.music);
     saveAccountSettings(username, settings);
+    setMusicEnabled(settings.music);
   });
 
   document.getElementById('toggle-sfx').addEventListener('click', e => {
     settings.sfx = !settings.sfx;
     updateToggle(e.currentTarget, settings.sfx);
     saveAccountSettings(username, settings);
+    setSfxEnabled(settings.sfx);
   });
 
   document.getElementById('btn-settings-close').addEventListener('click', () => overlay.remove());

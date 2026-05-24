@@ -12,8 +12,11 @@ import {
   loadTrophies, saveTrophies,
 } from '../storage.js';
 import { showJessieDialogue, tutorialBeatShown, markTutorialBeat } from '../ui/jessieDialogue.js';
+import { stopBattleTheme } from '../ui/audio.js';
 
 export function mount(container, options = {}) {
+  stopBattleTheme();
+
   const session   = loadSession();
   const charId    = options.charId ?? session?.activeCharId;
   const midSeason = options.midSeason ?? false;   // true = between tournaments, add-only
