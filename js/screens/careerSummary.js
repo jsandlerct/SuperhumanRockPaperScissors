@@ -33,6 +33,15 @@ export function mount(container, options = {}) {
   const stats    = loadStats(charId);
   const trophies = loadTrophies(charId);
 
+  const isFinalScreen = progress?.phase === 'complete';
+  const hofStatus     = trophies?.hofStatus ?? false;
+
+  // Edge-case guard: phase is complete but hofStatus is null
+  if (isFinalScreen && trophies && trophies.hofStatus === null) {
+    console.error('phase is complete but hofStatus is null — defaulting to false');
+    trophies.hofStatus = false;
+  }
+
   const name       = identity?.name?.toUpperCase() ?? '???';
   const portraitId = identity?.portraitId ?? 'male_1';
   const elo        = progress?.currentElo ?? 0;
@@ -76,8 +85,10 @@ export function mount(container, options = {}) {
       <div class="content-card" style="gap:20px">
 
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <button class="snes-btn" id="btn-back" style="font-size:7px;padding:8px 10px">← BACK</button>
-          <p class="snes-title" style="flex:1">CAREER</p>
+          ${isFinalScreen
+            ? `<p class="snes-title" style="flex:1">CAREER</p>`
+            : `<button class="snes-btn" id="btn-back" style="font-size:7px;padding:8px 10px">← BACK</button>
+               <p class="snes-title" style="flex:1">CAREER</p>`}
           <button class="snes-btn" id="btn-how-to-play" style="font-size:7px;padding:8px 10px">? HOW TO PLAY</button>
           <button class="snes-btn" id="btn-settings" style="font-size:7px;padding:8px 10px">⚙ SETTINGS</button>
         </div>
@@ -101,6 +112,27 @@ export function mount(container, options = {}) {
             </p>
           </div>
         </div>
+
+        <!-- HOF gold box — shown near the top for any inducted player -->
+        ${hofStatus ? `
+        <div style="
+          border:3px solid #f8d020;
+          background:linear-gradient(135deg,#1a1a0a 0%,#2a2a14 100%);
+          padding:18px 16px;
+          display:flex;flex-direction:column;align-items:center;gap:10px;
+          position:relative;overflow:hidden;
+          box-shadow:0 0 0 1px rgba(248,208,32,0.2),inset 0 0 24px rgba(248,208,32,0.06);
+        ">
+          <p class="snes-small" style="color:#f8d020;font-size:6px;letter-spacing:0.25em;text-shadow:0 0 8px rgba(248,208,32,0.5)">
+            ★ HALL OF FAME ★
+          </p>
+          <p class="snes-label" style="color:#f8d020;text-align:center;font-size:clamp(9px,2.5vw,13px);letter-spacing:0.05em;text-shadow:0 0 12px rgba(248,208,32,0.4)">
+            ${name}
+          </p>
+          <div style="width:60%;height:1px;background:linear-gradient(90deg,transparent,#f8d020,transparent)"></div>
+          <p class="snes-small snes-muted" style="font-size:5px;letter-spacing:0.2em">SEASON 10 INDUCTEE</p>
+        </div>
+        ` : ''}
 
         <!-- Career record -->
         <div class="snes-panel" style="display:flex;flex-direction:column;gap:10px">
@@ -169,6 +201,28 @@ export function mount(container, options = {}) {
         <!-- Trophy case -->
         <div class="snes-panel" style="display:flex;flex-direction:column;gap:16px">
           <p class="snes-small snes-muted">TROPHY CASE</p>
+
+          ${hofStatus ? `
+          <!-- HOF plaque — gold box in trophy case for inductees -->
+          <div style="
+            border:3px solid #f8d020;
+            background:linear-gradient(135deg,#1a1a0a 0%,#2a2a14 100%);
+            padding:18px 16px;
+            display:flex;flex-direction:column;align-items:center;gap:10px;
+            position:relative;overflow:hidden;
+            box-shadow:0 0 0 1px rgba(248,208,32,0.2),inset 0 0 24px rgba(248,208,32,0.06);
+          ">
+            <p class="snes-small" style="color:#f8d020;font-size:6px;letter-spacing:0.25em;text-shadow:0 0 8px rgba(248,208,32,0.5)">
+              ★ HALL OF FAME ★
+            </p>
+            <p class="snes-label" style="color:#f8d020;text-align:center;font-size:clamp(9px,2.5vw,13px);letter-spacing:0.05em;text-shadow:0 0 12px rgba(248,208,32,0.4)">
+              ${name}
+            </p>
+            <div style="width:60%;height:1px;background:linear-gradient(90deg,transparent,#f8d020,transparent)"></div>
+            <p class="snes-small snes-muted" style="font-size:5px;letter-spacing:0.2em">SEASON 10 INDUCTEE</p>
+          </div>
+          ` : ''}
+
           ${trophySeasons.length === 0
             ? `<p class="snes-small snes-muted" style="text-align:center">NO TROPHIES YET</p>`
             : trophySeasons.map(season => `
@@ -186,6 +240,18 @@ export function mount(container, options = {}) {
               </div>
             `).join('')}
         </div>
+
+        <!-- Final career buttons (Season 10 complete path) -->
+        ${isFinalScreen ? `
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <button class="snes-btn snes-btn-yellow" id="btn-play-again" style="width:100%">
+            ★ PLAY AGAIN (NEW CHARACTER)
+          </button>
+          <button class="snes-btn" id="btn-return-menu" style="width:100%">
+            ← RETURN TO MENU
+          </button>
+        </div>
+        ` : ''}
 
       </div>
     </div>
@@ -259,7 +325,15 @@ export function mount(container, options = {}) {
     }
   }
 
-  document.getElementById('btn-back').addEventListener('click', () => {
+  document.getElementById('btn-back')?.addEventListener('click', () => {
+    navigate('characterSelect', { username });
+  });
+
+  document.getElementById('btn-play-again')?.addEventListener('click', () => {
+    navigate('create');
+  });
+
+  document.getElementById('btn-return-menu')?.addEventListener('click', () => {
     navigate('characterSelect', { username });
   });
 

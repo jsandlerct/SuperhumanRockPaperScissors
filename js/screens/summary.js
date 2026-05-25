@@ -5,7 +5,7 @@ import {
   TOURNAMENT_CONFIG, SKILL_POINTS_AWARD, CONSOLATION_BONUS_BY_LEVEL,
   RANKING_MILESTONES, MILESTONE_FIRST_CHAMP_MSG, MILESTONE_THREE_TIME_CHAMP_MSG,
   TOTAL_PLAYERS, JESSIE_CONSOLATION_DIALOGUE, TROPHY_CONFIG,
-  JESSIE_MILESTONE_DIALOGUE, JESSIE_MILESTONE_PRIORITY,
+  JESSIE_MILESTONE_DIALOGUE, JESSIE_MILESTONE_PRIORITY, TOTAL_SEASONS,
 } from '../constants.js';
 import {
   loadSession, loadIdentity, loadProgress, saveProgress,
@@ -291,7 +291,8 @@ export function mount(container, options = {}) {
 
     updatedProgress.previousFinalists     = null;
     updatedProgress.currentTournamentTier = 1;
-    updatedProgress.phase                 = 'off_season';
+    // Season 10 ends with 'complete' — no off-season after the final season.
+    updatedProgress.phase = (progress.currentSeason >= TOTAL_SEASONS) ? 'complete' : 'off_season';
     // Tournament-scope powerup effects expire at season end (no active tournament).
     if (updatedProgress.activePowerupEffects) {
       updatedProgress.activePowerupEffects.tournament = [];
@@ -438,7 +439,12 @@ export function mount(container, options = {}) {
       openRankingsOverlay(charId, getAllNpcs);
     });
     document.getElementById('btn-season-continue').addEventListener('click', () => {
-      navigate('offSeason', { charId });
+      const freshProgress = loadProgress(charId);
+      if (freshProgress?.phase === 'complete') {
+        navigate('hofSuspense', { charId });
+      } else {
+        navigate('offSeason', { charId });
+      }
     });
   }
 }

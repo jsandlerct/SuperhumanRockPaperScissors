@@ -819,6 +819,11 @@ export const JESSIE_SEASON_CHECKIN = [
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const FEEDBACK_URL = 'https://forms.gle/P73QR6txD1pZf7YL7';
 
+// ── Hall of Fame ──────────────────────────────────────────────────────────────
+export const HOF_ELIGIBILITY_TOP_N_RANK = 3;
+// Player inducted if average world rank across 10 seasons is <= this value.
+// Design doc Section 12.1: "top 3 cumulative ELO rankings". Tune during playtesting.
+
 // ── localStorage Schema Version ───────────────────────────────────────────────
 export const SCHEMA_VERSION = 1;
 // Increment this when making any breaking localStorage schema change.

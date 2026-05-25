@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<!--
+  HOF Visual Test Stub
+  Usage: open this file in your browser, pick a path, click Launch.
+  It seeds localStorage with a 10-season career then redirects to index.html,
+  which picks up the test-nav hook and goes straight to the HOF screens.
+  All test data is written under the key prefix "srps_char_hof_test_".
+  Click "Clean Up Test Data" after testing to remove it.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOF Visual Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a1a;
+      color: #e8e8d0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 24px 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+    h1  { color: #f8d020; font-size: 12px; text-align: center; line-height: 2; }
+    h2  { color: #aaaaff; font-size: 9px; margin-bottom: 10px; }
+    .card {
+      background: #111128;
+      border: 3px solid #444488;
+      padding: 20px;
+      max-width: 520px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    label  { display: flex; align-items: center; gap: 10px; cursor: pointer; line-height: 1.8; }
+    input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; }
+    select {
+      background: #0a0a1a; color: #e8e8d0; border: 2px solid #444488;
+      font-family: inherit; font-size: 8px; padding: 6px 8px; width: 100%;
+    }
+    .btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 12px 16px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      line-height: 1.6;
+    }
+    .btn-inducted  { background: #f8d020; color: #000; }
+    .btn-noninduct { background: #5050b8; color: #fff; }
+    .btn-career    { background: #224422; color: #88ff88; border: 2px solid #44ff44; }
+    .btn-cleanup   { background: #440000; color: #ff8888; border: 2px solid #ff4444; }
+    .btn:hover     { filter: brightness(1.15); }
+    .muted  { color: #777; font-size: 7px; line-height: 2; }
+    .divider { border: none; border-top: 1px solid #333366; }
+    .status { font-size: 7px; color: #44ff88; min-height: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<h1>HOF VISUAL TEST STUB</h1>
+
+<div class="card">
+  <h2>OPTIONS</h2>
+
+  <label>
+    <input type="checkbox" id="jessie-on" checked>
+    Jessie toggle ON (uncheck to test Jessie-OFF path)
+  </label>
+
+  <label>
+    <input type="checkbox" id="clear-oneshots" checked>
+    Clear jessieOneShots (so M-05 / M-07 fire fresh)
+  </label>
+
+  <div>
+    <div class="muted" style="margin-bottom:8px">Portrait to use:</div>
+    <select id="portrait-select">
+      <option value="male_1">male_1</option>
+      <option value="male_2">male_2</option>
+      <option value="female_1">female_1</option>
+      <option value="female_3">female_3</option>
+    </select>
+  </div>
+
+  <hr class="divider">
+  <div id="status" class="status"></div>
+</div>
+
+<div class="card">
+  <h2>PATH A — INDUCTED</h2>
+  <p class="muted">
+    Seeds 10 seasons with worldRank = 1 each (avgRank = 1.0 ≤ 3).<br>
+    Flow: HOF Suspense → gold flash → plaque + confetti → M-05 (4-box Jessie) → Career Summary with gold HOF plaque.
+  </p>
+  <button class="btn btn-inducted" onclick="launch('inducted')">
+    ★ LAUNCH — INDUCTED PATH
+  </button>
+</div>
+
+<div class="card">
+  <h2>PATH B — NOT INDUCTED</h2>
+  <p class="muted">
+    Seeds 10 seasons with worldRank = 50 each (avgRank = 50 &gt; 3).<br>
+    Flow: HOF Suspense → white flash → M-07 (2-box Jessie: "I'm sorry" + consolation) → Career Summary with silhouette HOF slot.
+  </p>
+  <button class="btn btn-noninduct" onclick="launch('not_inducted')">
+    ✗ LAUNCH — NOT INDUCTED PATH
+  </button>
+</div>
+
+<div class="card">
+  <h2>RELOAD TEST — CAREER SUMMARY</h2>
+  <p class="muted">
+    Simulates a player who already completed the HOF sequence and reloaded the page.<br>
+    Phase = 'complete', hofStatus already written. Router should go straight to Career Summary — no suspense screen.
+  </p>
+  <label>
+    <input type="checkbox" id="reload-inducted">
+    hofStatus = inducted (uncheck for not-inducted silhouette)
+  </label>
+  <button class="btn btn-career" onclick="launchReload()">
+    ↺ LAUNCH — RELOAD / CAREER SUMMARY
+  </button>
+</div>
+
+<div class="card">
+  <button class="btn btn-cleanup" onclick="cleanup()">
+    🗑 CLEAN UP ALL TEST DATA
+  </button>
+  <p class="muted" style="text-align:center">
+    Removes all srps_char_hof_test_* and srps_test_* keys from localStorage.
+  </p>
+</div>
+
+<script>
+  const CHAR_ID  = 'char_hof_test01';
+  const USERNAME = 'hof_tester';
+
+  // ── Shared helpers ────────────────────────────────────────────────────────────
+
+  function buildSeasonHistory(worldRank) {
+    // 10 seasons, each with the given worldRank and a plausible ELO arc
+    return Array.from({ length: 10 }, (_, i) => ({
+      season:    i + 1,
+      endElo:    1200 + i * 40,
+      worldRank: worldRank,
+    }));
+  }
+
+  function getOptions() {
+    return {
+      jessieOn:       document.getElementById('jessie-on').checked,
+      clearOneshots:  document.getElementById('clear-oneshots').checked,
+      portraitId:     document.getElementById('portrait-select').value,
+    };
+  }
+
+  function seedSharedData(opts) {
+    // srps_meta
+    const meta = JSON.parse(localStorage.getItem('srps_meta') || '{}');
+    meta.schemaVersion = 1;
+    if (!meta.accountUsernames) meta.accountUsernames = [];
+    if (!meta.accountUsernames.includes(USERNAME)) meta.accountUsernames.push(USERNAME);
+    localStorage.setItem('srps_meta', JSON.stringify(meta));
+
+    // Account
+    localStorage.setItem(`srps_acct_${USERNAME}`, JSON.stringify({
+      username:     USERNAME,
+      passwordHash: 'test',
+      characterIds: [CHAR_ID],
+      settings: {
+        music:  false,
+        sfx:    false,
+        jessie: opts.jessieOn,
+      },
+    }));
+
+    // Session
+    localStorage.setItem('srps_session', JSON.stringify({
+      loggedInUsername: USERNAME,
+      activeCharId:     CHAR_ID,
+    }));
+
+    // Identity
+    localStorage.setItem(`srps_char_${CHAR_ID}_identity`, JSON.stringify({
+      charId:      CHAR_ID,
+      name:        'Test Player',
+      portraitId:  opts.portraitId,
+      primaryTree: 'MIND',
+      secondaryTree: 'FORTUNE',
+    }));
+
+    // Stats (minimal)
+    localStorage.setItem(`srps_char_${CHAR_ID}_stats`, JSON.stringify({
+      career: {
+        rock: 120, paper: 100, scissors: 80,
+        rockWins: 60, paperWins: 55, scissorsWins: 35,
+        tournamentsEntered: 50,
+        tournamentsWon: 12,
+        runnerUpFinishes: 8,
+        deepestTournamentReached: 5,
+        t5Wins: 3,
+      },
+      season: { rock: 0, paper: 0, scissors: 0, rockWins: 0, paperWins: 0, scissorsWins: 0 },
+    }));
+  }
+
+  // ── PATH A / B — HOF Suspense flow ───────────────────────────────────────────
+
+  function launch(path) {
+    const opts    = getOptions();
+    const rank    = path === 'inducted' ? 1 : 50;
+    const history = buildSeasonHistory(rank);
+
+    seedSharedData(opts);
+
+    // Progress — phase must allow the test-nav hook to redirect to hofSuspense
+    localStorage.setItem(`srps_char_${CHAR_ID}_progress`, JSON.stringify({
+      phase:                  'active_season',
+      currentSeason:          10,
+      currentTournamentTier:  1,
+      currentElo:             1600,
+      peakElo:                1650,
+      worldRank:              rank,
+      peakWorldRank:          rank,
+      unspentSkillPoints:     0,
+      totalSkillPointsEarned: 280,
+      treeState: {
+        MIND:    { 'MIND.1': true },
+        FORTUNE: { 'FORTUNE.1': true },
+      },
+      crossMatchState: { neuralScanMatchesSinceLastUse: 0 },
+      activePowerupEffects: { tournament: [], season: [] },
+      previousFinalists: null,
+    }));
+
+    // Trophies — 10-season history for evaluateHOF()
+    const oneshots = opts.clearOneshots ? [] : ['some_other_beat'];
+    localStorage.setItem(`srps_char_${CHAR_ID}_trophies`, JSON.stringify({
+      hofStatus:                null,
+      hofInductionSeason:       null,
+      seasonEloHistory:         history,
+      trophies:                 [
+        { id: 't1_1st', season: 1 },
+        { id: 't2_1st', season: 3 },
+        { id: 't3_2nd', season: 5 },
+        { id: 't5_1st', season: 8 },
+      ],
+      achievedMilestones:       ['ranked', 'top50', 'top20', 'top10'],
+      jessieOneShots:           oneshots,
+      jessieSeasonCheckInHistory: [],
+    }));
+
+    // Tournament (null — no active match)
+    localStorage.setItem(`srps_char_${CHAR_ID}_tournament`, 'null');
+
+    // Queue the screen override — consumed once by main.js init()
+    localStorage.setItem('srps_test_navigate', JSON.stringify({
+      screen: 'hofSuspense',
+      charId: CHAR_ID,
+    }));
+
+    setStatus(`Seeded ${path === 'inducted' ? 'INDUCTED' : 'NOT INDUCTED'} data. Launching...`);
+    setTimeout(() => { window.location.href = 'index.html'; }, 400);
+  }
+
+  // ── RELOAD TEST — Career Summary direct ──────────────────────────────────────
+
+  function launchReload() {
+    const opts      = getOptions();
+    const inducted  = document.getElementById('reload-inducted').checked;
+    const rank      = inducted ? 1 : 50;
+    const history   = buildSeasonHistory(rank);
+
+    seedSharedData(opts);
+
+    // Progress — phase = complete, hofStatus already written
+    localStorage.setItem(`srps_char_${CHAR_ID}_progress`, JSON.stringify({
+      phase:                  'complete',
+      currentSeason:          10,
+      currentTournamentTier:  1,
+      currentElo:             1600,
+      peakElo:                1650,
+      worldRank:              rank,
+      peakWorldRank:          rank,
+      unspentSkillPoints:     0,
+      totalSkillPointsEarned: 280,
+      treeState: {
+        MIND:    { 'MIND.1': true },
+        FORTUNE: { 'FORTUNE.1': true },
+      },
+      crossMatchState: { neuralScanMatchesSinceLastUse: 0 },
+      activePowerupEffects: { tournament: [], season: [] },
+      previousFinalists: null,
+    }));
+
+    // Trophies — hofStatus already evaluated
+    localStorage.setItem(`srps_char_${CHAR_ID}_trophies`, JSON.stringify({
+      hofStatus:                inducted,
+      hofInductionSeason:       inducted ? 10 : null,
+      seasonEloHistory:         history,
+      trophies:                 [
+        { id: 't1_1st', season: 1 },
+        { id: 't3_1st', season: 4 },
+        { id: 't5_1st', season: 9 },
+      ],
+      achievedMilestones:       ['ranked', 'top50'],
+      jessieOneShots:           inducted ? ['M-05'] : ['M-07'],
+      jessieSeasonCheckInHistory: [],
+    }));
+
+    localStorage.setItem(`srps_char_${CHAR_ID}_tournament`, 'null');
+    // No srps_test_navigate — let routeByPhase handle it naturally (goes to careerSummary)
+
+    setStatus(`Seeded reload state (hofStatus=${inducted}). Launching...`);
+    setTimeout(() => { window.location.href = 'index.html'; }, 400);
+  }
+
+  // ── Clean up ──────────────────────────────────────────────────────────────────
+
+  function cleanup() {
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes(CHAR_ID) || key === 'srps_test_navigate')) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
+
+    // Also remove the test account from srps_meta if present
+    const meta = JSON.parse(localStorage.getItem('srps_meta') || '{}');
+    if (meta.accountUsernames) {
+      meta.accountUsernames = meta.accountUsernames.filter(u => u !== USERNAME);
+      localStorage.setItem('srps_meta', JSON.stringify(meta));
+    }
+    localStorage.removeItem(`srps_acct_${USERNAME}`);
+
+    // Clear session only if it points to our test char
+    const session = JSON.parse(localStorage.getItem('srps_session') || 'null');
+    if (session?.activeCharId === CHAR_ID) {
+      localStorage.removeItem('srps_session');
+    }
+
+    setStatus(`Removed ${toRemove.length + 2} test keys from localStorage.`);
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status').textContent = msg;
+  }
+</script>
+
+</body>
+</html>

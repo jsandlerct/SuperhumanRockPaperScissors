@@ -11,6 +11,8 @@ import { mount as mountMatch }           from './screens/match.js';
 import { mount as mountSummary }         from './screens/summary.js';
 import { mount as mountCareerSummary }   from './screens/careerSummary.js';
 import { mount as mountOffSeason }       from './screens/offSeason.js';
+import { mount as mountHofSuspense }     from './screens/hofSuspense.js';
+import { mount as mountHofInduction }    from './screens/hofInduction.js';
 
 // ── NPC Roster ────────────────────────────────────────────────────────────────
 // Loaded once at init, read-only at runtime. All access via helpers below.
@@ -56,6 +58,8 @@ export function navigate(screen, options = {}) {
       case 'summary':        mountSummary(app, options);        break;
       case 'careerSummary':  mountCareerSummary(app, options);  break;
       case 'offSeason':      mountOffSeason(app, options);      break;
+      case 'hofSuspense':    mountHofSuspense(app, options);    break;
+      case 'hofInduction':   mountHofInduction(app, options);   break;
       default:
         app.innerHTML = `<div class="screen" style="justify-content:center;align-items:center">
           <p class="snes-label snes-error">Unknown screen: ${screen}</p>
@@ -92,10 +96,10 @@ export function routeByPhase(charId) {
   }
 
   switch (progress.phase) {
-    case 'pre_season':    navigate('skillTree',  { charId }); break;
-    case 'active_season': navigate('tournament', { charId }); break;
-    case 'off_season':    navigate('offSeason',  { charId }); break;
-    case 'complete':      navigate('summary',    { charId }); break;
+    case 'pre_season':    navigate('skillTree',    { charId }); break;
+    case 'active_season': navigate('tournament',  { charId }); break;
+    case 'off_season':    navigate('offSeason',   { charId }); break;
+    case 'complete':      navigate('careerSummary', { charId }); break;
     default:              navigate('login');
   }
 }
@@ -104,6 +108,16 @@ export function routeByPhase(charId) {
 
 async function init() {
   migrateIfNeeded();
+
+  // Test hook: if a screen override is queued in localStorage, consume it and navigate there.
+  // Set by hof_test.html — never set by game code. Clears itself immediately on read.
+  const _testNav = localStorage.getItem('srps_test_navigate');
+  if (_testNav) {
+    localStorage.removeItem('srps_test_navigate');
+    const { screen, charId } = JSON.parse(_testNav);
+    navigate(screen, { charId });
+    return;
+  }
 
   try {
     await loadNpcRoster();

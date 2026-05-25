@@ -56,7 +56,10 @@ Every Claude Code session begins with this sequence, no exceptions:
 │   │   ├── skillTree.js               ← skill tree allocation + Lock In
 │   │   ├── tournament.js              ← bracket UI and match routing
 │   │   ├── match.js                   ← round loop controller
-│   │   └── summary.js                 ← post-tournament/season summary
+│   │   ├── summary.js                 ← post-tournament/season summary
+│   │   ├── hofSuspense.js             ← HOF suspense screen (shared pre-reveal, Season 10 only)
+│   │   ├── hofInduction.js            ← HOF induction screen (inducted path only)
+│   │   └── careerSummary.js           ← final career screen (post-HOF sequence or mid-game stats)
 │   ├── systems/
 │   │   ├── round.js                   ← round resolution (throws, skills, powerups)
 │   │   ├── elo.js                     ← ELO calculation
@@ -381,16 +384,19 @@ Legal node rule: node is legal if (a) not yet purchased, (b) parent is purchased
 
 The `phase` field in `_progress` drives all screen routing. This is the complete valid state machine:
 
+> **CRITICAL:** There is NO off-season after Season 10. When `currentSeason === 10` and the season ends, `phase` transitions directly to `'complete'` — never `'off_season'`. The HOF suspense screen runs before career summary, not the off-season screen.
+
 ```
 [pre_season] → player selects tree, allocates points, Lock In (≥1 node required)
      ↓
 [active_season] → tournaments run sequentially; mid-season add-only spend after each win
      ↓ (win championship OR lose all paths)
-[off_season] → full respec; powerups cleared; NPC simulation runs; Lock In (≥1 node required)
-     ↓
-[pre_season] → next season begins
-     ↓ (after Season 10 off-season)
-[complete] → HOF evaluation; career summary; no further seasons
+     ├── if currentSeason < 10 →
+     │        [off_season] → full respec; powerups cleared; NPC simulation runs
+     │             ↓
+     │        [pre_season] → next season begins (loop)
+     └── if currentSeason === 10 →
+              [complete] → HOF suspense → HOF evaluation → induction or no-HOF → career summary
 ```
 
 On app load:
@@ -462,6 +468,18 @@ These are the most likely mistakes. Read this list before writing code for any s
 - Never put a magic number in game logic — define it in `constants.js`
 - Never create a second source of truth for any value — pick one place and reference it
 
+**Jessie system:**
+- Never treat the HOF suspense screen Jessie line as a milestone beat — it has no beat ID and is never tracked in `jessieOneShots`
+- Never fire M-05 or M-07 without checking `jessieOneShots` first
+- Never record M-05 or M-07 to `jessieOneShots` when Jessie toggle is OFF
+
+**Hall of Fame:**
+- Never transition to `off_season` when `currentSeason === 10` — phase goes directly to `complete`
+- Never run `evaluateHOF()` before the HOF suspense screen — compute during Phase B so the reveal feels live
+- Never re-run the HOF sequence on app reload when `phase === 'complete'` — route straight to Career Summary
+- Never show the HOF induction screen without firing M-05 immediately after (if Jessie ON and not yet fired)
+- Never read `hofStatus` from transient state — always read from `_trophies` in storage
+
 ---
 
 ## 12. Session Protocol
@@ -525,3 +543,4 @@ Test stubs go in `js/tests/` — do not mix test code with game code.
 | Coach Jessie | 15 |
 | Coding gotchas (all 13) | 16 |
 | MVP roadmap | 18 |
+| HOF implementation spec | `HOF_claude_code_prompt.md` in project root |
