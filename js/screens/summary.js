@@ -201,10 +201,10 @@ export function mount(container, options = {}) {
         saveStats(charId, stats);
       }
 
-      // Award 1st-place trophy for this tier (champion only reaches here)
+      // Award trophy for this tier (both champion and runner-up advance on T1–T4)
       const advTrophies = loadTrophies(charId) ?? { trophies: [] };
       if (!advTrophies.trophies) advTrophies.trophies = [];
-      const advTrophyId  = `t${tier}_1st`;
+      const advTrophyId  = `t${tier}_${outcome === 'champion' ? '1st' : '2nd'}`;
       const advTrophyDef = TROPHY_CONFIG.find(t => t.id === advTrophyId) ?? null;
       const isFirstEarnAdv = !advTrophies.trophies.some(e =>
         (typeof e === 'string' ? e : e.id) === advTrophyId
