@@ -232,10 +232,17 @@ export function mount(container, options = {}) {
         primaryTree = tree;
         identity.primaryTree = tree;
         saveIdentity(charId, identity);
-      } else if (!isSeason1 && primaryTree && tree !== primaryTree && secondaryTree === null) {
-        secondaryTree = tree;
-        identity.secondaryTree = tree;
-        saveIdentity(charId, identity);
+      } else if (!isSeason1 && secondaryTree === null) {
+        if (primaryTree === null) {
+          // Legacy save (pre-v0.3): no primaryTree was ever committed; treat first L1 buy as primary.
+          primaryTree = tree;
+          identity.primaryTree = tree;
+          saveIdentity(charId, identity);
+        } else if (tree !== primaryTree) {
+          secondaryTree = tree;
+          identity.secondaryTree = tree;
+          saveIdentity(charId, identity);
+        }
       }
     }
 
@@ -311,10 +318,16 @@ export function mount(container, options = {}) {
     progress.treeState[tree][nodeId] = false;
     progress.unspentSkillPoints += cost;
 
-    if (level === 1 && isSeason1 && primaryTree === tree) {
-      primaryTree = null;
-      identity.primaryTree = null;
-      saveIdentity(charId, identity);
+    if (level === 1) {
+      if (isSeason1 && primaryTree === tree) {
+        primaryTree = null;
+        identity.primaryTree = null;
+        saveIdentity(charId, identity);
+      } else if (!isSeason1 && secondaryTree === tree) {
+        secondaryTree = null;
+        identity.secondaryTree = null;
+        saveIdentity(charId, identity);
+      }
     }
 
     saveProgress(charId, progress);
