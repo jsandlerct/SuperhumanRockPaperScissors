@@ -173,7 +173,8 @@
 - [x] NPC powerup activation system (unblocks Padlock real effect)
 - [x] NPC throw history tracking (unblocks full Research Notes display)
 - [x] Full NPC behaviors: strategy + skill tree + powerup
-- [ ] Hall of Fame: 10-season evaluation, induction screen
+- [x] Hall of Fame: 10-season evaluation, induction screen
+- [x] HOF trophy case entry: inducted players need a visible HOF plaque/item in the in-game trophy case (careerSummary.js), distinct from the tournament trophies — designer to specify asset and placement (Section 13.2 of design doc)
 - [ ] Audio: 8-bit chiptune music and SFX
 
 

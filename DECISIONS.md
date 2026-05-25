@@ -444,6 +444,8 @@ Ties resolve in the player's favour (player gets the higher rank). Computed from
 
 ## Season & Tournament Structure
 
+**[v1.0 | 2026-05-25] There is no off-season after Season 10. When `currentSeason === TOTAL_SEASONS` and the season ends, `phase` transitions directly from `active_season` to `complete`. The state machine diagram in CLAUDE.md Section 9 previously implied a Season 10 off-season — this has been corrected. Never transition to `off_season` on Season 10 end.**
+
 **[v0.2 | 2026-04-30] Bracket display redesigned as a player-path layout (one column per round, linear sequence with ▶ arrows).**
 Replaces the T1 fork-connector layout. Scales cleanly to T5 (6 rounds) with horizontal scroll. NPC vs NPC results appear in a "Meanwhile…" panel after each player match, before bracket advances.
 
@@ -600,3 +602,24 @@ Push beat ID to `jessieOneShots` (or update `jessieSeasonCheckInHistory` for M-1
 All other Jessie one-shot beats: check `jessieOneShots.includes(beatId)` before firing; push after firing.
 
 **[v1.0 | 2026-04-27] `jessieSeasonCheckInHistory` tracks used M-12 line indices (0–7). Reset to [] after all 8 used.**
+
+---
+
+## Hall of Fame — Implementation (v1.0)
+
+**[v1.0 | 2026-05-25] HOF sequence order (locked): post-season summary → HOF suspense screen → `evaluateHOF()` → (inducted) HOF induction screen → M-05 → career summary | (not inducted) M-07 → career summary.**
+
+**[v1.0 | 2026-05-25] `evaluateHOF()` is called during Phase B of the HOF suspense screen animation, not at season-end write time.** This preserves the dramatic reveal. `_trophies.seasonEloHistory` must have all 10 entries written before `evaluateHOF()` runs — guaranteed by existing season-end write order. Result: `inducted = avgRank <= HOF_ELIGIBILITY_TOP_N_RANK` (constant = 3), where `avgRank` is the mean of `worldRank` across all 10 `seasonEloHistory` entries.
+
+**[v1.0 | 2026-05-25] HOF suspense screen (`js/screens/hofSuspense.js`) has three auto-advancing phases.**
+Phase A: black screen with "SEASON 10 COMPLETE." text crawl (~80ms/char). Phase B: committee panel slides in from bottom; trophy silhouette pulses; Jessie dialogue crawls (if Jessie ON); `evaluateHOF()` runs mid-crawl. Phase C: white flash → branch to result.
+
+**[v1.0 | 2026-05-25] HOF induction screen (`js/screens/hofInduction.js`) plays before M-05 and before career summary.** Sub-Phase 1: gold flash → HOF plaque materializes via scanline reveal → pixel confetti → "HALL OF FAME INDUCTED." title. Sub-Phase 2: M-05 4-box Jessie dialogue.
+
+**[v1.0 | 2026-05-25] The HOF suspense screen Jessie line is NOT a milestone beat.** Text: "Ten seasons. The committee has your full record in front of them right now. Whatever they decide — you gave them something real to look at." No beat ID. Not tracked in `jessieOneShots`. Fires unconditionally when Jessie toggle is ON. Fires for both inducted and not-inducted players — outcome is unknown at that moment.
+
+**[v1.0 | 2026-05-25] On app reload with `phase === 'complete'`: route directly to career summary. Never re-run the HOF sequence. `_trophies.hofStatus` is the authoritative record.**
+
+**[v1.0 | 2026-05-25] Career summary screen reads `hofStatus` directly from `_trophies` — it does not receive HOF result as a parameter.** HOF plaque shown in full color if `hofStatus === true`; shown as dark silhouette if `false`. Screen works correctly on reload without transient state.
+
+**[v1.0 | 2026-05-25] Jessie toggle behavior for HOF beats: M-05 and M-07 are recorded to `jessieOneShots` only when Jessie toggle is ON and the beat fires. If toggle is OFF: beats are skipped and NOT recorded (so they fire if toggle is later turned ON and the sequence is re-visited — impossible for M-05/M-07 since phase is complete, but correct by principle).**

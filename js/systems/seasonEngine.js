@@ -8,9 +8,12 @@ import {
   TOTAL_PLAYERS,
   RANKING_MILESTONES,
   MILESTONE_PERSONAL_BEST_MSG,
+  HOF_ELIGIBILITY_TOP_N_RANK,
+  TOTAL_SEASONS,
 } from '../constants.js';
 import {
   saveWorld, saveProgress, saveTrophies, saveStats,
+  loadTrophies,
 } from '../storage.js';
 
 // ── Tree structure ─────────────────────────────────────────────────────────────
@@ -269,6 +272,34 @@ export function computeMidSeasonRank(playerElo, worldData, roster) {
   // Falls back to startingElo when worldData not yet initialised (Season 1 mid-play)
   const npcElos = roster.map(n => worldData?.npcs?.[n.id]?.currentElo ?? n.startingElo);
   return npcElos.filter(e => e > playerElo).length + 1;
+}
+
+// ── Hall of Fame evaluation ───────────────────────────────────────────────────
+
+// Called during the HOF suspense screen (Phase B). Requires all 10 season entries
+// in seasonEloHistory before running. Writes hofStatus and hofInductionSeason to _trophies.
+// Returns true if inducted.
+export function evaluateHOF(charId) {
+  const trophies = loadTrophies(charId);
+  const seasonHistory = trophies?.seasonEloHistory ?? [];
+
+  if (seasonHistory.length !== TOTAL_SEASONS) {
+    console.error('evaluateHOF() called before 10 seasons complete — aborting');
+    return false;
+  }
+
+  const avgRank  = seasonHistory.reduce((sum, s) => sum + s.worldRank, 0) / TOTAL_SEASONS;
+  const inducted = avgRank <= HOF_ELIGIBILITY_TOP_N_RANK;
+
+  // TODO playtesting: stub alternate method — cumulative ELO sum
+  // const cumulativeElo = seasonHistory.reduce((sum, s) => sum + s.endElo, 0);
+  // Consider switching primary method to cumulativeElo ranking vs all NPCs if avgRank feels wrong
+
+  trophies.hofStatus           = inducted;
+  trophies.hofInductionSeason  = inducted ? TOTAL_SEASONS : null;
+  saveTrophies(charId, trophies);
+
+  return inducted;
 }
 
 // ── Milestone detection ────────────────────────────────────────────────────────
